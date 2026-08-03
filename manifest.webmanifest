@@ -1,0 +1,17 @@
+{
+  "name": "천자문 · 千字文",
+  "short_name": "천자문",
+  "description": "천자문 1,000자를 그리드와 한국어 음성으로 익히는 정적 학습 앱",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f3efe5",
+  "theme_color": "#f3efe5",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
