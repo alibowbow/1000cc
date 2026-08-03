@@ -1,0 +1,73 @@
+export function createOverviewCell(item, options) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "overview-cell";
+  button.dataset.index = String(item.index);
+  button.title = item.contextHun;
+  if (options.selected) button.classList.add("is-selected");
+  if (options.contextOnly) button.classList.add("is-context");
+  if (options.recentWrong) button.classList.add("is-recent-wrong");
+  if (options.due) button.classList.add("is-due");
+  button.setAttribute(
+    "aria-label",
+    `${item.number}번째, ${item.contextHun}, 숙련도 ${options.masteryLevel}단계`,
+  );
+  button.innerHTML =
+    `<span class="overview-cell__number">${item.number}</span>` +
+    `<span class="overview-cell__hanja" lang="zh-Hant">${item.character}</span>` +
+    `<span class="overview-cell__reading">${item.reading}</span>` +
+    `<i class="mastery-mark" data-level="${options.masteryLevel}" aria-hidden="true"></i>`;
+  return button;
+}
+
+export function createPassageCharacter(item, options) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "phrase-character";
+  button.dataset.index = String(item.index);
+  button.setAttribute("aria-pressed", String(options.selected));
+  if (options.selected) button.classList.add("is-selected");
+  button.setAttribute(
+    "aria-label",
+    options.concealReading
+      ? `${item.number}번째 글자 ${item.character}`
+      : `${item.number}번째 글자, ${item.contextHun}`,
+  );
+  button.innerHTML =
+    `<span class="phrase-character__hanja" lang="zh-Hant">${item.character}</span>` +
+    `<span class="phrase-character__reading">${item.reading}</span>`;
+  return button;
+}
+
+export function renderBoardCellElement(button, item) {
+  button.classList.remove("is-correct", "is-wrong", "is-hint", "is-empty");
+  if (!item) {
+    button.dataset.index = "";
+    button.disabled = true;
+    button.classList.add("is-empty");
+    button.replaceChildren();
+    button.setAttribute("aria-label", "빈 칸");
+    return;
+  }
+  button.disabled = false;
+  button.dataset.index = String(item.index);
+  button.innerHTML = `<span class="board-cell__hanja" lang="zh-Hant">${item.character}</span>`;
+  button.setAttribute("aria-label", `후보 글자 ${item.character}, ${item.number}번째`);
+}
+
+export function createReviewItem(item, options) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "review-item";
+  button.dataset.index = String(item.index);
+  button.setAttribute("aria-pressed", String(options.selected));
+  button.setAttribute(
+    "aria-label",
+    `${item.contextHun}, 숙련도 ${options.masteryLevel}단계${options.selected ? ", 선택됨" : ""}`,
+  );
+  button.innerHTML =
+    `<span class="review-item__number">${item.number}</span>` +
+    `<span class="review-item__hanja" lang="zh-Hant">${item.character}</span>` +
+    `<span class="review-item__meta">${item.reading} · <b class="review-item__level">${options.masteryLevel}단계</b></span>`;
+  return button;
+}
