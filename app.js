@@ -91,7 +91,6 @@ const elements = {
   passageScreen: document.querySelector("#screen-passage"),
   passageCard: document.querySelector("#passage-card"),
   phraseGrids: Array.from(document.querySelectorAll("[data-phrase-grid]")),
-  phrasePlayButtons: Array.from(document.querySelectorAll("[data-play-phrase]")),
   coupletMeaning: document.querySelector("#couplet-meaning"),
   playCouplet: document.querySelector("#play-couplet"),
   continuousListen: document.querySelector("#continuous-listen"),
@@ -319,18 +318,12 @@ function bindEvents() {
     grid.addEventListener("click", handlePassageCharacterClick);
     grid.addEventListener("keydown", handleFourGridKeyboard);
   });
-  elements.phrasePlayButtons.forEach(function (button) {
-    button.addEventListener("click", function () {
-      playPhrase(Number(button.dataset.playPhrase));
-    });
-  });
   elements.playCharacter.addEventListener("click", function () {
     tts.speak(CHARACTERS[appState.ui.selectedIndex].contextHun, {
       kind: "character",
       onError: handleTtsError,
     });
   });
-  elements.selectedRelatedWords.addEventListener("click", handleRelatedWordClick);
   elements.playCouplet.addEventListener("click", playCurrentCouplet);
   elements.continuousListen.addEventListener("click", toggleContinuousListening);
   elements.markCouplet.addEventListener("click", markCurrentCouplet);
@@ -757,13 +750,7 @@ function renderPassage() {
   const relatedWordsFragment = document.createDocumentFragment();
   details.relatedWords.forEach(function (word) {
     const entry = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "related-word";
-    button.dataset.relatedWord = word.word;
-    button.dataset.relatedOrigin = word.origin;
-    button.dataset.relatedDefinition = word.definition;
-    button.setAttribute("aria-label", `${word.word}, ${word.origin}. ${word.definition} 듣기`);
+    entry.className = "related-word";
 
     const term = document.createElement("span");
     term.className = "related-word__term";
@@ -777,12 +764,7 @@ function renderPassage() {
     const definition = document.createElement("span");
     definition.className = "related-word__definition";
     definition.textContent = word.definition;
-    const listen = document.createElement("span");
-    listen.className = "related-word__listen";
-    listen.setAttribute("aria-hidden", "true");
-    listen.textContent = "듣기";
-    button.append(term, definition, listen);
-    entry.append(button);
+    entry.append(term, definition);
     relatedWordsFragment.append(entry);
   });
   elements.selectedRelatedWords.replaceChildren(relatedWordsFragment);
@@ -815,16 +797,11 @@ function renderPassageVisibility() {
   elements.coupletMeaning.setAttribute("aria-hidden", String(concealMeaning));
   elements.selectedGloss.setAttribute("aria-hidden", String(concealMeaning));
   elements.selectedReading.setAttribute("aria-hidden", String(concealReading));
-  elements.selectedRelatedWords.querySelectorAll(".related-word").forEach(function (button) {
-    const definition = button.querySelector(".related-word__definition");
-    if (definition) definition.setAttribute("aria-hidden", String(concealMeaning));
-    button.setAttribute(
-      "aria-label",
-      concealMeaning
-        ? `${button.dataset.relatedWord}, ${button.dataset.relatedOrigin}, 듣기`
-        : `${button.dataset.relatedWord}, ${button.dataset.relatedOrigin}. ${button.dataset.relatedDefinition} 듣기`,
-    );
-  });
+  elements.selectedRelatedWords
+    .querySelectorAll(".related-word__definition")
+    .forEach(function (definition) {
+      definition.setAttribute("aria-hidden", String(concealMeaning));
+    });
   const concealed = concealReading || concealMeaning;
   elements.playCharacter.setAttribute(
     "aria-label",
@@ -845,15 +822,6 @@ function handlePassageCharacterClick(event) {
   if (appState.settings.tapToSpeak) {
     tts.speak(CHARACTERS[index].contextHun, { kind: "character", onError: handleTtsError });
   }
-}
-
-function handleRelatedWordClick(event) {
-  const button = event.target.closest("[data-related-word]");
-  if (!button) return;
-  tts.speak(button.dataset.relatedWord, {
-    kind: "word",
-    onError: handleTtsError,
-  });
 }
 
 function handleFourGridKeyboard(event) {
@@ -881,12 +849,6 @@ function moveCouplet(delta) {
     state.ui.revealAnswer = false;
   });
   renderPassage();
-}
-
-function playPhrase(phraseOffset) {
-  const couplet = getCouplet(CHARACTERS[appState.ui.selectedIndex].coupletIndex);
-  const phrase = phraseOffset === 0 ? couplet.firstPhrase : couplet.secondPhrase;
-  tts.speak(phrase.reading, { kind: "phrase", onError: handleTtsError });
 }
 
 function playCurrentCouplet() {
