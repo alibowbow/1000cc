@@ -3,6 +3,7 @@ import {
   COUPLETS,
   TOTAL_CHARACTERS,
   findCharacterIndexes,
+  getCharacterStudyDetails,
   getCouplet,
   getPhrase,
 } from "./js/data-model.js";
@@ -99,11 +100,15 @@ const elements = {
   revealAnswer: document.querySelector("#reveal-answer"),
   selectedNumber: document.querySelector("#selected-number"),
   selectedCharacter: document.querySelector("#selected-character"),
-  selectedHun: document.querySelector("#selected-hun"),
   selectedGloss: document.querySelector("#selected-gloss"),
+  selectedReading: document.querySelector("#selected-reading"),
+  selectedPosition: document.querySelector("#selected-position"),
+  selectedRole: document.querySelector("#selected-role"),
   selectedPhrase: document.querySelector("#selected-phrase"),
+  selectedPhraseReading: document.querySelector("#selected-phrase-reading"),
+  selectedPhraseBreakdown: document.querySelector("#selected-phrase-breakdown"),
   selectedCouplet: document.querySelector("#selected-couplet"),
-  selectedContext: document.querySelector("#selected-context"),
+  selectedCoupletReading: document.querySelector("#selected-couplet-reading"),
   playCharacter: document.querySelector("#play-character"),
   playCharacterLabel: document.querySelector("#play-character-label"),
   gridSetup: document.querySelector("#grid-setup"),
@@ -688,7 +693,8 @@ function focusOverviewCell(index) {
 
 function renderPassage() {
   const selected = CHARACTERS[appState.ui.selectedIndex];
-  const couplet = getCouplet(selected.coupletIndex);
+  const details = getCharacterStudyDetails(selected.index);
+  const couplet = details.couplet;
   elements.coupletPosition.textContent = `${couplet.index + 1} / 125`;
   elements.previousCouplet.disabled = couplet.index === 0;
   elements.nextCouplet.disabled = couplet.index === 124;
@@ -708,15 +714,41 @@ function renderPassage() {
     grid.replaceChildren(fragment);
   });
 
-  elements.selectedNumber.textContent = String(selected.number);
+  elements.selectedNumber.textContent = `전체 ${selected.number} / 1,000`;
   elements.selectedCharacter.textContent = selected.character;
-  elements.selectedHun.textContent = selected.contextHun;
-  elements.selectedGloss.textContent = `기본 뜻은 ‘${selected.gloss}’입니다. 이 글귀에서는 ‘${selected.reading}’으로 읽습니다.`;
+  elements.selectedGloss.textContent = selected.gloss;
+  elements.selectedReading.textContent = selected.reading;
+  elements.selectedPosition.textContent = `8자 연 ${details.coupletNumber} / ${details.coupletCount}`;
+  elements.selectedRole.textContent = `4자구 ${details.phraseNumber} / ${details.phraseCount} · ${details.phrasePosition}번째 글자`;
   elements.selectedPhrase.textContent = selected.phrase;
+  elements.selectedPhraseReading.textContent = selected.phraseReading;
+  const breakdownFragment = document.createDocumentFragment();
+  details.phrase.items.forEach(function (item) {
+    const entry = document.createElement("li");
+    if (item.index === selected.index) {
+      entry.classList.add("is-current");
+      entry.setAttribute("aria-current", "true");
+    }
+    const character = document.createElement("strong");
+    character.className = "breakdown-character";
+    character.lang = "zh-Hant";
+    character.textContent = item.character;
+    const hun = document.createElement("span");
+    hun.className = "breakdown-hun";
+    const gloss = document.createElement("span");
+    gloss.className = "breakdown-gloss";
+    gloss.textContent = item.gloss;
+    const reading = document.createElement("span");
+    reading.className = "breakdown-reading";
+    reading.textContent = item.reading;
+    hun.append(gloss, reading);
+    entry.append(character, hun);
+    breakdownFragment.append(entry);
+  });
+  elements.selectedPhraseBreakdown.replaceChildren(breakdownFragment);
   elements.selectedCouplet.textContent = selected.couplet;
-  elements.selectedContext.textContent = selected.meaning;
-  elements.playCharacterLabel.textContent = `${selected.contextHun} 듣기`;
-  elements.playCharacter.setAttribute("aria-label", `${selected.contextHun} 듣기`);
+  elements.selectedCoupletReading.textContent = selected.coupletReading;
+  elements.playCharacterLabel.textContent = "선택 글자 훈음 듣기";
 
   const allRecorded = couplet.items.every(function (item) {
     return appState.progress[item.index] && appState.progress[item.index].masteryLevel >= 2;
@@ -731,6 +763,8 @@ function renderPassage() {
 
 function renderPassageVisibility() {
   const reveal = appState.ui.revealAnswer;
+  const concealReading = appState.settings.hideReading && !reveal;
+  const concealMeaning = appState.settings.hideMeaning && !reveal;
   elements.passageScreen.classList.toggle("is-reading-hidden", appState.settings.hideReading);
   elements.passageScreen.classList.toggle("is-meaning-hidden", appState.settings.hideMeaning);
   elements.passageScreen.classList.toggle("is-answer-revealed", reveal);
@@ -739,21 +773,23 @@ function renderPassageVisibility() {
   elements.revealAnswer.hidden = !(
     (appState.settings.hideReading || appState.settings.hideMeaning) && !reveal
   );
-  elements.coupletMeaning.setAttribute(
-    "aria-hidden",
-    String(appState.settings.hideMeaning && !reveal),
-  );
-  elements.selectedHun.setAttribute(
-    "aria-hidden",
-    String(appState.settings.hideReading && !reveal),
-  );
-  elements.selectedGloss.setAttribute(
-    "aria-hidden",
-    String(appState.settings.hideMeaning && !reveal),
-  );
-  elements.selectedContext.setAttribute(
-    "aria-hidden",
-    String(appState.settings.hideMeaning && !reveal),
+  elements.coupletMeaning.setAttribute("aria-hidden", String(concealMeaning));
+  elements.selectedGloss.setAttribute("aria-hidden", String(concealMeaning));
+  elements.selectedReading.setAttribute("aria-hidden", String(concealReading));
+  elements.selectedPhraseReading.setAttribute("aria-hidden", String(concealReading));
+  elements.selectedCoupletReading.setAttribute("aria-hidden", String(concealReading));
+  elements.selectedPhraseBreakdown.querySelectorAll(".breakdown-gloss").forEach(function (node) {
+    node.setAttribute("aria-hidden", String(concealMeaning));
+  });
+  elements.selectedPhraseBreakdown.querySelectorAll(".breakdown-reading").forEach(function (node) {
+    node.setAttribute("aria-hidden", String(concealReading));
+  });
+  const concealed = concealReading || concealMeaning;
+  elements.playCharacter.setAttribute(
+    "aria-label",
+    concealed
+      ? "선택한 글자 훈음 듣기"
+      : `${CHARACTERS[appState.ui.selectedIndex].contextHun} 듣기`,
   );
 }
 

@@ -175,26 +175,41 @@
           </div>
         </article>
 
-        <aside class="character-inspector" aria-labelledby="selected-hun">
+        <aside class="character-inspector" aria-label="선택한 글자 정보">
           <div class="character-inspector__glyph" aria-hidden="true">
-            <span id="selected-number">1</span>
+            <span id="selected-number">전체 1 / 1,000</span>
             <strong id="selected-character" lang="zh-Hant">天</strong>
           </div>
           <div class="character-inspector__body">
-            <p class="eyebrow">선택한 글자 · 훈음</p>
-            <h2 id="selected-hun">하늘 천</h2>
-            <p id="selected-gloss">기본 뜻은 ‘하늘’입니다.</p>
+            <p class="eyebrow">선택한 글자</p>
+            <h2 id="selected-hun"><span id="selected-gloss">하늘</span> <span id="selected-reading">천</span></h2>
+            <div class="character-position" aria-label="천자문 안의 위치">
+              <span id="selected-position">8자 연 1 / 125</span>
+              <span id="selected-role">4자구 1 / 250 · 1번째 글자</span>
+            </div>
+
+            <section class="phrase-breakdown-card" aria-labelledby="phrase-breakdown-title">
+              <div class="phrase-breakdown-card__heading">
+                <span id="phrase-breakdown-title">4자구 해체</span>
+                <strong id="selected-phrase" lang="zh-Hant">天地玄黃</strong>
+              </div>
+              <p class="phrase-reading" id="selected-phrase-reading">천 지 현 황</p>
+              <ol class="phrase-breakdown" id="selected-phrase-breakdown"></ol>
+            </section>
+
             <dl class="character-context">
-              <div><dt>4자구</dt><dd id="selected-phrase">天地玄黃</dd></div>
-              <div><dt>8자 연</dt><dd id="selected-couplet">天地玄黃宇宙洪荒</dd></div>
-              <div><dt>문맥</dt><dd id="selected-context">하늘은 검고 땅은 누르며 우주는 넓고도 크다.</dd></div>
+              <div>
+                <dt>8자 연</dt>
+                <dd class="context-hanja" id="selected-couplet" lang="zh-Hant">天地玄黃宇宙洪荒</dd>
+                <dd class="context-reading" id="selected-couplet-reading">천지현황 우주홍황</dd>
+              </div>
             </dl>
             <button class="character-play" id="play-character" type="button" data-tts>
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M11 5 6 9H3v6h3l5 4V5Z" />
                 <path d="M15 9.5a4 4 0 0 1 0 5M17.7 6.8a7.5 7.5 0 0 1 0 10.4" />
               </svg>
-              <span id="play-character-label">하늘 천 듣기</span>
+              <span id="play-character-label">선택 글자 훈음 듣기</span>
             </button>
           </div>
         </aside>

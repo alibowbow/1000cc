@@ -6,6 +6,7 @@ import {
   COUPLETS,
   TOTAL_CHARACTERS,
   getCouplet,
+  getCharacterStudyDetails,
   getHunSound,
 } from "../js/data-model.js";
 
@@ -74,4 +75,25 @@ test("1,000자 훈음은 원문·독음의 같은 인덱스에 빈 값 없이 �
   assert.equal(CHARACTERS[0].contextHun, "하늘 천");
   assert.equal(CHARACTERS[1].contextHun, "땅 지");
   assert.equal(CHARACTERS.at(-1).contextHun, "어조사 야");
+});
+
+test("선택 글자 학습 정보는 4자구 훈음과 전체 위치를 정확히 제공한다", function () {
+  const first = getCharacterStudyDetails(0);
+  assert.equal(first.phrase.hanja, "天地玄黃");
+  assert.equal(first.phrase.reading, "천 지 현 황");
+  assert.deepEqual(first.phrase.items.map((item) => item.contextHun), [
+    "하늘 천",
+    "땅 지",
+    "검을 현",
+    "누를 황",
+  ]);
+  assert.equal(first.phraseNumber, 1);
+  assert.equal(first.phrasePosition, 1);
+  assert.equal(first.coupletNumber, 1);
+
+  const last = getCharacterStudyDetails(999);
+  assert.equal(last.phrase.hanja, "焉哉乎也");
+  assert.equal(last.phraseNumber, 250);
+  assert.equal(last.phrasePosition, 4);
+  assert.equal(last.coupletNumber, 125);
 });

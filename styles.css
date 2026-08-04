@@ -712,13 +712,79 @@ progress::-moz-progress-bar { background: var(--pine); border-radius: 999px; }
   line-height: 1;
 }
 .character-inspector__body h2 {
-  margin: 3px 0 4px;
+  margin: 3px 0 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-size: clamp(1.8rem, 3vw, 2.6rem);
   letter-spacing: -0.04em;
 }
-.character-inspector__body > p:not(.eyebrow) { margin: 0; color: var(--ink-soft); }
+.character-inspector__body h2 #selected-reading { color: var(--cinnabar-deep); }
+.character-position {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.character-position span {
+  padding: 4px 7px;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: rgba(255, 253, 247, 0.7);
+  font-size: 0.68rem;
+}
+.phrase-breakdown-card {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+}
+.phrase-breakdown-card__heading {
+  min-height: 42px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.phrase-breakdown-card__heading span { color: var(--muted); font-size: 0.68rem; font-weight: 700; }
+.phrase-breakdown-card__heading strong { font-family: "Noto Serif KR", serif; font-size: 1.05rem; font-weight: 500; }
+.phrase-reading {
+  margin: 0;
+  padding: 7px 10px;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+}
+.phrase-breakdown {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+}
+.phrase-breakdown li {
+  min-width: 0;
+  padding: 9px 3px 8px;
+  display: grid;
+  place-items: center;
+  gap: 5px;
+  border-right: 1px solid var(--rule);
+  text-align: center;
+}
+.phrase-breakdown li:last-child { border-right: 0; }
+.phrase-breakdown li.is-current { background: var(--cinnabar-soft); box-shadow: inset 0 -2px 0 var(--cinnabar); }
+.breakdown-character { font-size: 1.65rem; font-weight: 500; line-height: 1; }
+.breakdown-hun { min-width: 0; display: grid; gap: 2px; font-size: 0.68rem; line-height: 1.15; }
+.breakdown-gloss,
+.breakdown-reading { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.breakdown-gloss { color: var(--ink-soft); }
+.breakdown-reading { color: var(--cinnabar-deep); font-weight: 700; }
 .character-context {
-  margin: 18px 0;
+  margin: 12px 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1px;
@@ -728,6 +794,8 @@ progress::-moz-progress-bar { background: var(--pine); border-radius: 999px; }
 .character-context div { min-width: 0; padding: 11px 12px; background: var(--surface-solid); }
 .character-context dt { color: var(--muted); font-size: 0.68rem; font-weight: 700; }
 .character-context dd { margin: 3px 0 0; color: var(--ink-soft); font-size: 0.84rem; }
+.character-context .context-hanja { color: var(--ink); font-family: "Noto Serif KR", serif; font-size: 1rem; }
+.character-context .context-reading { color: var(--cinnabar-deep); font-size: 0.76rem; }
 .character-play {
   min-height: 48px;
   padding: 0 15px;
@@ -741,15 +809,21 @@ progress::-moz-progress-bar { background: var(--pine); border-radius: 999px; }
   cursor: pointer;
 }
 .is-reading-hidden .phrase-character__reading,
-.is-reading-hidden #selected-hun { visibility: hidden; }
+.is-reading-hidden #selected-reading,
+.is-reading-hidden .phrase-reading,
+.is-reading-hidden .context-reading,
+.is-reading-hidden .breakdown-reading { visibility: hidden; }
 .is-meaning-hidden .passage-meaning p,
 .is-meaning-hidden #selected-gloss,
-.is-meaning-hidden #selected-context { visibility: hidden; }
+.is-meaning-hidden .breakdown-gloss { visibility: hidden; }
 .is-answer-revealed .phrase-character__reading,
-.is-answer-revealed #selected-hun,
+.is-answer-revealed #selected-reading,
+.is-answer-revealed .phrase-reading,
+.is-answer-revealed .context-reading,
+.is-answer-revealed .breakdown-reading,
 .is-answer-revealed .passage-meaning p,
 .is-answer-revealed #selected-gloss,
-.is-answer-revealed #selected-context { visibility: visible; }
+.is-answer-revealed .breakdown-gloss { visibility: visible; }
 
 .grid-setup,
 .grid-session,
@@ -1207,10 +1281,15 @@ progress::-moz-progress-bar { background: var(--pine); border-radius: 999px; }
   .character-inspector__glyph { min-height: 148px; }
   .character-inspector__glyph strong { font-size: 5.5rem; }
   .character-inspector__body h2 { font-size: 1.6rem; }
-  .character-context { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; }
-  #screen-passage .character-context { display: none; }
+  #screen-passage .character-inspector__body { display: contents; }
+  #screen-passage .character-inspector__glyph { grid-column: 1; grid-row: 1 / 4; }
+  #screen-passage .character-inspector__body > .eyebrow { grid-column: 2; grid-row: 1; align-self: end; }
+  #screen-passage .character-inspector__body > h2 { grid-column: 2; grid-row: 2; }
+  #screen-passage .character-position { grid-column: 2; grid-row: 3; align-self: start; }
+  #screen-passage .phrase-breakdown-card { grid-column: 1 / -1; grid-row: 4; margin-top: 0; }
+  .character-context { grid-column: 1 / -1; grid-row: 5; display: grid; grid-template-columns: 1fr; }
   .character-context div:last-child { grid-column: 1; }
-  .character-play { width: 100%; justify-content: center; }
+  .character-play { grid-column: 1 / -1; grid-row: 6; width: 100%; justify-content: center; }
   .grid-setup,
   .grid-session,
   .session-result { margin: 0 -1px; padding: 15px 10px; }

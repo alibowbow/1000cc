@@ -103,6 +103,24 @@ export function getCouplet(coupletIndex) {
   };
 }
 
+export function getCharacterStudyDetails(index) {
+  const safeIndex = Math.min(TOTAL_CHARACTERS - 1, Math.max(0, Math.floor(Number(index) || 0)));
+  const item = CHARACTERS[safeIndex];
+  const phrase = getPhrase(item.phraseStart);
+  const couplet = getCouplet(item.coupletIndex);
+  return {
+    item,
+    phrase,
+    couplet,
+    phraseNumber: item.phraseIndex + 1,
+    phraseCount: TOTAL_CHARACTERS / 4,
+    phrasePosition: item.index - item.phraseStart + 1,
+    coupletNumber: item.coupletIndex + 1,
+    coupletCount: COUPLETS.length,
+    coupletPosition: item.offset + 1,
+  };
+}
+
 export function findCharacterIndexes(query) {
   const raw = String(query || "").trim();
   if (!raw) return CHARACTERS.map(function (item) { return item.index; });
