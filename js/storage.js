@@ -26,6 +26,7 @@ export function createDefaultState() {
     settings: {
       hideReading: false,
       hideMeaning: false,
+      hideOverviewMeaning: false,
       tapToSpeak: true,
       rate: 0.85,
       voiceURI: "",
@@ -101,6 +102,7 @@ export function normalizeV2(value) {
 
   defaults.settings.hideReading = Boolean(settings.hideReading);
   defaults.settings.hideMeaning = Boolean(settings.hideMeaning);
+  defaults.settings.hideOverviewMeaning = Boolean(settings.hideOverviewMeaning);
   defaults.settings.tapToSpeak =
     typeof settings.tapToSpeak === "boolean" ? settings.tapToSpeak : true;
   defaults.settings.rate = validRate(settings.rate);

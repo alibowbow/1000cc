@@ -65,7 +65,7 @@
         <div class="screen-heading">
           <div>
             <p class="eyebrow" id="overview-range-label">첫째 마당 · 1–100</p>
-            <h1 id="overview-title">천 글자를 구절로 살펴보기</h1>
+            <h1 id="overview-title">천 글자를 눌러 익히기</h1>
           </div>
           <button class="quiet-button" id="go-current-position" type="button">현재 학습 위치</button>
         </div>
@@ -100,6 +100,7 @@
         </div>
 
         <div class="highlight-tools" aria-label="강조 표시">
+          <button class="toggle-chip" id="overview-toggle-meaning" type="button" aria-pressed="false">뜻 가리기</button>
           <button class="toggle-chip" id="highlight-wrong" type="button" aria-pressed="false">최근 오답 강조</button>
           <button class="toggle-chip" id="highlight-due" type="button" aria-pressed="false">복습 예정 강조</button>
           <button class="text-button" id="clear-search" type="button" hidden>검색 지우기</button>
@@ -107,6 +108,7 @@
         </div>
 
         <div class="overview-grid" id="overview-grid" aria-label="천자문 전체 보기"></div>
+        <p class="sr-only" id="overview-announcement" aria-live="polite" aria-atomic="true"></p>
         <div class="empty-state" id="overview-empty" hidden>
           <strong>조건에 맞는 글자가 없습니다.</strong>
           <p>검색어나 숙련 상태 필터를 바꿔 보세요.</p>

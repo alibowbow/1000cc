@@ -57,6 +57,7 @@ const store = createStore(loaded.state, function (value) {
 let appState = store.get();
 let passageContinuous = false;
 let speechState = { speaking: false, kind: "" };
+let overviewRevealedIndexes = new Set();
 let toastTimer = 0;
 let completionTimer = 0;
 let renderedSessionKey = "";
@@ -76,6 +77,8 @@ const elements = {
   overviewEmpty: document.querySelector("#overview-empty"),
   overviewResetFilters: document.querySelector("#overview-reset-filters"),
   overviewResultCount: document.querySelector("#overview-result-count"),
+  overviewToggleMeaning: document.querySelector("#overview-toggle-meaning"),
+  overviewAnnouncement: document.querySelector("#overview-announcement"),
   clearSearch: document.querySelector("#clear-search"),
   goCurrentPosition: document.querySelector("#go-current-position"),
   highlightWrong: document.querySelector("#highlight-wrong"),
@@ -275,6 +278,17 @@ function bindEvents() {
       state.ui.highlightDue = !state.ui.highlightDue;
     });
     renderOverview();
+  });
+  elements.overviewToggleMeaning.addEventListener("click", function () {
+    const willHide = !appState.settings.hideOverviewMeaning;
+    overviewRevealedIndexes = new Set();
+    commit(function (state) {
+      state.settings.hideOverviewMeaning = willHide;
+    });
+    renderOverview();
+    elements.overviewAnnouncement.textContent = willHide
+      ? "모든 글자의 뜻을 가렸습니다. 한자를 누르면 해당 글자의 뜻을 듣고 확인할 수 있습니다."
+      : "모든 글자의 뜻을 표시했습니다.";
   });
   elements.goCurrentPosition.addEventListener("click", function () {
     const cursor = Math.min(999, appState.grid.lastCursor);
@@ -528,6 +542,9 @@ function renderOverview() {
       const cell = createOverviewCell(item, {
         selected: item.index === appState.ui.selectedIndex,
         masteryLevel: record ? record.masteryLevel : 0,
+        concealMeaning:
+          appState.settings.hideOverviewMeaning && !overviewRevealedIndexes.has(item.index),
+        revealed: overviewRevealedIndexes.has(item.index),
         contextOnly: !eligibleSet.has(item.index),
         recentWrong: appState.ui.highlightWrong && recentSet.has(item.index),
         due: appState.ui.highlightDue && dueSet.has(item.index),
@@ -539,7 +556,10 @@ function renderOverview() {
   });
 
   elements.overviewGrid.append(fragment);
-  elements.overviewGrid.classList.toggle("is-reading-hidden", appState.settings.hideReading);
+  elements.overviewGrid.classList.toggle(
+    "is-meaning-hidden",
+    appState.settings.hideOverviewMeaning,
+  );
   elements.overviewEmpty.hidden = eligible.length > 0;
   elements.overviewGrid.hidden = eligible.length === 0;
   elements.overviewRangeNav.hidden = Boolean(query);
@@ -559,6 +579,10 @@ function renderOverview() {
       : "";
   elements.highlightWrong.setAttribute("aria-pressed", String(appState.ui.highlightWrong));
   elements.highlightDue.setAttribute("aria-pressed", String(appState.ui.highlightDue));
+  elements.overviewToggleMeaning.setAttribute(
+    "aria-pressed",
+    String(appState.settings.hideOverviewMeaning),
+  );
   document.querySelectorAll("[data-group-size]").forEach(function (button) {
     button.setAttribute("aria-pressed", String(Number(button.dataset.groupSize) === groupSize));
   });
@@ -586,7 +610,33 @@ function handleOverviewClick(event) {
   }
   const cell = event.target.closest(".overview-cell");
   if (!cell) return;
-  openPassage(Number(cell.dataset.index), appState.settings.tapToSpeak);
+  const index = Number(cell.dataset.index);
+  const item = CHARACTERS[index];
+  if (!item) return;
+
+  overviewRevealedIndexes.add(index);
+  commit(function (state) {
+    state.ui.selectedIndex = index;
+  });
+
+  elements.overviewGrid.querySelectorAll(".overview-cell.is-selected").forEach(function (button) {
+    button.classList.remove("is-selected");
+    button.setAttribute("aria-pressed", "false");
+  });
+  cell.classList.add("is-selected", "is-revealed");
+  cell.setAttribute("aria-pressed", "true");
+  cell.title = item.contextHun;
+  cell.setAttribute(
+    "aria-label",
+    `${item.number}번째, ${item.contextHun}, 숙련도 ${appState.progress[index]?.masteryLevel || 0}단계`,
+  );
+  const meaning = cell.querySelector(".overview-cell__meaning");
+  if (meaning) meaning.removeAttribute("aria-hidden");
+  elements.overviewAnnouncement.textContent = `${item.contextHun}.`;
+
+  if (appState.settings.tapToSpeak) {
+    tts.speak(item.contextHun, { kind: "character", onError: handleTtsError });
+  }
 }
 
 function openPassage(index, speak) {

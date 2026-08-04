@@ -7,6 +7,7 @@ import {
   createDefaultState,
   createExportJson,
   loadStateFromStorage,
+  normalizeV2,
   parseImportJson,
   saveStateToStorage,
 } from "../js/storage.js";
@@ -64,6 +65,16 @@ test("잘못된 localStorage JSON은 앱을 깨뜨리지 않고 기본값으로 
   const loaded = loadStateFromStorage(storage);
   assert.equal(loaded.source, "default");
   assert.deepEqual(loaded.state, createDefaultState());
+});
+
+test("전체 보기 뜻 가리기 설정은 저장되고 기존 v2에는 안전한 기본값을 적용한다", function () {
+  const state = createDefaultState();
+  state.settings.hideOverviewMeaning = true;
+  assert.equal(normalizeV2(state).settings.hideOverviewMeaning, true);
+
+  const oldV2 = createDefaultState();
+  delete oldV2.settings.hideOverviewMeaning;
+  assert.equal(normalizeV2(oldV2).settings.hideOverviewMeaning, false);
 });
 
 test("진행 중 boardIndexes를 포함한 v2 세션을 저장하고 복원한다", function () {

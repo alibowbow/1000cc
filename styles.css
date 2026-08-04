@@ -458,8 +458,34 @@ progress::-moz-progress-bar { background: var(--pine); border-radius: 999px; }
   font-weight: 500;
   line-height: 1;
 }
-.overview-cell__reading { color: var(--ink-soft); font-size: 0.68rem; line-height: 1; }
-.overview-grid.is-reading-hidden .overview-cell__reading { visibility: hidden; }
+.overview-cell__meaning {
+  max-width: calc(100% - 2px);
+  min-height: 0.78rem;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 0.66rem;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.overview-grid.is-meaning-hidden .overview-cell:not(.is-revealed) .overview-cell__meaning {
+  width: 38px;
+  height: 9px;
+  min-height: 9px;
+  color: transparent;
+  border-radius: 999px;
+  background: var(--paper-deep);
+  user-select: none;
+}
+.overview-grid.is-meaning-hidden .overview-cell.is-revealed .overview-cell__meaning {
+  animation: meaning-reveal 180ms ease-out;
+}
+.overview-cell.is-revealed { background: rgba(168, 56, 42, 0.055); }
+
+@keyframes meaning-reveal {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .mastery-mark {
   position: absolute;
   right: 5px;
