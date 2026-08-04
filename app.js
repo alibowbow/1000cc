@@ -673,6 +673,9 @@ function renderTodayScreen() {
   elements.courseStreak.textContent = String(courseStats.streak);
   elements.courseMasteredCount.textContent = String(mastered);
   elements.todayDayNumber.textContent = String(dayIndex + 1);
+  elements.todayDashboard.dataset.courseQuarter = String(
+    Math.min(3, Math.floor(dayIndex / Math.ceil(COURSE_DAYS / 4))),
+  );
   elements.todayRangeCopy.textContent = `${RANGE_NAMES[Math.floor(lesson.indexes[0] / 100)]} · ${lesson.indexes[0] + 1}–${lesson.indexes.at(-1) + 1}자`;
   elements.todayMeaning.textContent = lesson.couplet.data.meaning;
   elements.todayMemoryScene.textContent = lesson.memoryScene;

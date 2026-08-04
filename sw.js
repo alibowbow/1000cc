@@ -1,14 +1,16 @@
-const CACHE_NAME = "1000cc-static-v7-20260804";
+const CACHE_NAME = "1000cc-static-v8-20260804";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
+  "./theme-folio.css",
   "./app.js",
   "./data.js",
   "./character-meta.js",
   "./character-content.js",
   "./manifest.webmanifest",
   "./icon.svg",
+  "./assets/learning-seasons-atlas.webp",
   "./js/data-model.js",
   "./js/course-engine.js",
   "./js/grid-engine.js",
