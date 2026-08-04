@@ -7,7 +7,7 @@ import {
   getCouplet,
   getPhrase,
 } from "./js/data-model.js";
-import { createGridSession, getSessionProgress, selectGridIndex } from "./js/grid-engine.js";
+import { createGridSession, getSessionProgress, selectGridIndex } from "./js/grid-engine.js?v=10";
 import {
   COURSE_DAYS,
   createChallengeUrl,
@@ -18,7 +18,7 @@ import {
   getRandomDailyPick,
   isBetterScore,
   parseChallengeDay,
-} from "./js/course-engine.js";
+} from "./js/course-engine.js?v=10";
 import {
   getDueIndexes,
   getFrequentWrongIndexes,
@@ -40,7 +40,7 @@ import {
   loadStateFromStorage,
   parseImportJson,
   saveStateToStorage,
-} from "./js/storage.js";
+} from "./js/storage.js?v=10";
 import { createStore } from "./js/state.js";
 import { TTSManager } from "./js/tts-manager.js";
 import { downloadTextFile, formatDuration } from "./js/utils.js";
