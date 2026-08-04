@@ -95,7 +95,7 @@ export function selectGridIndex(session, selectedIndex) {
 
 export function restoreGridSession(value) {
   if (!value || value.engineVersion !== 1) {
-    throw new Error("연속 그리드 저장 형식이 올바르지 않습니다.");
+    throw new Error("한자 순서 게임 저장 형식이 올바르지 않습니다.");
   }
 
   const order = uniqueValidIndexes(value.order);
@@ -115,7 +115,7 @@ export function restoreGridSession(value) {
     !Array.isArray(value.boardIndexes) ||
     value.boardIndexes.length !== boardSize
   ) {
-    throw new Error("연속 그리드 저장 값이 유효하지 않습니다.");
+    throw new Error("한자 순서 게임 저장 값이 유효하지 않습니다.");
   }
 
   const boardIndexes = value.boardIndexes.map(function (index) {
@@ -154,7 +154,7 @@ export function restoreGridSession(value) {
     Number(value.supplyCursor) !== expectedSupply ||
     Boolean(value.complete) !== complete
   ) {
-    throw new Error("연속 그리드 커서가 저장된 보드와 일치하지 않습니다.");
+    throw new Error("한자 순서 게임 위치가 저장된 보드와 일치하지 않습니다.");
   }
 
   return {

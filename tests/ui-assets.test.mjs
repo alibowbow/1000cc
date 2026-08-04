@@ -4,20 +4,36 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("서책 테마와 수묵 아틀라스는 화면과 오프라인 셸에 함께 연결된다", async function () {
-  const [html, theme, serviceWorker, atlas] = await Promise.all([
+test("125개 기억 그림과 회상 화면은 UI와 오프라인 셸에 함께 연결된다", async function () {
+  const [html, app, theme, serviceWorker, seasonalAtlas, ...memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
+    readFile(new URL("app.js", root), "utf8"),
     readFile(new URL("theme-folio.css", root), "utf8"),
     readFile(new URL("sw.js", root), "utf8"),
     stat(new URL("assets/learning-seasons-atlas.webp", root)),
+    ...Array.from({ length: 16 }, function (_, index) {
+      return stat(new URL(`assets/memory-atlas-${String(index + 1).padStart(2, "0")}.webp`, root));
+    }),
   ]);
 
   assert.match(html, /theme-folio\.css/);
   assert.match(html, /memory-scene__art/);
+  assert.match(html, /id="passage-memory-image"/);
+  assert.match(html, /id="passage-memory-clues"/);
+  assert.doesNotMatch(html, /daily-path/);
+  assert.doesNotMatch(html, /today-tools/);
+  assert.match(app, /memory-atlas-/);
+  assert.match(app, /createRandomDailyPick/);
   assert.match(theme, /learning-seasons-atlas\.webp/);
-  assert.match(theme, /data-course-quarter="3"/);
+  assert.match(theme, /\.memory-clue/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
-  assert.ok(atlas.size > 50_000);
-  assert.ok(atlas.size < 250_000);
+  assert.match(serviceWorker, /assets\/memory-atlas-16\.webp/);
+  assert.ok(seasonalAtlas.size > 50_000);
+  assert.ok(seasonalAtlas.size < 250_000);
+  assert.equal(memoryAtlases.length, 16);
+  memoryAtlases.forEach(function (atlas) {
+    assert.ok(atlas.size > 100_000);
+    assert.ok(atlas.size < 350_000);
+  });
 });

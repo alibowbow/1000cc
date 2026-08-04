@@ -66,8 +66,10 @@ export function createDailyLessonState(dayIndex, progress, now = Date.now()) {
   return {
     dayIndex: lesson.dayIndex,
     startedAt: new Date(now).toISOString(),
-    stage: "review",
-    reviewItems: getAdaptiveReviewItems(progress, lesson.indexes, { now }),
+    stage: "lesson",
+    // v2 내보내기 형식과 진행 중이던 기록의 호환을 위해 필드는 남기되,
+    // 복습은 오늘의 학습 흐름에서 분리한다.
+    reviewItems: [],
     reviewResults: {},
     lessonOpened: false,
     recallMode: "reading",
@@ -78,6 +80,42 @@ export function createDailyLessonState(dayIndex, progress, now = Date.now()) {
     gridStartedAt: null,
     vocabularyOpened: false,
   };
+}
+
+export function createRandomDailyPick(completedDays, options = {}) {
+  const completed = completedDays && typeof completedDays === "object" ? completedDays : {};
+  const incomplete = Array.from({ length: COURSE_DAYS }, function (_, dayIndex) {
+    return dayIndex;
+  }).filter(function (dayIndex) {
+    return !completed[dayIndex]?.completedAt;
+  });
+  const pool = incomplete.length > 0
+    ? incomplete
+    : Array.from({ length: COURSE_DAYS }, function (_, dayIndex) { return dayIndex; });
+  const excludeDay = Number(options.excludeDay);
+  const candidates = pool.length > 1 && Number.isInteger(excludeDay)
+    ? pool.filter(function (dayIndex) { return dayIndex !== excludeDay; })
+    : pool;
+  const random = Math.min(0.999999999, Math.max(0, Number(options.random) || 0));
+  const dayIndex = candidates[Math.floor(random * candidates.length)] || 0;
+  return {
+    dateKey: localDayKey(Number(options.now) || Date.now()),
+    dayIndex,
+  };
+}
+
+export function getRandomDailyPick(course, now = Date.now()) {
+  const pick = course?.dailyPick;
+  if (
+    !pick ||
+    pick.dateKey !== localDayKey(now) ||
+    !Number.isInteger(pick.dayIndex) ||
+    pick.dayIndex < 0 ||
+    pick.dayIndex >= COURSE_DAYS
+  ) {
+    return null;
+  }
+  return pick.dayIndex;
 }
 
 export function getAdaptiveReviewItems(progress, excludedIndexes = [], options = {}) {
@@ -203,15 +241,11 @@ export function getConfusableNotes(items, limit = 2) {
 }
 
 export function getDailyCompletion(activeLesson) {
-  if (!activeLesson) return { review: false, lesson: false, recall: false, grid: false, vocabulary: false };
-  const reviewDone = activeLesson.reviewItems.every(function (item) {
-    return Boolean(activeLesson.reviewResults[item.index]);
-  });
+  if (!activeLesson) return { lesson: false, recall: false, grid: false, vocabulary: false };
   const recallDone = ["reading", "meaning", "reverse"].every(function (skill) {
     return Object.keys(activeLesson.recallResults[skill] || {}).length >= LESSON_SIZE;
   });
   return {
-    review: reviewDone,
     lesson: Boolean(activeLesson.lessonOpened),
     recall: recallDone,
     grid: Boolean(activeLesson.gridSession?.complete),
@@ -221,7 +255,6 @@ export function getDailyCompletion(activeLesson) {
 
 export function nextDailyStage(activeLesson) {
   const completed = getDailyCompletion(activeLesson);
-  if (!completed.review) return "review";
   if (!completed.lesson) return "lesson";
   if (!completed.recall) return "recall";
   if (!completed.grid) return "grid";

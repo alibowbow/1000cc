@@ -10,12 +10,12 @@ import {
 import { createGridSession, getSessionProgress, selectGridIndex } from "./js/grid-engine.js";
 import {
   COURSE_DAYS,
-  SKILL_LABELS,
   createChallengeUrl,
   createDailyLessonState,
+  createRandomDailyPick,
   getCourseStats,
-  getDailyCompletion,
   getLesson,
+  getRandomDailyPick,
   isBetterScore,
   parseChallengeDay,
 } from "./js/course-engine.js";
@@ -75,8 +75,9 @@ let toastTimer = 0;
 let completionTimer = 0;
 let renderedSessionKey = "";
 let renderedDailyGridKey = "";
-let dailyReviewRevealed = false;
 let dailyRecallRevealed = false;
+let memoryClueRevealed = new Set();
+let renderedMemoryDay = -1;
 let sharedChallengeDay = parseChallengeDay(window.location.search);
 let sharedChallengeSession = null;
 let sharedChallengeStartedAt = 0;
@@ -109,36 +110,21 @@ const elements = {
   sharedChallengeAnnouncement: document.querySelector("#shared-challenge-announcement"),
   todayDashboard: document.querySelector("#today-dashboard"),
   courseRing: document.querySelector("#course-ring"),
-  courseRingDay: document.querySelector("#course-ring-day"),
+  courseRingCount: document.querySelector("#course-ring-count"),
   courseCompletedDays: document.querySelector("#course-completed-days"),
   courseStreak: document.querySelector("#course-streak"),
   courseMasteredCount: document.querySelector("#course-mastered-count"),
-  todayReviewCount: document.querySelector("#today-review-count"),
-  todayReviewPreview: document.querySelector("#today-review-preview"),
-  todayDayNumber: document.querySelector("#today-day-number"),
   todayRangeCopy: document.querySelector("#today-range-copy"),
   todayCharacters: document.querySelector("#today-characters"),
   todayMeaning: document.querySelector("#today-meaning"),
   todayMemoryScene: document.querySelector("#today-memory-scene"),
+  todayMemoryArt: document.querySelector("#open-today-memory"),
+  shuffleTodayLesson: document.querySelector("#shuffle-today-lesson"),
   shareTodayChallenge: document.querySelector("#share-today-challenge"),
   startDailyLearning: document.querySelector("#start-daily-learning"),
   dailyStartLabel: document.querySelector("#daily-start-label"),
-  dailyPath: document.querySelector("#daily-path"),
-  pathReviewCopy: document.querySelector("#path-review-copy"),
   dailyWorkflow: document.querySelector("#daily-workflow"),
   dailySteps: Array.from(document.querySelectorAll("[data-daily-step]")),
-  dailyReviewProgress: document.querySelector("#daily-review-progress"),
-  dailyReviewEmpty: document.querySelector("#daily-review-empty"),
-  dailyReviewCard: document.querySelector("#daily-review-card"),
-  dailyReviewSkill: document.querySelector("#daily-review-skill"),
-  dailyReviewCharacter: document.querySelector("#daily-review-character"),
-  dailyReviewPrompt: document.querySelector("#daily-review-prompt"),
-  dailyReviewAnswer: document.querySelector("#daily-review-answer"),
-  dailyReviewReveal: document.querySelector("#daily-review-reveal"),
-  dailyReviewRating: document.querySelector("#daily-review-rating"),
-  dailyReviewWrong: document.querySelector("#daily-review-wrong"),
-  dailyReviewCorrect: document.querySelector("#daily-review-correct"),
-  dailyReviewContinue: document.querySelector("#daily-review-continue"),
   dailyLessonGrid: document.querySelector("#daily-lesson-grid"),
   dailyLessonMeaning: document.querySelector("#daily-lesson-meaning"),
   dailyLessonScene: document.querySelector("#daily-lesson-scene"),
@@ -206,6 +192,11 @@ const elements = {
   selectedStrokes: document.querySelector("#selected-strokes"),
   relatedWordsSection: document.querySelector("#related-words-section"),
   selectedRelatedWords: document.querySelector("#selected-related-words"),
+  passageMemoryImage: document.querySelector("#passage-memory-image"),
+  passageMemoryClues: document.querySelector("#passage-memory-clues"),
+  passageMemoryScene: document.querySelector("#passage-memory-scene"),
+  passageMemoryReveal: document.querySelector("#passage-memory-reveal"),
+  resetMemoryClues: document.querySelector("#reset-memory-clues"),
   gridSetup: document.querySelector("#grid-setup"),
   gridSession: document.querySelector("#grid-session"),
   sessionResult: document.querySelector("#session-result"),
@@ -353,24 +344,9 @@ function bindEvents() {
 
   elements.startDailyLearning.addEventListener("click", startDailyLearning);
   elements.shareTodayChallenge.addEventListener("click", shareTodayLesson);
+  elements.shuffleTodayLesson.addEventListener("click", shuffleTodayLesson);
+  elements.todayMemoryArt.addEventListener("click", openTodayMemoryStudy);
   elements.todayCharacters.addEventListener("click", speakDailyCharacter);
-  elements.dailyReviewReveal.addEventListener("click", revealDailyReview);
-  elements.dailyReviewCharacter.addEventListener("click", speakCurrentDailyReview);
-  elements.dailyReviewCharacter.addEventListener("keydown", function (event) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      speakCurrentDailyReview();
-    }
-  });
-  elements.dailyReviewWrong.addEventListener("click", function () {
-    rateDailyReview(false);
-  });
-  elements.dailyReviewCorrect.addEventListener("click", function () {
-    rateDailyReview(true);
-  });
-  elements.dailyReviewContinue.addEventListener("click", function () {
-    moveDailyStage("lesson");
-  });
   elements.dailyLessonGrid.addEventListener("click", speakDailyCharacter);
   elements.dailyPlayCouplet.addEventListener("click", playDailyCouplet);
   elements.dailyLessonContinue.addEventListener("click", finishDailyLessonIntro);
@@ -476,6 +452,8 @@ function bindEvents() {
   elements.playCouplet.addEventListener("click", playCurrentCouplet);
   elements.continuousListen.addEventListener("click", toggleContinuousListening);
   elements.markCouplet.addEventListener("click", markCurrentCouplet);
+  elements.passageMemoryClues.addEventListener("click", toggleMemoryClue);
+  elements.resetMemoryClues.addEventListener("click", resetMemoryClues);
   elements.toggleReading.addEventListener("click", function () {
     commit(function (state) {
       state.settings.hideReading = !state.settings.hideReading;
@@ -659,41 +637,90 @@ function renderTodayScreen() {
   elements.todayDashboard.hidden = false;
   const courseStats = getCourseStats(appState.course);
   const active = appState.course.activeLesson;
-  const dayIndex = active ? active.dayIndex : courseStats.currentDay;
+  const dayIndex = active ? active.dayIndex : getOrCreateTodayLessonDay();
   const lesson = getLesson(dayIndex);
   const mastered = getMasteredCount(appState.progress);
-  const previewState = active || createDailyLessonState(dayIndex, appState.progress);
 
   elements.courseRing.style.setProperty(
     "--course-ratio",
     `${Math.round((courseStats.completed / COURSE_DAYS) * 360)}deg`,
   );
-  elements.courseRingDay.textContent = String(dayIndex + 1);
+  elements.courseRingCount.textContent = String(courseStats.completed);
   elements.courseCompletedDays.textContent = String(courseStats.completed);
   elements.courseStreak.textContent = String(courseStats.streak);
   elements.courseMasteredCount.textContent = String(mastered);
-  elements.todayDayNumber.textContent = String(dayIndex + 1);
   elements.todayDashboard.dataset.courseQuarter = String(
     Math.min(3, Math.floor(dayIndex / Math.ceil(COURSE_DAYS / 4))),
   );
-  elements.todayRangeCopy.textContent = `${RANGE_NAMES[Math.floor(lesson.indexes[0] / 100)]} · ${lesson.indexes[0] + 1}–${lesson.indexes.at(-1) + 1}자`;
+  elements.todayRangeCopy.textContent = `125개 연 중 무작위 선택 · ${lesson.couplet.data.reading}`;
   elements.todayMeaning.textContent = lesson.couplet.data.meaning;
   elements.todayMemoryScene.textContent = lesson.memoryScene;
+  applyMemoryAtlas(elements.todayMemoryArt, dayIndex);
+  elements.todayMemoryArt.dataset.dayIndex = String(dayIndex);
 
   renderTodayCharacters(lesson);
-  renderTodayReviewPreview(previewState.reviewItems);
-  elements.pathReviewCopy.textContent = `${previewState.reviewItems.length}자`;
   elements.dailyStartLabel.textContent = active
     ? active.stage === "complete"
       ? "오늘 기록 보기"
       : "학습 이어가기"
-    : courseStats.complete
-      ? "125일차 다시 익히기"
-      : "5분 학습 시작";
+    : "5분 학습 시작";
+  elements.shuffleTodayLesson.disabled = Boolean(active && active.stage !== "complete");
+  elements.shuffleTodayLesson.title = elements.shuffleTodayLesson.disabled
+    ? "진행 중인 학습을 마치면 다른 8자를 고를 수 있습니다."
+    : "아직 익히지 않은 8자 연에서 다시 무작위로 고릅니다.";
 
-  renderDailyPath(active);
   if (active) renderDailyWorkflow(active, lesson);
   else elements.dailyWorkflow.hidden = true;
+}
+
+function getOrCreateTodayLessonDay(options = {}) {
+  const stored = options.force ? null : getRandomDailyPick(appState.course);
+  if (stored !== null) return stored;
+  const previous = appState.course.dailyPick?.dayIndex;
+  const pick = createRandomDailyPick(appState.course.completedDays, {
+    now: Date.now(),
+    random: secureRandomUnit(),
+    excludeDay: options.excludeDay ?? previous,
+  });
+  commit(function (state) {
+    state.course.dailyPick = pick;
+  });
+  return pick.dayIndex;
+}
+
+function secureRandomUnit() {
+  if (window.crypto?.getRandomValues) {
+    const value = new Uint32Array(1);
+    window.crypto.getRandomValues(value);
+    return value[0] / 4294967296;
+  }
+  return Math.random();
+}
+
+function shuffleTodayLesson() {
+  const active = appState.course.activeLesson;
+  if (active && active.stage !== "complete") return;
+  const previous = active?.dayIndex ?? appState.course.dailyPick?.dayIndex;
+  commit(function (state) {
+    state.course.activeLesson = null;
+  });
+  getOrCreateTodayLessonDay({ force: true, excludeDay: previous });
+  renderedDailyGridKey = "";
+  renderApp();
+  window.scrollTo({ top: 0, behavior: "auto" });
+  showToast("다른 8자를 무작위로 골랐습니다.");
+}
+
+function openTodayMemoryStudy() {
+  const dayIndex = Number(elements.todayMemoryArt.dataset.dayIndex);
+  if (!Number.isInteger(dayIndex)) return;
+  openPassage(dayIndex * 8, false);
+  window.setTimeout(function () {
+    document.querySelector(".memory-study")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  }, 0);
 }
 
 function renderTodayCharacters(lesson) {
@@ -712,24 +739,6 @@ function renderTodayCharacters(lesson) {
   elements.todayCharacters.replaceChildren(fragment);
 }
 
-function renderTodayReviewPreview(reviewItems) {
-  const fragment = document.createDocumentFragment();
-  reviewItems.slice(0, 6).forEach(function (reviewItem) {
-    const span = document.createElement("span");
-    span.lang = "zh-Hant";
-    span.textContent = CHARACTERS[reviewItem.index].character;
-    fragment.append(span);
-  });
-  if (reviewItems.length === 0) {
-    const empty = document.createElement("span");
-    empty.className = "is-empty";
-    empty.textContent = "새 8자부터 시작";
-    fragment.append(empty);
-  }
-  elements.todayReviewCount.textContent = String(reviewItems.length);
-  elements.todayReviewPreview.replaceChildren(fragment);
-}
-
 function speakDailyCharacter(event) {
   const button = event.target.closest("[data-index]");
   if (!button) return;
@@ -741,12 +750,11 @@ function speakDailyCharacter(event) {
 function startDailyLearning() {
   stopAllSpeech();
   if (!appState.course.activeLesson) {
-    const dayIndex = getCourseStats(appState.course).currentDay;
+    const dayIndex = getOrCreateTodayLessonDay();
     commit(function (state) {
       state.course.activeLesson = createDailyLessonState(dayIndex, state.progress);
       state.ui.mode = "today";
     });
-    dailyReviewRevealed = false;
     dailyRecallRevealed = false;
     renderedDailyGridKey = "";
   }
@@ -754,30 +762,11 @@ function startDailyLearning() {
   scrollToDailyWorkflow();
 }
 
-function renderDailyPath(active) {
-  const order = ["review", "lesson", "recall", "grid", "vocabulary", "complete"];
-  const completion = getDailyCompletion(active);
-  const current = active ? active.stage : null;
-  elements.dailyPath.querySelectorAll("[data-daily-path]").forEach(function (item) {
-    const stage = item.dataset.dailyPath;
-    const done = stage === "complete" ? current === "complete" : Boolean(completion[stage]);
-    item.classList.toggle("is-complete", done);
-    item.classList.toggle("is-active", stage === current);
-    if (stage === current) item.setAttribute("aria-current", "step");
-    else item.removeAttribute("aria-current");
-  });
-  if (!active) {
-    const first = elements.dailyPath.querySelector('[data-daily-path="review"]');
-    if (first) first.classList.add("is-active");
-  }
-}
-
 function renderDailyWorkflow(active, lesson) {
   elements.dailyWorkflow.hidden = false;
   elements.dailySteps.forEach(function (step) {
     step.hidden = step.dataset.dailyStep !== active.stage;
   });
-  if (active.stage === "review") renderDailyReview(active);
   if (active.stage === "lesson") renderDailyLesson(lesson);
   if (active.stage === "recall") renderDailyRecall(active, lesson);
   if (active.stage === "grid") renderDailyGrid(active);
@@ -785,115 +774,8 @@ function renderDailyWorkflow(active, lesson) {
   if (active.stage === "complete") renderDailyCompletion(active);
 }
 
-function renderDailyReview(active) {
-  const completed = active.reviewItems.filter(function (item) {
-    return Object.prototype.hasOwnProperty.call(active.reviewResults, item.index);
-  }).length;
-  const pending = active.reviewItems.find(function (item) {
-    return !Object.prototype.hasOwnProperty.call(active.reviewResults, item.index);
-  });
-  elements.dailyReviewProgress.textContent = `${completed} / ${active.reviewItems.length}`;
-  elements.dailyReviewEmpty.hidden = active.reviewItems.length > 0;
-  elements.dailyReviewCard.hidden = !pending;
-  elements.dailyReviewContinue.hidden = Boolean(pending);
-
-  if (!pending) return;
-  const item = CHARACTERS[pending.index];
-  const content = getReviewCardContent(item, pending.skill);
-  elements.dailyReviewSkill.textContent = `${SKILL_LABELS[pending.skill]} 회상`;
-  elements.dailyReviewCharacter.textContent = content.front;
-  elements.dailyReviewCharacter.lang = content.frontIsHanja ? "zh-Hant" : "ko";
-  elements.dailyReviewCharacter.tabIndex = 0;
-  elements.dailyReviewCharacter.setAttribute("role", "button");
-  elements.dailyReviewCharacter.setAttribute("aria-label", `${item.contextHun} 소리 듣기`);
-  elements.dailyReviewPrompt.textContent = content.prompt;
-  elements.dailyReviewAnswer.textContent = content.answer;
-  elements.dailyReviewAnswer.hidden = !dailyReviewRevealed;
-  elements.dailyReviewReveal.hidden = dailyReviewRevealed;
-  elements.dailyReviewRating.hidden = !dailyReviewRevealed;
-}
-
-function getReviewCardContent(item, skill) {
-  if (skill === "meaning") {
-    return {
-      front: `${item.character} · ${item.reading}`,
-      frontIsHanja: false,
-      prompt: "이 글자의 뜻을 떠올려 보세요.",
-      answer: `${item.gloss} · ${item.contextHun}`,
-    };
-  }
-  if (skill === "reverse") {
-    return {
-      front: item.gloss,
-      frontIsHanja: false,
-      prompt: "이 뜻에 맞는 한자를 떠올려 보세요.",
-      answer: `${item.character} · ${item.contextHun}`,
-    };
-  }
-  if (skill === "order") {
-    const previous = item.index > 0 ? CHARACTERS[item.index - 1].character : "첫 글자";
-    return {
-      front: `${previous} → ?`,
-      frontIsHanja: false,
-      prompt: "천자문 순서에서 다음 글자를 떠올려 보세요.",
-      answer: `${item.character} · ${item.contextHun}`,
-    };
-  }
-  if (skill === "listening") {
-    return {
-      front: "♪",
-      frontIsHanja: false,
-      prompt: "음성을 듣고 한자와 뜻을 떠올려 보세요.",
-      answer: `${item.character} · ${item.contextHun}`,
-    };
-  }
-  return {
-    front: item.character,
-    frontIsHanja: true,
-    prompt: "이 글자의 훈음을 떠올려 보세요.",
-    answer: item.contextHun,
-  };
-}
-
-function getPendingDailyReview(active) {
-  return active.reviewItems.find(function (item) {
-    return !Object.prototype.hasOwnProperty.call(active.reviewResults, item.index);
-  }) || null;
-}
-
-function speakCurrentDailyReview() {
-  const active = appState.course.activeLesson;
-  const pending = active ? getPendingDailyReview(active) : null;
-  if (!pending) return;
-  tts.speak(CHARACTERS[pending.index].contextHun, {
-    kind: "daily-review",
-    onError: handleTtsError,
-  });
-}
-
-function revealDailyReview() {
-  dailyReviewRevealed = true;
-  const active = appState.course.activeLesson;
-  if (active) renderDailyReview(active);
-}
-
-function rateDailyReview(correct) {
-  const active = appState.course.activeLesson;
-  const pending = active ? getPendingDailyReview(active) : null;
-  if (!pending || !dailyReviewRevealed) return;
-  commit(function (state) {
-    state.progress = recordSkillAttempt(state.progress, pending.index, pending.skill, {
-      correct,
-    });
-    state.course.activeLesson.reviewResults[pending.index] = correct ? "correct" : "wrong";
-  });
-  dailyReviewRevealed = false;
-  renderHeader();
-  renderTodayScreen();
-}
-
 function moveDailyStage(stage) {
-  const allowed = ["review", "lesson", "recall", "grid", "vocabulary", "complete"];
+  const allowed = ["lesson", "recall", "grid", "vocabulary", "complete"];
   if (!allowed.includes(stage) || !appState.course.activeLesson) return;
   stopAllSpeech();
   commit(function (state) {
@@ -1247,18 +1129,17 @@ function completeDailyLesson() {
   });
   renderApp();
   scrollToDailyWorkflow();
-  showToast("오늘의 8자와 복습 기록을 저장했습니다.");
+  showToast("오늘의 8자 학습 기록을 저장했습니다.");
 }
 
 function calculateDailyResult(active, now = Date.now()) {
-  const reviewValues = Object.values(active.reviewResults || {});
   const recallValues = ["reading", "meaning", "reverse"].flatMap(function (mode) {
     return Object.values(active.recallResults?.[mode] || {});
   });
-  const correctCards = [...reviewValues, ...recallValues].filter(function (value) {
+  const correctCards = recallValues.filter(function (value) {
     return value === "correct";
   }).length;
-  const wrongCards = reviewValues.length + recallValues.length - correctCards;
+  const wrongCards = recallValues.length - correctCards;
   const gridCorrect = active.gridSession?.targetPosition || 0;
   const gridWrong = active.gridWrongCount || 0;
   const attempts = correctCards + wrongCards + gridCorrect + gridWrong;
@@ -1286,23 +1167,24 @@ function renderDailyCompletion(active) {
   elements.dailyCompleteTime.textContent = formatDuration(result.duration || 0);
   elements.dailyCompleteAccuracy.textContent = `${result.accuracy ?? 100}%`;
   elements.dailyCompleteCourse.textContent = `${courseStats.completed} / ${COURSE_DAYS}`;
-  elements.dailyNextLesson.disabled = courseStats.complete;
-  elements.dailyNextLesson.textContent = courseStats.complete ? "125일 과정 완주" : "다음 8자 이어서";
+  elements.dailyNextLesson.disabled = false;
+  elements.dailyNextLesson.textContent = courseStats.complete ? "다른 8자 다시 뽑기" : "다른 8자 뽑기";
 }
 
 function continueToNextDailyLesson() {
-  if (getCourseStats(appState.course).complete) return;
+  const previous = appState.course.activeLesson?.dayIndex ?? appState.course.dailyPick?.dayIndex;
   commit(function (state) {
     state.course.activeLesson = null;
     state.ui.mode = "today";
   });
+  getOrCreateTodayLessonDay({ force: true, excludeDay: previous });
   renderedDailyGridKey = "";
   renderApp();
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 async function shareTodayLesson() {
-  const dayIndex = sharedChallengeDay ?? appState.course.activeLesson?.dayIndex ?? getCourseStats(appState.course).currentDay;
+  const dayIndex = sharedChallengeDay ?? appState.course.activeLesson?.dayIndex ?? getOrCreateTodayLessonDay();
   const lesson = getLesson(dayIndex);
   const url = createChallengeUrl(window.location, dayIndex);
   const shareData = {
@@ -1741,8 +1623,102 @@ function renderPassage() {
   elements.markCouplet.querySelector("span").textContent = allRecorded
     ? "8자 학습 기록 완료"
     : "8자 학습 기록";
+  renderPassageMemory(couplet);
   renderPassageVisibility();
   renderSpeechState();
+}
+
+function applyMemoryAtlas(element, dayIndex) {
+  if (!element) return;
+  const sheet = Math.floor(dayIndex / 8) + 1;
+  const cell = dayIndex % 8;
+  const column = cell % 4;
+  const row = Math.floor(cell / 4);
+  element.style.backgroundImage = `url("./assets/memory-atlas-${String(sheet).padStart(2, "0")}.webp")`;
+  element.style.backgroundSize = "400% 200%";
+  element.style.backgroundPosition = `${(column / 3) * 100}% ${row * 100}%`;
+}
+
+function renderPassageMemory(couplet) {
+  const lesson = getLesson(couplet.index);
+  if (renderedMemoryDay !== lesson.dayIndex) {
+    renderedMemoryDay = lesson.dayIndex;
+    memoryClueRevealed = new Set();
+  }
+  applyMemoryAtlas(elements.passageMemoryImage, lesson.dayIndex);
+  elements.passageMemoryScene.textContent = lesson.memoryScene;
+
+  const clues = document.createDocumentFragment();
+  for (let pairIndex = 0; pairIndex < 4; pairIndex += 1) {
+    const pair = lesson.items.slice(pairIndex * 2, pairIndex * 2 + 2);
+    const revealed = memoryClueRevealed.has(pairIndex);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "memory-clue";
+    button.dataset.memoryClue = String(pairIndex);
+    button.dataset.position = String(pairIndex + 1);
+    button.setAttribute("aria-pressed", String(revealed));
+    button.setAttribute(
+      "aria-label",
+      revealed
+        ? `${pair.map(function (item) { return item.contextHun; }).join(", ")}, 다시 가리기`
+        : `${pairIndex + 1}번째 그림 단서 보기`,
+    );
+    if (revealed) {
+      const characters = document.createElement("strong");
+      characters.lang = "zh-Hant";
+      characters.textContent = pair.map(function (item) { return item.character; }).join("");
+      const readings = document.createElement("span");
+      readings.textContent = pair.map(function (item) { return item.contextHun; }).join(" · ");
+      button.append(characters, readings);
+    } else {
+      button.textContent = String(pairIndex + 1);
+    }
+    clues.append(button);
+  }
+  elements.passageMemoryClues.replaceChildren(clues);
+  renderMemoryReveal(lesson);
+}
+
+function renderMemoryReveal(lesson) {
+  if (memoryClueRevealed.size === 0) {
+    elements.passageMemoryReveal.textContent = "그림 속 단서를 눌러 두 글자씩 떠올려 보세요.";
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  Array.from(memoryClueRevealed).sort().forEach(function (pairIndex) {
+    const pair = lesson.items.slice(pairIndex * 2, pairIndex * 2 + 2);
+    const line = document.createElement("p");
+    const characters = document.createElement("strong");
+    characters.lang = "zh-Hant";
+    characters.textContent = pair.map(function (item) { return item.character; }).join("");
+    const copy = document.createElement("span");
+    copy.textContent = pair.map(function (item) { return item.contextHun; }).join(" · ");
+    line.append(characters, copy);
+    fragment.append(line);
+  });
+  elements.passageMemoryReveal.replaceChildren(fragment);
+}
+
+function toggleMemoryClue(event) {
+  const button = event.target.closest("[data-memory-clue]");
+  if (!button) return;
+  const pairIndex = Number(button.dataset.memoryClue);
+  if (!Number.isInteger(pairIndex) || pairIndex < 0 || pairIndex > 3) return;
+  if (memoryClueRevealed.has(pairIndex)) memoryClueRevealed.delete(pairIndex);
+  else memoryClueRevealed.add(pairIndex);
+  const couplet = getCouplet(CHARACTERS[appState.ui.selectedIndex].coupletIndex);
+  const target = couplet.items[pairIndex * 2];
+  commit(function (state) {
+    state.ui.selectedIndex = target.index;
+  });
+  renderPassage();
+}
+
+function resetMemoryClues() {
+  memoryClueRevealed = new Set();
+  renderPassage();
+  elements.passageMemoryClues.querySelector("button")?.focus();
 }
 
 function renderPassageVisibility() {

@@ -50,6 +50,7 @@ export function createDefaultState() {
       completedDays: {},
       activeLesson: null,
       challengeBest: {},
+      dailyPick: null,
     },
   };
 }
@@ -134,6 +135,7 @@ export function normalizeV2(value) {
   defaults.course.completedDays = normalizeCompletedDays(course?.completedDays);
   defaults.course.activeLesson = normalizeActiveLesson(course?.activeLesson);
   defaults.course.challengeBest = normalizeBestScores(course?.challengeBest, 125);
+  defaults.course.dailyPick = normalizeDailyPick(course?.dailyPick);
   return defaults;
 }
 
@@ -276,9 +278,11 @@ function normalizeActiveLesson(value) {
   return {
     dayIndex,
     startedAt: toIsoString(value.startedAt, new Date().toISOString()),
-    stage: ["review", "lesson", "recall", "grid", "vocabulary", "complete"].includes(value.stage)
-      ? value.stage
-      : "review",
+    stage: value.stage === "review"
+      ? "lesson"
+      : ["lesson", "recall", "grid", "vocabulary", "complete"].includes(value.stage)
+        ? value.stage
+        : "lesson",
     reviewItems,
     reviewResults: normalizeResultMap(value.reviewResults),
     lessonOpened: Boolean(value.lessonOpened),
@@ -296,6 +300,15 @@ function normalizeActiveLesson(value) {
     gridStartedAt: toIsoString(value.gridStartedAt),
     vocabularyOpened: Boolean(value.vocabularyOpened),
   };
+}
+
+function normalizeDailyPick(value) {
+  if (!isPlainObject(value)) return null;
+  const dayIndex = Number(value.dayIndex);
+  const dateKey = typeof value.dateKey === "string" ? value.dateKey : "";
+  if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= 125) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
+  return { dateKey, dayIndex };
 }
 
 function normalizeResultMap(value) {
@@ -362,7 +375,7 @@ function assertStrictState(value) {
     );
   });
   if (value.grid && value.grid.session && !normalizeSavedSession(value.grid.session)) {
-    throw new Error("저장된 연속 그리드 세션이 올바르지 않습니다.");
+    throw new Error("저장된 한자 순서 게임 세션이 올바르지 않습니다.");
   }
   if (value.course?.activeLesson && !normalizeActiveLesson(value.course.activeLesson)) {
     throw new Error("저장된 오늘의 학습 기록이 올바르지 않습니다.");

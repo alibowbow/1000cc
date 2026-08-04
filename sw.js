@@ -1,4 +1,4 @@
-const CACHE_NAME = "1000cc-static-v8-20260804";
+const CACHE_NAME = "1000cc-static-v9-20260805";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -11,6 +11,22 @@ const APP_SHELL = [
   "./manifest.webmanifest",
   "./icon.svg",
   "./assets/learning-seasons-atlas.webp",
+  "./assets/memory-atlas-01.webp",
+  "./assets/memory-atlas-02.webp",
+  "./assets/memory-atlas-03.webp",
+  "./assets/memory-atlas-04.webp",
+  "./assets/memory-atlas-05.webp",
+  "./assets/memory-atlas-06.webp",
+  "./assets/memory-atlas-07.webp",
+  "./assets/memory-atlas-08.webp",
+  "./assets/memory-atlas-09.webp",
+  "./assets/memory-atlas-10.webp",
+  "./assets/memory-atlas-11.webp",
+  "./assets/memory-atlas-12.webp",
+  "./assets/memory-atlas-13.webp",
+  "./assets/memory-atlas-14.webp",
+  "./assets/memory-atlas-15.webp",
+  "./assets/memory-atlas-16.webp",
   "./js/data-model.js",
   "./js/course-engine.js",
   "./js/grid-engine.js",

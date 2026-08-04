@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f0e7" />
     <meta
       name="description"
-      content="하루 5분, 125일 동안 천자문 1,000자를 복습과 연속 그리드로 익히는 학습 앱"
+      content="매일 무작위 8자를 그림·회상·한자 순서 게임으로 익히는 천자문 학습 앱"
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
@@ -36,9 +36,9 @@
 
       <button class="icon-button tools-button" id="tools-button" type="button" aria-haspopup="dialog">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z" /></svg>
-        <span>학습 도구</span>
+        <span>학습 메뉴</span>
       </button>
-      <button class="icon-button" id="settings-button" type="button" aria-haspopup="dialog">
+      <button class="icon-button" id="settings-button" type="button" aria-haspopup="dialog" aria-label="설정 열기">
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
           <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.82 2.82-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.36a1.7 1.7 0 0 0-1.88.34l-.06.06-2.82-2.82.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3v-4h.04A1.7 1.7 0 0 0 4.6 8.92a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.82-2.82.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 10 3V3h4v.08a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.82 2.82-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04H21v4h-.04A1.7 1.7 0 0 0 19.4 15Z" />
@@ -61,7 +61,7 @@
               <span><strong id="shared-challenge-progress">0 / 8</strong></span>
               <span>오답 <strong id="shared-challenge-wrong">0</strong></span>
             </div>
-            <div class="daily-board" id="shared-challenge-board" aria-label="공유 8자 도전 그리드"></div>
+            <div class="daily-board" id="shared-challenge-board" aria-label="공유 8자 도전 게임판"></div>
           </div>
           <div class="shared-challenge-result" id="shared-challenge-result" hidden>
             <strong>도전 완료</strong>
@@ -79,30 +79,32 @@
           <aside class="course-rail" aria-label="125일 과정 요약">
             <p class="course-rail__eyebrow">학습 일지</p>
             <div class="course-ring" id="course-ring" style="--course-ratio: 0deg">
-              <div><strong id="course-ring-day">1</strong><span>/125일</span></div>
+              <div><strong id="course-ring-count">0</strong><span>/125 연</span></div>
             </div>
             <dl class="course-facts">
               <div><dt>완료</dt><dd><span id="course-completed-days">0</span>일</dd></div>
               <div><dt>연속 학습</dt><dd><span id="course-streak">0</span>일</dd></div>
               <div><dt>숙련 글자</dt><dd><span id="course-mastered-count">0</span>자</dd></div>
             </dl>
-            <div class="rail-review">
-              <div><span>오늘 복습</span><strong><span id="today-review-count">0</span>자</strong></div>
-              <div class="rail-review__characters" id="today-review-preview" aria-hidden="true"></div>
-            </div>
           </aside>
 
           <div class="today-main">
             <header class="today-hero">
               <div class="today-hero__heading">
                 <div>
-                  <p class="eyebrow">오늘의 학습</p>
-                  <h1 id="today-title"><span id="today-day-number">1</span>일차</h1>
+                  <p class="eyebrow">매일 새로 고른 한 연</p>
+                  <h1 id="today-title">오늘의 8자</h1>
                 </div>
-                <button class="share-button" id="share-today-challenge" type="button" aria-label="오늘의 8자 도전 공유">
-                  <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 12v7h11V8h-4M12 3v11M8 7l4-4 4 4" /></svg>
-                  도전 공유
-                </button>
+                <div class="today-hero__actions">
+                  <button class="share-button shuffle-button" id="shuffle-today-lesson" type="button">
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
+                    다른 8자
+                  </button>
+                  <button class="share-button" id="share-today-challenge" type="button" aria-label="오늘의 8자 도전 공유">
+                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 12v7h11V8h-4M12 3v11M8 7l4-4 4 4" /></svg>
+                    도전 공유
+                  </button>
+                </div>
               </div>
               <p class="today-hero__range" id="today-range-copy">첫째 마당 · 1–8자</p>
               <div class="today-characters" id="today-characters" aria-label="오늘의 여덟 글자"></div>
@@ -113,10 +115,10 @@
                 </div>
                 <div class="memory-scene">
                   <div class="memory-scene__copy">
-                    <strong>장면으로 기억하기</strong>
+                    <strong>그림으로 기억하기</strong>
                     <p id="today-memory-scene"></p>
                   </div>
-                  <div class="memory-scene__art" aria-hidden="true"></div>
+                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자를 그림으로 기억하기"></button>
                 </div>
               </div>
               <button class="daily-start" id="start-daily-learning" type="button">
@@ -125,37 +127,9 @@
               </button>
             </header>
 
-            <ol class="daily-path" id="daily-path" aria-label="오늘의 학습 순서">
-              <li data-daily-path="review"><span aria-hidden="true">復</span><strong>복습</strong><small id="path-review-copy">0자</small></li>
-              <li data-daily-path="lesson"><span aria-hidden="true">讀</span><strong>오늘의 8자</strong><small>읽고 듣기</small></li>
-              <li data-daily-path="recall"><span aria-hidden="true">憶</span><strong>읽기·뜻 회상</strong><small>3가지 방향</small></li>
-              <li data-daily-path="grid"><span aria-hidden="true">續</span><strong>연속 그리드</strong><small>순서 찾기</small></li>
-              <li data-daily-path="vocabulary"><span aria-hidden="true">語</span><strong>현대 어휘</strong><small>실제 쓰임</small></li>
-              <li data-daily-path="complete"><span aria-hidden="true">完</span><strong>완료</strong><small>오늘 기록</small></li>
-            </ol>
-
             <section class="daily-workflow" id="daily-workflow" aria-label="오늘의 5분 학습" hidden>
-              <article class="daily-step" id="daily-step-review" data-daily-step="review">
-                <header><span>01</span><div><p>먼저 되살리기</p><h2>오늘의 복습</h2></div><strong id="daily-review-progress">0 / 0</strong></header>
-                <div class="daily-review-empty" id="daily-review-empty" hidden>
-                  <strong>오늘은 복습할 글자가 없습니다.</strong><p>바로 새 8자로 시작합니다.</p>
-                </div>
-                <div class="daily-flashcard" id="daily-review-card" hidden>
-                  <span id="daily-review-skill">독음 회상</span>
-                  <strong id="daily-review-character" lang="zh-Hant">天</strong>
-                  <p id="daily-review-prompt">이 글자의 독음을 떠올려 보세요.</p>
-                  <div class="daily-flashcard__answer" id="daily-review-answer" hidden></div>
-                  <button class="quiet-button" id="daily-review-reveal" type="button">정답 보기</button>
-                  <div class="recall-rating" id="daily-review-rating" hidden>
-                    <button type="button" id="daily-review-wrong">헷갈렸어요</button>
-                    <button type="button" id="daily-review-correct">기억났어요</button>
-                  </div>
-                </div>
-                <button class="primary-action step-continue" id="daily-review-continue" type="button" hidden>오늘의 8자 보기</button>
-              </article>
-
               <article class="daily-step" id="daily-step-lesson" data-daily-step="lesson">
-                <header><span>02</span><div><p>새로 익히기</p><h2>오늘의 8자</h2></div></header>
+                <header><span>01</span><div><p>새로 익히기</p><h2>오늘의 8자</h2></div></header>
                 <div class="daily-lesson-grid" id="daily-lesson-grid"></div>
                 <div class="daily-lesson-context">
                   <p id="daily-lesson-meaning"></p>
@@ -168,7 +142,7 @@
               </article>
 
               <article class="daily-step" id="daily-step-recall" data-daily-step="recall">
-                <header><span>03</span><div><p>스스로 꺼내기</p><h2>읽기·뜻 회상</h2></div><strong id="daily-recall-progress">0 / 24</strong></header>
+                <header><span>02</span><div><p>스스로 꺼내기</p><h2>읽기·뜻 회상</h2></div><strong id="daily-recall-progress">0 / 24</strong></header>
                 <div class="recall-tabs" id="daily-recall-tabs" role="tablist" aria-label="회상 방향">
                   <button type="button" data-recall-mode="reading" aria-pressed="true">독음</button>
                   <button type="button" data-recall-mode="meaning" aria-pressed="false">뜻</button>
@@ -184,23 +158,23 @@
                     <button type="button" id="daily-recall-correct">기억났어요</button>
                   </div>
                 </div>
-                <button class="primary-action step-continue" id="daily-recall-continue" type="button" hidden>연속 그리드 시작</button>
+                <button class="primary-action step-continue" id="daily-recall-continue" type="button" hidden>8자 순서 게임 시작</button>
               </article>
 
               <article class="daily-step" id="daily-step-grid" data-daily-step="grid">
-                <header><span>04</span><div><p>순서로 연결하기</p><h2>8자 연속 그리드</h2></div><strong id="daily-grid-progress">0 / 8</strong></header>
+                <header><span>03</span><div><p>순서로 연결하기</p><h2>8자 순서 게임</h2></div><strong id="daily-grid-progress">0 / 8</strong></header>
                 <div class="daily-grid-status">
                   <span>다음 독음 <strong id="daily-grid-target">천</strong></span>
                   <span>정답률 <strong id="daily-grid-accuracy">—</strong></span>
                   <span>오답 <strong id="daily-grid-wrong">0</strong></span>
                 </div>
-                <div class="daily-board" id="daily-board" aria-label="오늘의 8자 연속 그리드"></div>
+                <div class="daily-board" id="daily-board" aria-label="오늘의 8자 순서 게임판"></div>
                 <button class="primary-action step-continue" id="daily-grid-continue" type="button" hidden>현대 어휘 보기</button>
                 <p class="sr-only" id="daily-grid-announcement" aria-live="assertive"></p>
               </article>
 
               <article class="daily-step" id="daily-step-vocabulary" data-daily-step="vocabulary">
-                <header><span>05</span><div><p>지금의 말로 연결하기</p><h2>현대 어휘</h2></div></header>
+                <header><span>04</span><div><p>지금의 말로 연결하기</p><h2>현대 어휘</h2></div></header>
                 <ul class="daily-vocabulary" id="daily-vocabulary"></ul>
                 <div class="confusable-notes" id="daily-confusable-notes"></div>
                 <button class="primary-action step-continue" id="daily-vocabulary-complete" type="button">오늘 학습 완료</button>
@@ -216,19 +190,12 @@
                   <div><span>과정 진도</span><strong id="daily-complete-course">1 / 125</strong></div>
                 </div>
                 <div class="result-actions">
-                  <button class="primary-action" id="daily-next-lesson" type="button">다음 8자 이어서</button>
+                  <button class="primary-action" id="daily-next-lesson" type="button">다른 8자 뽑기</button>
                   <button class="quiet-button" id="daily-share-result" type="button">8자 도전 공유</button>
                 </div>
               </article>
             </section>
 
-            <nav class="today-tools" aria-label="보조 학습 도구">
-              <div><span>학습 도구</span><small>필요할 때 더 깊게</small></div>
-              <button type="button" data-mode="overview"><span aria-hidden="true">全</span>전체 보기</button>
-              <button type="button" data-mode="passage"><span aria-hidden="true">句</span>구절 학습</button>
-              <button type="button" data-mode="grid"><span aria-hidden="true">續</span>연속 그리드</button>
-              <button type="button" data-mode="review"><span aria-hidden="true">復</span>복습</button>
-            </nav>
           </div>
         </div>
       </section>
@@ -340,7 +307,30 @@
           </div>
         </article>
 
-        <aside class="character-inspector" aria-label="선택한 글자 정보">
+        <div class="passage-lower">
+          <section class="memory-study" aria-labelledby="memory-study-title">
+            <header class="memory-study__heading">
+              <div>
+                <p class="eyebrow">눈으로 먼저 떠올리기</p>
+                <h2 id="memory-study-title">그림으로 기억하기</h2>
+              </div>
+              <button class="quiet-button" id="reset-memory-clues" type="button">단서 다시 가리기</button>
+            </header>
+            <div class="memory-study__body">
+              <div class="memory-study__visual" id="passage-memory-visual" role="group" aria-label="그림 속 네 개의 기억 단서">
+                <div class="memory-study__image" id="passage-memory-image" aria-hidden="true"></div>
+                <div class="memory-study__clues" id="passage-memory-clues"></div>
+              </div>
+              <div class="memory-study__notes">
+                <p id="passage-memory-scene"></p>
+                <div class="memory-study__reveal" id="passage-memory-reveal" aria-live="polite">
+                  그림 속 단서를 눌러 두 글자씩 떠올려 보세요.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="character-inspector" aria-label="선택한 글자 정보">
           <div class="character-inspector__glyph" aria-hidden="true">
             <strong id="selected-character" lang="zh-Hant">天</strong>
           </div>
@@ -367,15 +357,16 @@
             </section>
 
           </div>
-        </aside>
+          </aside>
+        </div>
       </section>
 
       <section class="screen" id="screen-grid" data-screen="grid" aria-labelledby="grid-title" hidden>
         <div class="grid-setup" id="grid-setup">
           <div class="screen-heading">
             <div>
-              <p class="eyebrow">대표 학습 · 다음 글자 찾기</p>
-              <h1 id="grid-title">연속 그리드</h1>
+              <p class="eyebrow">대표 게임 · 다음 글자 찾기</p>
+              <h1 id="grid-title">한자 순서 게임</h1>
             </div>
             <p class="screen-summary">정답 칸만 다음 글자로 바뀌어 흐름이 끊기지 않습니다.</p>
           </div>
@@ -384,7 +375,7 @@
             <div>
               <p class="eyebrow">개인 최고 기록</p>
               <h2 id="grid-challenge-title">40자 연속 챌린지</h2>
-              <p>현재 학습 위치부터 무힌트로 40자를 잇습니다.</p>
+            <p>현재 학습 위치부터 힌트 없이 40자를 잇습니다.</p>
             </div>
             <div class="grid-challenge-best">
               <span>최고 기록</span>
@@ -416,11 +407,11 @@
                 <option value="character">글자 힌트</option>
                 <option value="reading">독음 힌트</option>
                 <option value="listening">듣고 찾기</option>
-                <option value="none">무힌트</option>
+                <option value="none">힌트 없음</option>
               </select>
             </label>
             <label class="select-control">
-              <span>그리드 크기</span>
+              <span>게임판 크기</span>
               <select id="session-board-size">
                 <option value="16">4 × 4 · 16칸</option>
                 <option value="25">5 × 5 · 25칸</option>
@@ -450,7 +441,7 @@
             <span id="target-position">전체 1번째</span>
           </div>
 
-          <div class="continuous-board" id="continuous-board" aria-label="연속 그리드"></div>
+            <div class="continuous-board" id="continuous-board" aria-label="한자 순서 게임판"></div>
 
           <div class="phrase-progress">
             <span>현재 4자구</span>
@@ -481,7 +472,7 @@
           </div>
           <div class="result-characters" id="result-characters"></div>
           <div class="result-actions">
-            <button class="primary-action" id="review-result" type="button">바로 복습</button>
+            <button class="quiet-button" id="review-result" type="button">틀린 글자 다시 풀기</button>
             <button class="quiet-button" id="close-result" type="button">학습 종료</button>
           </div>
         </div>
@@ -524,10 +515,10 @@
         <div class="review-list" id="review-list"></div>
         <div class="empty-state" id="review-empty" hidden>
           <strong>지금 복습할 글자가 없습니다.</strong>
-          <p>연속 그리드에서 학습하거나 다른 복습 묶음을 선택해 보세요.</p>
+          <p>한자 순서 게임에서 학습하거나 다른 복습 묶음을 선택해 보세요.</p>
         </div>
         <button class="primary-action review-start" id="start-review-grid" type="button" disabled>
-          선택한 글자로 연속 그리드 시작
+          선택한 글자로 순서 게임 시작
         </button>
       </section>
     </main>
@@ -543,7 +534,7 @@
     <dialog class="tools-dialog" id="tools-dialog" aria-labelledby="tools-title">
       <form method="dialog">
         <div class="dialog-heading">
-          <div><p class="eyebrow">천자문 더 살펴보기</p><h2 id="tools-title">학습 도구</h2></div>
+          <div><p class="eyebrow">원하는 방식으로 익히기</p><h2 id="tools-title">학습 메뉴</h2></div>
           <button class="dialog-close" value="close" aria-label="학습 도구 닫기">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></svg>
           </button>
@@ -552,9 +543,9 @@
           <button type="button" data-mode="today"><span aria-hidden="true">今</span><strong>오늘의 학습</strong><small>5분 과정 이어가기</small></button>
           <button type="button" data-mode="overview"><span aria-hidden="true">全</span><strong>전체 보기</strong><small>검색하고 펼쳐 보기</small></button>
           <button type="button" data-mode="passage"><span aria-hidden="true">句</span><strong>구절 학습</strong><small>원하는 8자 깊게 보기</small></button>
-          <button type="button" data-mode="grid"><span aria-hidden="true">續</span><strong>연속 그리드</strong><small>개인 최고 기록 도전</small></button>
-          <button type="button" data-mode="review"><span aria-hidden="true">復</span><strong>복습</strong><small>약한 글자 골라 보기</small></button>
+          <button type="button" data-mode="grid"><span aria-hidden="true">遊</span><strong>한자 순서 게임</strong><small>다음 글자를 찾아 기록 도전</small></button>
         </nav>
+        <button class="tools-dialog__review" type="button" data-mode="review">약한 글자만 복습하기</button>
       </form>
     </dialog>
 
@@ -592,7 +583,7 @@
           <input id="setting-tap-to-speak" type="checkbox" />
         </label>
         <label class="setting-row">
-          <span><strong>4자 완성 시 읽기</strong><small>연속 그리드에서 완성한 네 글자를 또박또박 읽습니다.</small></span>
+          <span><strong>4자 완성 시 읽기</strong><small>한자 순서 게임에서 완성한 네 글자를 또박또박 읽습니다.</small></span>
           <input id="setting-read-four" type="checkbox" />
         </label>
         <label class="setting-row">

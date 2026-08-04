@@ -131,6 +131,7 @@ test("학습 기록 JSON은 왕복 가능하고 잘못된 인덱스는 거부한
 
 test("125일 과정과 진행 중 8자 학습 상태를 저장하고 복원한다", function () {
   const state = createDefaultState();
+  state.course.dailyPick = { dateKey: "2026-08-04", dayIndex: 73 };
   state.course.completedDays[0] = {
     completedAt: "2026-08-04T01:00:00.000Z",
     duration: 240000,
@@ -154,9 +155,31 @@ test("125일 과정과 진행 중 8자 학습 상태를 저장하고 복원한�
   };
   const restored = parseImportJson(createExportJson(state));
   assert.equal(restored.course.completedDays[0].accuracy, 92);
+  assert.deepEqual(restored.course.dailyPick, { dateKey: "2026-08-04", dayIndex: 73 });
   assert.equal(restored.course.activeLesson.dayIndex, 1);
   assert.equal(restored.course.activeLesson.gridSession.boardSize, 8);
   assert.deepEqual(restored.course.activeLesson.gridSession.order, [8, 9, 10, 11, 12, 13, 14, 15]);
+});
+
+test("예전 오늘 복습 단계는 새 버전에서 오늘의 8자 단계로 이어진다", function () {
+  const state = createDefaultState();
+  state.course.activeLesson = {
+    dayIndex: 3,
+    startedAt: "2026-08-04T02:00:00.000Z",
+    stage: "review",
+    reviewItems: [{ index: 0, skill: "reading" }],
+    reviewResults: {},
+    lessonOpened: false,
+    recallMode: "reading",
+    recallCursor: 0,
+    recallResults: { reading: {}, meaning: {}, reverse: {} },
+    gridSession: null,
+    gridWrongCount: 0,
+    gridStartedAt: null,
+    vocabularyOpened: false,
+  };
+  const restored = parseImportJson(createExportJson(state));
+  assert.equal(restored.course.activeLesson.stage, "lesson");
 });
 
 test("40자 챌린지 개인 최고 기록을 정답률·시간과 함께 보존한다", function () {

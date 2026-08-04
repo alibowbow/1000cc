@@ -4,8 +4,10 @@ import {
   COURSE_DAYS,
   createChallengeUrl,
   createDailyLessonState,
+  createRandomDailyPick,
   getCourseStats,
   getLesson,
+  getRandomDailyPick,
   isBetterScore,
   isReadingAlignedWord,
   parseChallengeDay,
@@ -49,15 +51,30 @@ test("125일 과정은 매일 8자·전체 뜻·고유한 기억 장면·현대 
   ]);
 });
 
-test("오늘 복습은 새 8자를 제외하고 약한 학습 영역을 자동 선택한다", function () {
+test("복습은 오늘의 학습에서 분리되고 새 8자로 바로 시작한다", function () {
   const now = Date.UTC(2026, 7, 4, 1);
   let progress = {};
   progress = recordSkillAttempt(progress, 0, "reading", { correct: false, now });
   progress = recordSkillAttempt(progress, 1, "meaning", { correct: false, now });
   progress = recordSkillAttempt(progress, 8, "reverse", { correct: false, now });
   const daily = createDailyLessonState(0, progress, now + 1000);
-  assert.deepEqual(daily.reviewItems.map(function (item) { return item.index; }).sort(), [8]);
-  assert.equal(daily.reviewItems[0].skill, "reverse");
+  assert.equal(daily.stage, "lesson");
+  assert.deepEqual(daily.reviewItems, []);
+});
+
+test("오늘의 8자는 미완료 연에서 무작위로 고르고 같은 날짜에는 유지한다", function () {
+  const now = new Date(2026, 7, 5, 9).getTime();
+  const completedDays = {
+    0: { completedAt: new Date(2026, 7, 3, 9).toISOString() },
+    1: { completedAt: new Date(2026, 7, 4, 9).toISOString() },
+  };
+  const first = createRandomDailyPick(completedDays, { now, random: 0 });
+  const last = createRandomDailyPick(completedDays, { now, random: 0.999999 });
+  assert.equal(first.dayIndex, 2);
+  assert.equal(last.dayIndex, 124);
+  assert.equal(first.dateKey, "2026-08-05");
+  assert.equal(getRandomDailyPick({ dailyPick: first }, now), 2);
+  assert.equal(getRandomDailyPick({ dailyPick: first }, now + 24 * 60 * 60 * 1000), null);
 });
 
 test("숙련은 서로 다른 날짜의 영역별 정답을 요구한다", function () {
