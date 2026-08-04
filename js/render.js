@@ -3,8 +3,13 @@ export function createOverviewCell(item, options) {
   button.type = "button";
   button.className = "overview-cell";
   button.dataset.index = String(item.index);
-  button.title = options.concealMeaning ? `${item.character} · 눌러서 뜻과 읽기 확인` : item.contextHun;
+  button.title = options.concealMeaning
+    ? `${item.character} · 눌러서 뜻과 읽기 확인`
+    : options.meaningToggle
+      ? `${item.contextHun} · 다시 눌러 뜻 가리기`
+      : item.contextHun;
   button.setAttribute("aria-pressed", String(options.selected));
+  if (options.meaningToggle) button.setAttribute("aria-expanded", String(options.revealed));
   if (options.selected) button.classList.add("is-selected");
   if (options.revealed) button.classList.add("is-revealed");
   if (options.contextOnly) button.classList.add("is-context");
@@ -12,8 +17,10 @@ export function createOverviewCell(item, options) {
   if (options.due) button.classList.add("is-due");
   button.setAttribute(
     "aria-label",
-    options.concealMeaning
-      ? `${item.number}번째 글자 ${item.character}, 뜻 가림, 눌러서 확인`
+    options.meaningToggle
+      ? options.revealed
+        ? `${item.number}번째, ${item.contextHun}, 다시 누르면 뜻 가림`
+        : `${item.number}번째 글자 ${item.character}, 뜻 가림, 눌러서 확인`
       : `${item.number}번째, ${item.contextHun}, 숙련도 ${options.masteryLevel}단계`,
   );
   button.innerHTML =

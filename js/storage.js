@@ -6,14 +6,15 @@ export const STORAGE_KEY_V1 = "cheonjamun-study-v1";
 export const STORAGE_KEY_V2 = "cheonjamun-study-v2";
 export const EXPORT_SCHEMA = "1000cc-study-record";
 
-const MODES = ["overview", "passage", "grid", "review"];
+const MODES = ["today", "overview", "passage", "grid", "review"];
 const DIFFICULTIES = ["character", "reading", "listening", "none"];
+const SKILLS = ["reading", "meaning", "reverse", "order", "listening"];
 
 export function createDefaultState() {
   return {
     version: 2,
     ui: {
-      mode: "overview",
+      mode: "today",
       selectedIndex: 0,
       rangeStart: 0,
       overviewGroupSize: 4,
@@ -38,11 +39,17 @@ export function createDefaultState() {
     grid: {
       lastCursor: 0,
       session: null,
+      bestScores: {},
     },
     review: {
       selectedIndexes: [],
       source: "due",
       rangeStart: 0,
+    },
+    course: {
+      completedDays: {},
+      activeLesson: null,
+      challengeBest: {},
     },
   };
 }
@@ -50,8 +57,8 @@ export function createDefaultState() {
 export function migrateV1(value, now = Date.now()) {
   if (!isPlainObject(value)) throw new Error("v1 학습 기록이 올바르지 않습니다.");
   const next = createDefaultState();
-  const modeMap = { browse: "overview", sequence: "grid", listen: "passage" };
-  next.ui.mode = modeMap[value.mode] || "overview";
+  // 기존 진도와 마지막 위치는 보존하되, 새 125일 과정의 첫 진입점은 오늘의 학습으로 통일한다.
+  next.ui.mode = "today";
   next.ui.selectedIndex = validIndex(value.selectedIndex, 0);
   next.ui.rangeStart = normalizeRange(value.rangeStart);
   next.settings.hideReading = Boolean(value.hideReading);
@@ -87,8 +94,9 @@ export function normalizeV2(value) {
   const settings = isPlainObject(value.settings) ? value.settings : {};
   const grid = isPlainObject(value.grid) ? value.grid : {};
   const review = isPlainObject(value.review) ? value.review : {};
+  const course = isPlainObject(value.course) ? value.course : null;
 
-  defaults.ui.mode = MODES.includes(ui.mode) ? ui.mode : defaults.ui.mode;
+  defaults.ui.mode = course && MODES.includes(ui.mode) ? ui.mode : "today";
   defaults.ui.selectedIndex = validIndex(ui.selectedIndex, 0);
   defaults.ui.rangeStart = normalizeRange(ui.rangeStart);
   defaults.ui.overviewGroupSize = Number(ui.overviewGroupSize) === 8 ? 8 : 4;
@@ -117,11 +125,15 @@ export function normalizeV2(value) {
   defaults.progress = normalizeProgress(value.progress);
   defaults.grid.lastCursor = clampCursor(grid.lastCursor);
   defaults.grid.session = grid.session ? normalizeSavedSession(grid.session) : null;
+  defaults.grid.bestScores = normalizeBestScores(grid.bestScores);
   defaults.review.selectedIndexes = uniqueValidIndexes(review.selectedIndexes);
   defaults.review.source = ["due", "recent", "frequent", "range"].includes(review.source)
     ? review.source
     : "due";
   defaults.review.rangeStart = normalizeRange(review.rangeStart);
+  defaults.course.completedDays = normalizeCompletedDays(course?.completedDays);
+  defaults.course.activeLesson = normalizeActiveLesson(course?.activeLesson);
+  defaults.course.challengeBest = normalizeBestScores(course?.challengeBest, 125);
   return defaults;
 }
 
@@ -223,6 +235,7 @@ function normalizeSavedSession(value) {
       difficulty: DIFFICULTIES.includes(value.difficulty) ? value.difficulty : "character",
       scope: typeof value.scope === "string" ? value.scope : "continue",
       reviewMode: Boolean(value.reviewMode),
+      challengeMode: Boolean(value.challengeMode),
       correctCount: Math.max(0, Math.floor(Number(value.correctCount) || 0)),
       wrongCount: Math.max(0, Math.floor(Number(value.wrongCount) || 0)),
       wrongIndexes: uniqueValidIndexes(value.wrongIndexes),
@@ -233,6 +246,101 @@ function normalizeSavedSession(value) {
   } catch (error) {
     return null;
   }
+}
+
+function normalizeActiveLesson(value) {
+  if (!isPlainObject(value)) return null;
+  const dayIndex = Number(value.dayIndex);
+  if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= 125) return null;
+  const reviewItems = Array.isArray(value.reviewItems)
+    ? value.reviewItems
+        .map(function (item) {
+          if (!isPlainObject(item)) return null;
+          const index = Number(item.index);
+          if (!Number.isInteger(index) || index < 0 || index >= 1000 || !SKILLS.includes(item.skill)) {
+            return null;
+          }
+          return { index, skill: item.skill };
+        })
+        .filter(Boolean)
+        .slice(0, 20)
+    : [];
+  let gridSession = null;
+  if (value.gridSession) {
+    try {
+      gridSession = restoreGridSession(value.gridSession);
+    } catch (error) {
+      gridSession = null;
+    }
+  }
+  return {
+    dayIndex,
+    startedAt: toIsoString(value.startedAt, new Date().toISOString()),
+    stage: ["review", "lesson", "recall", "grid", "vocabulary", "complete"].includes(value.stage)
+      ? value.stage
+      : "review",
+    reviewItems,
+    reviewResults: normalizeResultMap(value.reviewResults),
+    lessonOpened: Boolean(value.lessonOpened),
+    recallMode: ["reading", "meaning", "reverse"].includes(value.recallMode)
+      ? value.recallMode
+      : "reading",
+    recallCursor: Math.min(7, Math.max(0, Math.floor(Number(value.recallCursor) || 0))),
+    recallResults: {
+      reading: normalizeResultMap(value.recallResults?.reading),
+      meaning: normalizeResultMap(value.recallResults?.meaning),
+      reverse: normalizeResultMap(value.recallResults?.reverse),
+    },
+    gridSession,
+    gridWrongCount: Math.max(0, Math.floor(Number(value.gridWrongCount) || 0)),
+    gridStartedAt: toIsoString(value.gridStartedAt),
+    vocabularyOpened: Boolean(value.vocabularyOpened),
+  };
+}
+
+function normalizeResultMap(value) {
+  if (!isPlainObject(value)) return {};
+  const result = {};
+  Object.entries(value).forEach(function ([key, answer]) {
+    const index = Number(key);
+    if (Number.isInteger(index) && index >= 0 && index < 1000 && ["correct", "wrong"].includes(answer)) {
+      result[index] = answer;
+    }
+  });
+  return result;
+}
+
+function normalizeCompletedDays(value) {
+  if (!isPlainObject(value)) return {};
+  const result = {};
+  Object.entries(value).forEach(function ([key, entry]) {
+    const day = Number(key);
+    if (!Number.isInteger(day) || day < 0 || day >= 125 || !isPlainObject(entry)) return;
+    const completedAt = toIsoString(entry.completedAt);
+    if (!completedAt) return;
+    result[day] = {
+      completedAt,
+      duration: Math.max(0, Math.floor(Number(entry.duration) || 0)),
+      accuracy: Math.min(100, Math.max(0, Math.round(Number(entry.accuracy) || 0))),
+      wrongCount: Math.max(0, Math.floor(Number(entry.wrongCount) || 0)),
+    };
+  });
+  return result;
+}
+
+function normalizeBestScores(value, maximumKey = 1000) {
+  if (!isPlainObject(value)) return {};
+  const result = {};
+  Object.entries(value).forEach(function ([key, score]) {
+    const index = Number(key);
+    if (!Number.isInteger(index) || index < 0 || index >= maximumKey || !isPlainObject(score)) return;
+    result[index] = {
+      accuracy: Math.min(100, Math.max(0, Math.round(Number(score.accuracy) || 0))),
+      duration: Math.max(0, Math.floor(Number(score.duration) || 0)),
+      completedAt: toIsoString(score.completedAt),
+    };
+  });
+  return result;
 }
 
 function assertStrictState(value) {
@@ -255,6 +363,9 @@ function assertStrictState(value) {
   });
   if (value.grid && value.grid.session && !normalizeSavedSession(value.grid.session)) {
     throw new Error("저장된 연속 그리드 세션이 올바르지 않습니다.");
+  }
+  if (value.course?.activeLesson && !normalizeActiveLesson(value.course.activeLesson)) {
+    throw new Error("저장된 오늘의 학습 기록이 올바르지 않습니다.");
   }
 }
 

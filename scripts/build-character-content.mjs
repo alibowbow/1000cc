@@ -10,6 +10,10 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const outputPath = resolve(scriptDirectory, "../character-content.js");
 const characters = Array.from(COUPLETS.map((couplet) => couplet.hanja).join(""));
 const characterSet = new Set(characters);
+const readings = Array.from(COUPLETS.map((couplet) => couplet.reading.replace(/\s/g, "")).join(""));
+const readingByCharacter = new Map(characters.map(function (character, index) {
+  return [character, readings[index]];
+}));
 const candidates = new Map(characters.map((character) => [character, []]));
 const sourceHeaders = {
   "User-Agent": "1000cc-content-builder/1.0 (https://github.com/alibowbow/1000cc)",
@@ -26,6 +30,20 @@ function decodeXml(value) {
 
 function pushCandidate(character, candidate) {
   const list = candidates.get(character);
+  const origin = Array.from(candidate.origin);
+  const syllables = Array.from(candidate.word);
+  const contextReading = readingByCharacter.get(character);
+  if (
+    origin.length !== syllables.length ||
+    !origin.some(function (originCharacter, position) {
+      return originCharacter === character && syllables[position] === contextReading;
+    }) ||
+    /이름|성씨|지명|고을|중국의|나라의|왕조|사람을 이르는 말|옛말|방언|북한어|산 이름/.test(
+      candidate.definition,
+    )
+  ) {
+    return;
+  }
   if (!list || list.some((item) => item.word === candidate.word && item.origin === candidate.origin)) return;
   list.push(candidate);
   list.sort((left, right) => left.score - right.score || left.word.localeCompare(right.word, "ko"));

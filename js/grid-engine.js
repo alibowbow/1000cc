@@ -9,7 +9,7 @@ export function createIndexRange(startIndex, endIndex) {
 }
 
 export function createGridSession(options = {}) {
-  const boardSize = [16, 25].includes(Number(options.boardSize))
+  const boardSize = [8, 16, 25].includes(Number(options.boardSize))
     ? Number(options.boardSize)
     : 16;
   const startIndex = clamp(Math.floor(Number(options.startIndex) || 0), 0, 999);
@@ -105,7 +105,7 @@ export function restoreGridSession(value) {
 
   if (
     order.length === 0 ||
-    ![16, 25].includes(boardSize) ||
+    ![8, 16, 25].includes(boardSize) ||
     !Number.isInteger(targetPosition) ||
     !Number.isInteger(supplyPosition) ||
     targetPosition < 0 ||

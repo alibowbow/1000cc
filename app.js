@@ -9,11 +9,23 @@ import {
 } from "./js/data-model.js";
 import { createGridSession, getSessionProgress, selectGridIndex } from "./js/grid-engine.js";
 import {
+  COURSE_DAYS,
+  SKILL_LABELS,
+  createChallengeUrl,
+  createDailyLessonState,
+  getCourseStats,
+  getDailyCompletion,
+  getLesson,
+  isBetterScore,
+  parseChallengeDay,
+} from "./js/course-engine.js";
+import {
   getDueIndexes,
   getFrequentWrongIndexes,
   getMasteredCount,
   getRecentWrongIndexes,
   recordAttempt,
+  recordSkillAttempt,
 } from "./js/progress-engine.js";
 import {
   createOverviewCell,
@@ -62,13 +74,102 @@ let overviewRevealedIndexes = new Set();
 let toastTimer = 0;
 let completionTimer = 0;
 let renderedSessionKey = "";
+let renderedDailyGridKey = "";
+let dailyReviewRevealed = false;
+let dailyRecallRevealed = false;
+let sharedChallengeDay = parseChallengeDay(window.location.search);
+let sharedChallengeSession = null;
+let sharedChallengeStartedAt = 0;
+let sharedChallengeWrong = 0;
 
 const elements = {
   brandHome: document.querySelector("#brand-home"),
+  completedDaysCount: document.querySelector("#completed-days-count"),
+  courseProgress: document.querySelector("#course-progress"),
   masteredCount: document.querySelector("#mastered-count"),
-  masteryProgress: document.querySelector("#mastery-progress"),
+  toolsButton: document.querySelector("#tools-button"),
+  toolsDialog: document.querySelector("#tools-dialog"),
   modeButtons: Array.from(document.querySelectorAll("[data-mode]")),
   screens: Array.from(document.querySelectorAll("[data-screen]")),
+  sharedChallenge: document.querySelector("#shared-challenge"),
+  sharedChallengeDay: document.querySelector("#shared-challenge-day"),
+  sharedChallengeMeaning: document.querySelector("#shared-challenge-meaning"),
+  sharedChallengePhrase: document.querySelector("#shared-challenge-phrase"),
+  startSharedChallenge: document.querySelector("#start-shared-challenge"),
+  sharedChallengePlay: document.querySelector("#shared-challenge-play"),
+  sharedChallengeTarget: document.querySelector("#shared-challenge-target"),
+  sharedChallengeProgress: document.querySelector("#shared-challenge-progress"),
+  sharedChallengeWrong: document.querySelector("#shared-challenge-wrong"),
+  sharedChallengeBoard: document.querySelector("#shared-challenge-board"),
+  sharedChallengeResult: document.querySelector("#shared-challenge-result"),
+  sharedChallengeTime: document.querySelector("#shared-challenge-time"),
+  sharedChallengeAccuracy: document.querySelector("#shared-challenge-accuracy"),
+  retrySharedChallenge: document.querySelector("#retry-shared-challenge"),
+  shareSharedChallenge: document.querySelector("#share-shared-challenge"),
+  sharedChallengeAnnouncement: document.querySelector("#shared-challenge-announcement"),
+  todayDashboard: document.querySelector("#today-dashboard"),
+  courseRing: document.querySelector("#course-ring"),
+  courseRingDay: document.querySelector("#course-ring-day"),
+  courseCompletedDays: document.querySelector("#course-completed-days"),
+  courseStreak: document.querySelector("#course-streak"),
+  courseMasteredCount: document.querySelector("#course-mastered-count"),
+  todayReviewCount: document.querySelector("#today-review-count"),
+  todayReviewPreview: document.querySelector("#today-review-preview"),
+  todayDayNumber: document.querySelector("#today-day-number"),
+  todayRangeCopy: document.querySelector("#today-range-copy"),
+  todayCharacters: document.querySelector("#today-characters"),
+  todayMeaning: document.querySelector("#today-meaning"),
+  todayMemoryScene: document.querySelector("#today-memory-scene"),
+  shareTodayChallenge: document.querySelector("#share-today-challenge"),
+  startDailyLearning: document.querySelector("#start-daily-learning"),
+  dailyStartLabel: document.querySelector("#daily-start-label"),
+  dailyPath: document.querySelector("#daily-path"),
+  pathReviewCopy: document.querySelector("#path-review-copy"),
+  dailyWorkflow: document.querySelector("#daily-workflow"),
+  dailySteps: Array.from(document.querySelectorAll("[data-daily-step]")),
+  dailyReviewProgress: document.querySelector("#daily-review-progress"),
+  dailyReviewEmpty: document.querySelector("#daily-review-empty"),
+  dailyReviewCard: document.querySelector("#daily-review-card"),
+  dailyReviewSkill: document.querySelector("#daily-review-skill"),
+  dailyReviewCharacter: document.querySelector("#daily-review-character"),
+  dailyReviewPrompt: document.querySelector("#daily-review-prompt"),
+  dailyReviewAnswer: document.querySelector("#daily-review-answer"),
+  dailyReviewReveal: document.querySelector("#daily-review-reveal"),
+  dailyReviewRating: document.querySelector("#daily-review-rating"),
+  dailyReviewWrong: document.querySelector("#daily-review-wrong"),
+  dailyReviewCorrect: document.querySelector("#daily-review-correct"),
+  dailyReviewContinue: document.querySelector("#daily-review-continue"),
+  dailyLessonGrid: document.querySelector("#daily-lesson-grid"),
+  dailyLessonMeaning: document.querySelector("#daily-lesson-meaning"),
+  dailyLessonScene: document.querySelector("#daily-lesson-scene"),
+  dailyPlayCouplet: document.querySelector("#daily-play-couplet"),
+  dailyLessonContinue: document.querySelector("#daily-lesson-continue"),
+  dailyRecallProgress: document.querySelector("#daily-recall-progress"),
+  dailyRecallTabs: document.querySelector("#daily-recall-tabs"),
+  dailyRecallLabel: document.querySelector("#daily-recall-label"),
+  dailyRecallPrompt: document.querySelector("#daily-recall-prompt"),
+  dailyRecallAnswer: document.querySelector("#daily-recall-answer"),
+  dailyRecallReveal: document.querySelector("#daily-recall-reveal"),
+  dailyRecallRating: document.querySelector("#daily-recall-rating"),
+  dailyRecallWrong: document.querySelector("#daily-recall-wrong"),
+  dailyRecallCorrect: document.querySelector("#daily-recall-correct"),
+  dailyRecallContinue: document.querySelector("#daily-recall-continue"),
+  dailyGridProgress: document.querySelector("#daily-grid-progress"),
+  dailyGridTarget: document.querySelector("#daily-grid-target"),
+  dailyGridAccuracy: document.querySelector("#daily-grid-accuracy"),
+  dailyGridWrong: document.querySelector("#daily-grid-wrong"),
+  dailyBoard: document.querySelector("#daily-board"),
+  dailyGridContinue: document.querySelector("#daily-grid-continue"),
+  dailyGridAnnouncement: document.querySelector("#daily-grid-announcement"),
+  dailyVocabulary: document.querySelector("#daily-vocabulary"),
+  dailyConfusableNotes: document.querySelector("#daily-confusable-notes"),
+  dailyVocabularyComplete: document.querySelector("#daily-vocabulary-complete"),
+  dailyCompleteDay: document.querySelector("#daily-complete-day"),
+  dailyCompleteTime: document.querySelector("#daily-complete-time"),
+  dailyCompleteAccuracy: document.querySelector("#daily-complete-accuracy"),
+  dailyCompleteCourse: document.querySelector("#daily-complete-course"),
+  dailyNextLesson: document.querySelector("#daily-next-lesson"),
+  dailyShareResult: document.querySelector("#daily-share-result"),
   overviewRangeLabel: document.querySelector("#overview-range-label"),
   overviewRange: document.querySelector("#overview-range"),
   overviewRangeNav: document.querySelector("#overview-range-nav"),
@@ -105,11 +206,11 @@ const elements = {
   selectedStrokes: document.querySelector("#selected-strokes"),
   relatedWordsSection: document.querySelector("#related-words-section"),
   selectedRelatedWords: document.querySelector("#selected-related-words"),
-  playCharacter: document.querySelector("#play-character"),
-  playCharacterLabel: document.querySelector("#play-character-label"),
   gridSetup: document.querySelector("#grid-setup"),
   gridSession: document.querySelector("#grid-session"),
   sessionResult: document.querySelector("#session-result"),
+  gridChallengeBest: document.querySelector("#grid-challenge-best"),
+  startGridChallenge: document.querySelector("#start-grid-challenge"),
   sessionForm: document.querySelector("#session-form"),
   sessionScope: document.querySelector("#session-scope"),
   customStartField: document.querySelector("#custom-start-field"),
@@ -240,8 +341,62 @@ function bindEvents() {
   elements.modeButtons.forEach(function (button) {
     button.addEventListener("click", function () {
       setMode(button.dataset.mode);
+      if (elements.toolsDialog.open) elements.toolsDialog.close();
     });
   });
+  elements.toolsButton.addEventListener("click", function () {
+    elements.toolsDialog.showModal();
+  });
+  elements.toolsDialog.addEventListener("click", function (event) {
+    if (event.target === elements.toolsDialog) elements.toolsDialog.close();
+  });
+
+  elements.startDailyLearning.addEventListener("click", startDailyLearning);
+  elements.shareTodayChallenge.addEventListener("click", shareTodayLesson);
+  elements.todayCharacters.addEventListener("click", speakDailyCharacter);
+  elements.dailyReviewReveal.addEventListener("click", revealDailyReview);
+  elements.dailyReviewCharacter.addEventListener("click", speakCurrentDailyReview);
+  elements.dailyReviewCharacter.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      speakCurrentDailyReview();
+    }
+  });
+  elements.dailyReviewWrong.addEventListener("click", function () {
+    rateDailyReview(false);
+  });
+  elements.dailyReviewCorrect.addEventListener("click", function () {
+    rateDailyReview(true);
+  });
+  elements.dailyReviewContinue.addEventListener("click", function () {
+    moveDailyStage("lesson");
+  });
+  elements.dailyLessonGrid.addEventListener("click", speakDailyCharacter);
+  elements.dailyPlayCouplet.addEventListener("click", playDailyCouplet);
+  elements.dailyLessonContinue.addEventListener("click", finishDailyLessonIntro);
+  elements.dailyRecallTabs.addEventListener("click", selectRecallMode);
+  elements.dailyRecallReveal.addEventListener("click", revealDailyRecall);
+  elements.dailyRecallWrong.addEventListener("click", function () {
+    rateDailyRecall(false);
+  });
+  elements.dailyRecallCorrect.addEventListener("click", function () {
+    rateDailyRecall(true);
+  });
+  elements.dailyRecallContinue.addEventListener("click", startDailyGrid);
+  elements.dailyBoard.addEventListener("click", handleDailyBoardClick);
+  elements.dailyBoard.addEventListener("keydown", handleCompactBoardKeyboard);
+  elements.dailyGridContinue.addEventListener("click", function () {
+    moveDailyStage("vocabulary");
+  });
+  elements.dailyVocabularyComplete.addEventListener("click", completeDailyLesson);
+  elements.dailyNextLesson.addEventListener("click", continueToNextDailyLesson);
+  elements.dailyShareResult.addEventListener("click", shareTodayLesson);
+
+  elements.startSharedChallenge.addEventListener("click", startSharedChallenge);
+  elements.retrySharedChallenge.addEventListener("click", startSharedChallenge);
+  elements.shareSharedChallenge.addEventListener("click", shareTodayLesson);
+  elements.sharedChallengeBoard.addEventListener("click", handleSharedChallengeClick);
+  elements.sharedChallengeBoard.addEventListener("keydown", handleCompactBoardKeyboard);
 
   elements.overviewSearchForm.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -318,12 +473,6 @@ function bindEvents() {
     grid.addEventListener("click", handlePassageCharacterClick);
     grid.addEventListener("keydown", handleFourGridKeyboard);
   });
-  elements.playCharacter.addEventListener("click", function () {
-    tts.speak(CHARACTERS[appState.ui.selectedIndex].contextHun, {
-      kind: "character",
-      onError: handleTtsError,
-    });
-  });
   elements.playCouplet.addEventListener("click", playCurrentCouplet);
   elements.continuousListen.addEventListener("click", toggleContinuousListening);
   elements.markCouplet.addEventListener("click", markCurrentCouplet);
@@ -355,6 +504,7 @@ function bindEvents() {
     event.preventDefault();
     startStandardGridSession();
   });
+  elements.startGridChallenge.addEventListener("click", startGridChallenge);
   elements.resumeSession.addEventListener("click", function () {
     renderGridScreen();
   });
@@ -446,6 +596,7 @@ function bindEvents() {
 function renderApp() {
   renderHeader();
   renderModes();
+  if (sharedChallengeDay !== null || appState.ui.mode === "today") renderTodayScreen();
   if (appState.ui.mode === "overview") renderOverview();
   if (appState.ui.mode === "passage") renderPassage();
   if (appState.ui.mode === "grid") renderGridScreen();
@@ -454,26 +605,30 @@ function renderApp() {
 
 function renderHeader() {
   const mastered = getMasteredCount(appState.progress);
+  const course = getCourseStats(appState.course);
   elements.masteredCount.textContent = String(mastered);
-  elements.masteryProgress.value = mastered;
-  elements.masteryProgress.textContent = `${mastered} / 1000`;
+  elements.completedDaysCount.textContent = String(course.completed);
+  elements.courseProgress.value = course.completed;
+  elements.courseProgress.textContent = `${course.completed} / ${COURSE_DAYS}`;
 }
 
 function renderModes() {
+  const visibleMode = sharedChallengeDay !== null ? "today" : appState.ui.mode;
   elements.modeButtons.forEach(function (button) {
-    button.setAttribute("aria-pressed", String(button.dataset.mode === appState.ui.mode));
+    button.setAttribute("aria-pressed", String(button.dataset.mode === visibleMode));
   });
   elements.screens.forEach(function (screen) {
-    screen.hidden = screen.dataset.screen !== appState.ui.mode;
+    screen.hidden = screen.dataset.screen !== visibleMode;
   });
 }
 
 function goHome(event) {
   event.preventDefault();
   stopAllSpeech();
+  leaveChallengeView();
   overviewRevealedIndexes = new Set();
   commit(function (state) {
-    state.ui.mode = "overview";
+    state.ui.mode = "today";
     state.ui.search = "";
     state.ui.revealAnswer = false;
   });
@@ -482,13 +637,820 @@ function goHome(event) {
 }
 
 function setMode(mode) {
-  if (!["overview", "passage", "grid", "review"].includes(mode)) return;
+  if (!["today", "overview", "passage", "grid", "review"].includes(mode)) return;
+  if (sharedChallengeDay !== null) leaveChallengeView();
   if (mode !== appState.ui.mode) stopAllSpeech();
   commit(function (state) {
     state.ui.mode = mode;
     state.ui.revealAnswer = false;
   });
   renderApp();
+}
+
+function renderTodayScreen() {
+  if (sharedChallengeDay !== null) {
+    elements.sharedChallenge.hidden = false;
+    elements.todayDashboard.hidden = true;
+    renderSharedChallenge();
+    return;
+  }
+
+  elements.sharedChallenge.hidden = true;
+  elements.todayDashboard.hidden = false;
+  const courseStats = getCourseStats(appState.course);
+  const active = appState.course.activeLesson;
+  const dayIndex = active ? active.dayIndex : courseStats.currentDay;
+  const lesson = getLesson(dayIndex);
+  const mastered = getMasteredCount(appState.progress);
+  const previewState = active || createDailyLessonState(dayIndex, appState.progress);
+
+  elements.courseRing.style.setProperty(
+    "--course-ratio",
+    `${Math.round((courseStats.completed / COURSE_DAYS) * 360)}deg`,
+  );
+  elements.courseRingDay.textContent = String(dayIndex + 1);
+  elements.courseCompletedDays.textContent = String(courseStats.completed);
+  elements.courseStreak.textContent = String(courseStats.streak);
+  elements.courseMasteredCount.textContent = String(mastered);
+  elements.todayDayNumber.textContent = String(dayIndex + 1);
+  elements.todayRangeCopy.textContent = `${RANGE_NAMES[Math.floor(lesson.indexes[0] / 100)]} · ${lesson.indexes[0] + 1}–${lesson.indexes.at(-1) + 1}자`;
+  elements.todayMeaning.textContent = lesson.couplet.data.meaning;
+  elements.todayMemoryScene.textContent = lesson.memoryScene;
+
+  renderTodayCharacters(lesson);
+  renderTodayReviewPreview(previewState.reviewItems);
+  elements.pathReviewCopy.textContent = `${previewState.reviewItems.length}자`;
+  elements.dailyStartLabel.textContent = active
+    ? active.stage === "complete"
+      ? "오늘 기록 보기"
+      : "학습 이어가기"
+    : courseStats.complete
+      ? "125일차 다시 익히기"
+      : "5분 학습 시작";
+
+  renderDailyPath(active);
+  if (active) renderDailyWorkflow(active, lesson);
+  else elements.dailyWorkflow.hidden = true;
+}
+
+function renderTodayCharacters(lesson) {
+  const fragment = document.createDocumentFragment();
+  lesson.items.forEach(function (item) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "today-character";
+    button.dataset.index = String(item.index);
+    button.setAttribute("aria-label", `${item.contextHun} 듣기`);
+    button.innerHTML =
+      `<span class="today-character__hanja" lang="zh-Hant">${item.character}</span>` +
+      `<span class="today-character__reading">${item.contextHun}</span>`;
+    fragment.append(button);
+  });
+  elements.todayCharacters.replaceChildren(fragment);
+}
+
+function renderTodayReviewPreview(reviewItems) {
+  const fragment = document.createDocumentFragment();
+  reviewItems.slice(0, 6).forEach(function (reviewItem) {
+    const span = document.createElement("span");
+    span.lang = "zh-Hant";
+    span.textContent = CHARACTERS[reviewItem.index].character;
+    fragment.append(span);
+  });
+  if (reviewItems.length === 0) {
+    const empty = document.createElement("span");
+    empty.className = "is-empty";
+    empty.textContent = "새 8자부터 시작";
+    fragment.append(empty);
+  }
+  elements.todayReviewCount.textContent = String(reviewItems.length);
+  elements.todayReviewPreview.replaceChildren(fragment);
+}
+
+function speakDailyCharacter(event) {
+  const button = event.target.closest("[data-index]");
+  if (!button) return;
+  const item = CHARACTERS[Number(button.dataset.index)];
+  if (!item) return;
+  tts.speak(item.contextHun, { kind: "daily-character", onError: handleTtsError });
+}
+
+function startDailyLearning() {
+  stopAllSpeech();
+  if (!appState.course.activeLesson) {
+    const dayIndex = getCourseStats(appState.course).currentDay;
+    commit(function (state) {
+      state.course.activeLesson = createDailyLessonState(dayIndex, state.progress);
+      state.ui.mode = "today";
+    });
+    dailyReviewRevealed = false;
+    dailyRecallRevealed = false;
+    renderedDailyGridKey = "";
+  }
+  renderTodayScreen();
+  scrollToDailyWorkflow();
+}
+
+function renderDailyPath(active) {
+  const order = ["review", "lesson", "recall", "grid", "vocabulary", "complete"];
+  const completion = getDailyCompletion(active);
+  const current = active ? active.stage : null;
+  elements.dailyPath.querySelectorAll("[data-daily-path]").forEach(function (item) {
+    const stage = item.dataset.dailyPath;
+    const done = stage === "complete" ? current === "complete" : Boolean(completion[stage]);
+    item.classList.toggle("is-complete", done);
+    item.classList.toggle("is-active", stage === current);
+    if (stage === current) item.setAttribute("aria-current", "step");
+    else item.removeAttribute("aria-current");
+  });
+  if (!active) {
+    const first = elements.dailyPath.querySelector('[data-daily-path="review"]');
+    if (first) first.classList.add("is-active");
+  }
+}
+
+function renderDailyWorkflow(active, lesson) {
+  elements.dailyWorkflow.hidden = false;
+  elements.dailySteps.forEach(function (step) {
+    step.hidden = step.dataset.dailyStep !== active.stage;
+  });
+  if (active.stage === "review") renderDailyReview(active);
+  if (active.stage === "lesson") renderDailyLesson(lesson);
+  if (active.stage === "recall") renderDailyRecall(active, lesson);
+  if (active.stage === "grid") renderDailyGrid(active);
+  if (active.stage === "vocabulary") renderDailyVocabulary(lesson);
+  if (active.stage === "complete") renderDailyCompletion(active);
+}
+
+function renderDailyReview(active) {
+  const completed = active.reviewItems.filter(function (item) {
+    return Object.prototype.hasOwnProperty.call(active.reviewResults, item.index);
+  }).length;
+  const pending = active.reviewItems.find(function (item) {
+    return !Object.prototype.hasOwnProperty.call(active.reviewResults, item.index);
+  });
+  elements.dailyReviewProgress.textContent = `${completed} / ${active.reviewItems.length}`;
+  elements.dailyReviewEmpty.hidden = active.reviewItems.length > 0;
+  elements.dailyReviewCard.hidden = !pending;
+  elements.dailyReviewContinue.hidden = Boolean(pending);
+
+  if (!pending) return;
+  const item = CHARACTERS[pending.index];
+  const content = getReviewCardContent(item, pending.skill);
+  elements.dailyReviewSkill.textContent = `${SKILL_LABELS[pending.skill]} 회상`;
+  elements.dailyReviewCharacter.textContent = content.front;
+  elements.dailyReviewCharacter.lang = content.frontIsHanja ? "zh-Hant" : "ko";
+  elements.dailyReviewCharacter.tabIndex = 0;
+  elements.dailyReviewCharacter.setAttribute("role", "button");
+  elements.dailyReviewCharacter.setAttribute("aria-label", `${item.contextHun} 소리 듣기`);
+  elements.dailyReviewPrompt.textContent = content.prompt;
+  elements.dailyReviewAnswer.textContent = content.answer;
+  elements.dailyReviewAnswer.hidden = !dailyReviewRevealed;
+  elements.dailyReviewReveal.hidden = dailyReviewRevealed;
+  elements.dailyReviewRating.hidden = !dailyReviewRevealed;
+}
+
+function getReviewCardContent(item, skill) {
+  if (skill === "meaning") {
+    return {
+      front: `${item.character} · ${item.reading}`,
+      frontIsHanja: false,
+      prompt: "이 글자의 뜻을 떠올려 보세요.",
+      answer: `${item.gloss} · ${item.contextHun}`,
+    };
+  }
+  if (skill === "reverse") {
+    return {
+      front: item.gloss,
+      frontIsHanja: false,
+      prompt: "이 뜻에 맞는 한자를 떠올려 보세요.",
+      answer: `${item.character} · ${item.contextHun}`,
+    };
+  }
+  if (skill === "order") {
+    const previous = item.index > 0 ? CHARACTERS[item.index - 1].character : "첫 글자";
+    return {
+      front: `${previous} → ?`,
+      frontIsHanja: false,
+      prompt: "천자문 순서에서 다음 글자를 떠올려 보세요.",
+      answer: `${item.character} · ${item.contextHun}`,
+    };
+  }
+  if (skill === "listening") {
+    return {
+      front: "♪",
+      frontIsHanja: false,
+      prompt: "음성을 듣고 한자와 뜻을 떠올려 보세요.",
+      answer: `${item.character} · ${item.contextHun}`,
+    };
+  }
+  return {
+    front: item.character,
+    frontIsHanja: true,
+    prompt: "이 글자의 훈음을 떠올려 보세요.",
+    answer: item.contextHun,
+  };
+}
+
+function getPendingDailyReview(active) {
+  return active.reviewItems.find(function (item) {
+    return !Object.prototype.hasOwnProperty.call(active.reviewResults, item.index);
+  }) || null;
+}
+
+function speakCurrentDailyReview() {
+  const active = appState.course.activeLesson;
+  const pending = active ? getPendingDailyReview(active) : null;
+  if (!pending) return;
+  tts.speak(CHARACTERS[pending.index].contextHun, {
+    kind: "daily-review",
+    onError: handleTtsError,
+  });
+}
+
+function revealDailyReview() {
+  dailyReviewRevealed = true;
+  const active = appState.course.activeLesson;
+  if (active) renderDailyReview(active);
+}
+
+function rateDailyReview(correct) {
+  const active = appState.course.activeLesson;
+  const pending = active ? getPendingDailyReview(active) : null;
+  if (!pending || !dailyReviewRevealed) return;
+  commit(function (state) {
+    state.progress = recordSkillAttempt(state.progress, pending.index, pending.skill, {
+      correct,
+    });
+    state.course.activeLesson.reviewResults[pending.index] = correct ? "correct" : "wrong";
+  });
+  dailyReviewRevealed = false;
+  renderHeader();
+  renderTodayScreen();
+}
+
+function moveDailyStage(stage) {
+  const allowed = ["review", "lesson", "recall", "grid", "vocabulary", "complete"];
+  if (!allowed.includes(stage) || !appState.course.activeLesson) return;
+  stopAllSpeech();
+  commit(function (state) {
+    state.course.activeLesson.stage = stage;
+  });
+  renderTodayScreen();
+  scrollToDailyWorkflow();
+}
+
+function renderDailyLesson(lesson) {
+  const fragment = document.createDocumentFragment();
+  lesson.items.forEach(function (item) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "daily-lesson-character";
+    button.dataset.index = String(item.index);
+    button.setAttribute("aria-label", `${item.contextHun} 듣기`);
+    button.innerHTML =
+      `<strong lang="zh-Hant">${item.character}</strong>` +
+      `<span>${item.contextHun}</span>`;
+    fragment.append(button);
+  });
+  elements.dailyLessonGrid.replaceChildren(fragment);
+  elements.dailyLessonMeaning.textContent = `전체 뜻 · ${lesson.couplet.data.meaning}`;
+  elements.dailyLessonScene.textContent = `기억 장면 · ${lesson.memoryScene}`;
+}
+
+function playDailyCouplet() {
+  const active = appState.course.activeLesson;
+  if (!active) return;
+  const lesson = getLesson(active.dayIndex);
+  tts.speakSequence(
+    lesson.items.map(function (item) { return item.contextHun; }),
+    { kind: "daily-couplet", onError: handleTtsError },
+  );
+  commit(function (state) {
+    lesson.indexes.forEach(function (index) {
+      state.progress = recordSkillAttempt(state.progress, index, "listening", { correct: true });
+    });
+  });
+  renderHeader();
+}
+
+function finishDailyLessonIntro() {
+  if (!appState.course.activeLesson) return;
+  stopAllSpeech();
+  commit(function (state) {
+    state.course.activeLesson.lessonOpened = true;
+    state.course.activeLesson.stage = "recall";
+    state.course.activeLesson.recallMode = "reading";
+    state.course.activeLesson.recallCursor = 0;
+  });
+  dailyRecallRevealed = false;
+  renderTodayScreen();
+  scrollToDailyWorkflow();
+}
+
+function selectRecallMode(event) {
+  const button = event.target.closest("[data-recall-mode]");
+  if (!button || !appState.course.activeLesson) return;
+  commit(function (state) {
+    state.course.activeLesson.recallMode = button.dataset.recallMode;
+    state.course.activeLesson.recallCursor = 0;
+  });
+  dailyRecallRevealed = false;
+  renderDailyRecall(appState.course.activeLesson, getLesson(appState.course.activeLesson.dayIndex));
+}
+
+function renderDailyRecall(active, lesson) {
+  const modes = ["reading", "meaning", "reverse"];
+  const completedCount = modes.reduce(function (total, mode) {
+    return total + Object.keys(active.recallResults[mode] || {}).length;
+  }, 0);
+  const mode = active.recallMode;
+  const pending = lesson.items.find(function (item) {
+    return !Object.prototype.hasOwnProperty.call(active.recallResults[mode] || {}, item.index);
+  });
+
+  elements.dailyRecallProgress.textContent = `${completedCount} / 24`;
+  elements.dailyRecallTabs.querySelectorAll("[data-recall-mode]").forEach(function (button) {
+    const buttonMode = button.dataset.recallMode;
+    const modeComplete = Object.keys(active.recallResults[buttonMode] || {}).length >= 8;
+    button.setAttribute("aria-pressed", String(buttonMode === mode));
+    button.classList.toggle("is-complete", modeComplete);
+  });
+  elements.dailyRecallContinue.hidden = completedCount < 24;
+  elements.dailyRecallReveal.hidden = !pending || dailyRecallRevealed;
+  elements.dailyRecallRating.hidden = !pending || !dailyRecallRevealed;
+  elements.dailyRecallAnswer.hidden = !pending || !dailyRecallRevealed;
+
+  if (!pending) {
+    const nextMode = modes.find(function (candidate) {
+      return Object.keys(active.recallResults[candidate] || {}).length < 8;
+    });
+    if (nextMode && nextMode !== mode) {
+      commit(function (state) {
+        state.course.activeLesson.recallMode = nextMode;
+        state.course.activeLesson.recallCursor = 0;
+      });
+      dailyRecallRevealed = false;
+      renderDailyRecall(appState.course.activeLesson, lesson);
+      return;
+    }
+    elements.dailyRecallLabel.textContent = "세 방향 회상을 마쳤습니다";
+    elements.dailyRecallPrompt.textContent = lesson.couplet.data.hanja;
+    elements.dailyRecallPrompt.lang = "zh-Hant";
+    elements.dailyRecallAnswer.textContent = lesson.couplet.data.meaning;
+    elements.dailyRecallAnswer.hidden = false;
+    return;
+  }
+
+  const content = getRecallCardContent(pending, mode);
+  elements.dailyRecallLabel.textContent = content.label;
+  elements.dailyRecallPrompt.textContent = content.front;
+  elements.dailyRecallPrompt.lang = content.frontIsHanja ? "zh-Hant" : "ko";
+  elements.dailyRecallAnswer.textContent = content.answer;
+}
+
+function getRecallCardContent(item, mode) {
+  if (mode === "meaning") {
+    return {
+      label: "뜻을 떠올리세요",
+      front: `${item.character} · ${item.reading}`,
+      frontIsHanja: false,
+      answer: item.gloss,
+    };
+  }
+  if (mode === "reverse") {
+    return {
+      label: "뜻에서 한자를 떠올리세요",
+      front: item.gloss,
+      frontIsHanja: false,
+      answer: `${item.character} · ${item.contextHun}`,
+    };
+  }
+  return {
+    label: "훈음을 떠올리세요",
+    front: item.character,
+    frontIsHanja: true,
+    answer: item.contextHun,
+  };
+}
+
+function getPendingDailyRecall(active, lesson) {
+  const mode = active.recallMode;
+  return lesson.items.find(function (item) {
+    return !Object.prototype.hasOwnProperty.call(active.recallResults[mode] || {}, item.index);
+  }) || null;
+}
+
+function revealDailyRecall() {
+  dailyRecallRevealed = true;
+  const active = appState.course.activeLesson;
+  if (active) renderDailyRecall(active, getLesson(active.dayIndex));
+}
+
+function rateDailyRecall(correct) {
+  const active = appState.course.activeLesson;
+  if (!active || !dailyRecallRevealed) return;
+  const lesson = getLesson(active.dayIndex);
+  const pending = getPendingDailyRecall(active, lesson);
+  if (!pending) return;
+  const mode = active.recallMode;
+  commit(function (state) {
+    state.progress = recordSkillAttempt(state.progress, pending.index, mode, { correct });
+    state.course.activeLesson.recallResults[mode][pending.index] = correct ? "correct" : "wrong";
+    state.course.activeLesson.recallCursor = Math.min(7, state.course.activeLesson.recallCursor + 1);
+  });
+  dailyRecallRevealed = false;
+  renderHeader();
+  renderTodayScreen();
+}
+
+function startDailyGrid() {
+  const active = appState.course.activeLesson;
+  if (!active) return;
+  const lesson = getLesson(active.dayIndex);
+  const session = createGridSession({ indexes: lesson.indexes, boardSize: 8 });
+  commit(function (state) {
+    state.course.activeLesson.gridSession = session;
+    state.course.activeLesson.gridWrongCount = 0;
+    state.course.activeLesson.gridStartedAt = new Date().toISOString();
+    state.course.activeLesson.stage = "grid";
+  });
+  renderedDailyGridKey = "";
+  renderTodayScreen();
+  scrollToDailyWorkflow();
+  focusFirstCompactBoardCell(elements.dailyBoard);
+}
+
+function renderDailyGrid(active) {
+  const session = active.gridSession;
+  if (!session) {
+    elements.dailyGridProgress.textContent = "준비 중";
+    return;
+  }
+  const key = `${active.dayIndex}-${active.gridStartedAt}`;
+  if (renderedDailyGridKey !== key) {
+    renderCompactBoard(elements.dailyBoard, session);
+    renderedDailyGridKey = key;
+  }
+  updateDailyGridStatus(active);
+}
+
+function renderCompactBoard(container, session) {
+  const fragment = document.createDocumentFragment();
+  session.boardIndexes.forEach(function (index, slot) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "board-cell";
+    button.dataset.slot = String(slot);
+    renderBoardCellElement(button, Number.isInteger(index) ? CHARACTERS[index] : null);
+    fragment.append(button);
+  });
+  container.replaceChildren(fragment);
+}
+
+function updateDailyGridStatus(active) {
+  const session = active.gridSession;
+  const correct = session ? session.targetPosition : 0;
+  const wrong = active.gridWrongCount || 0;
+  const accuracy = correct + wrong > 0 ? Math.round((correct / (correct + wrong)) * 100) : null;
+  elements.dailyGridProgress.textContent = `${correct} / 8`;
+  elements.dailyGridTarget.textContent = session && !session.complete
+    ? CHARACTERS[session.targetCursor].reading
+    : "완료";
+  elements.dailyGridAccuracy.textContent = accuracy === null ? "—" : `${accuracy}%`;
+  elements.dailyGridWrong.textContent = String(wrong);
+  elements.dailyGridContinue.hidden = !session?.complete;
+}
+
+function handleDailyBoardClick(event) {
+  const button = event.target.closest(".board-cell");
+  if (!button || button.disabled) return;
+  const selectedIndex = Number(button.dataset.index);
+  if (Number.isInteger(selectedIndex)) answerDailyGrid(selectedIndex, button);
+}
+
+function answerDailyGrid(selectedIndex, button) {
+  const active = appState.course.activeLesson;
+  const session = active?.gridSession;
+  if (!session || session.complete) return;
+  const targetIndex = session.targetCursor;
+  const result = selectGridIndex(session, selectedIndex);
+  if (!result.correct) {
+    commit(function (state) {
+      state.progress = recordSkillAttempt(state.progress, targetIndex, "order", { correct: false });
+      state.course.activeLesson.gridWrongCount += 1;
+    });
+    button.classList.remove("is-wrong");
+    requestAnimationFrame(function () { button.classList.add("is-wrong"); });
+    window.setTimeout(function () { button.classList.remove("is-wrong"); }, 260);
+    updateDailyGridStatus(appState.course.activeLesson);
+    elements.dailyGridAnnouncement.textContent = "오답입니다. 순서와 글자 배치는 그대로입니다.";
+    return;
+  }
+
+  const item = CHARACTERS[targetIndex];
+  commit(function (state) {
+    state.progress = recordSkillAttempt(state.progress, targetIndex, "order", { correct: true });
+    state.course.activeLesson.gridSession = result.session;
+    state.grid.lastCursor = Math.max(state.grid.lastCursor, Math.min(1000, targetIndex + 1));
+  });
+  button.classList.add("is-correct");
+  button.dataset.index = "";
+  button.setAttribute("aria-label", `정답, ${item.contextHun}`);
+  window.setTimeout(function () {
+    if (button.isConnected) {
+      renderBoardCellElement(
+        button,
+        Number.isInteger(result.replacementIndex) ? CHARACTERS[result.replacementIndex] : null,
+      );
+    }
+  }, 120);
+  tts.speak(item.reading, { kind: "daily-grid-feedback", onError: handleTtsError });
+  if (appState.settings.vibrate && navigator.vibrate) navigator.vibrate(10);
+  updateDailyGridStatus(appState.course.activeLesson);
+  renderHeader();
+  renderDailyPath(appState.course.activeLesson);
+  elements.dailyGridAnnouncement.textContent = result.completed
+    ? `정답, ${item.reading}. 오늘의 8자 순서를 완성했습니다.`
+    : `정답, ${item.reading}. 다음 글자를 찾으세요.`;
+}
+
+function renderDailyVocabulary(lesson) {
+  const fragment = document.createDocumentFragment();
+  lesson.vocabulary.forEach(function (word) {
+    const item = document.createElement("li");
+    const term = document.createElement("div");
+    const modern = document.createElement("strong");
+    modern.textContent = word.word;
+    const origin = document.createElement("b");
+    origin.lang = "zh-Hant";
+    origin.textContent = word.origin;
+    term.append(modern, origin);
+    const definition = document.createElement("p");
+    definition.textContent = word.definition;
+    item.append(term, definition);
+    fragment.append(item);
+  });
+  if (lesson.vocabulary.length === 0) {
+    const empty = document.createElement("li");
+    empty.textContent = "이 연에서는 독음이 정확히 대응하는 일상 한자어만 선별하지 못했습니다.";
+    fragment.append(empty);
+  }
+  elements.dailyVocabulary.replaceChildren(fragment);
+
+  const notes = document.createDocumentFragment();
+  if (lesson.confusableNotes.length > 0) {
+    const title = document.createElement("strong");
+    title.textContent = "같은 소리, 다른 뜻";
+    notes.append(title);
+    lesson.confusableNotes.forEach(function (note) {
+      const copy = document.createElement("p");
+      copy.textContent = `${note.reading}: ${note.first.character}(${note.first.gloss}) · ${note.second.character}(${note.second.gloss})`;
+      notes.append(copy);
+    });
+  }
+  elements.dailyConfusableNotes.replaceChildren(notes);
+  elements.dailyConfusableNotes.hidden = lesson.confusableNotes.length === 0;
+}
+
+function completeDailyLesson() {
+  const active = appState.course.activeLesson;
+  if (!active) return;
+  const now = Date.now();
+  const summary = calculateDailyResult(active, now);
+  const gridCandidate = {
+    accuracy: summary.gridAccuracy,
+    duration: summary.gridDuration,
+    completedAt: new Date(now).toISOString(),
+  };
+  commit(function (state) {
+    const lessonState = state.course.activeLesson;
+    lessonState.vocabularyOpened = true;
+    lessonState.stage = "complete";
+    state.course.completedDays[lessonState.dayIndex] = {
+      completedAt: new Date(now).toISOString(),
+      duration: summary.duration,
+      accuracy: summary.accuracy,
+      wrongCount: summary.wrong,
+    };
+    const currentBest = state.course.challengeBest[lessonState.dayIndex];
+    if (isBetterScore(gridCandidate, currentBest)) {
+      state.course.challengeBest[lessonState.dayIndex] = gridCandidate;
+    }
+    const lesson = getLesson(lessonState.dayIndex);
+    state.ui.selectedIndex = lesson.indexes[0];
+    state.ui.rangeStart = Math.floor(lesson.indexes[0] / 100) * 100;
+    state.grid.lastCursor = Math.max(state.grid.lastCursor, Math.min(1000, lesson.indexes.at(-1) + 1));
+  });
+  renderApp();
+  scrollToDailyWorkflow();
+  showToast("오늘의 8자와 복습 기록을 저장했습니다.");
+}
+
+function calculateDailyResult(active, now = Date.now()) {
+  const reviewValues = Object.values(active.reviewResults || {});
+  const recallValues = ["reading", "meaning", "reverse"].flatMap(function (mode) {
+    return Object.values(active.recallResults?.[mode] || {});
+  });
+  const correctCards = [...reviewValues, ...recallValues].filter(function (value) {
+    return value === "correct";
+  }).length;
+  const wrongCards = reviewValues.length + recallValues.length - correctCards;
+  const gridCorrect = active.gridSession?.targetPosition || 0;
+  const gridWrong = active.gridWrongCount || 0;
+  const attempts = correctCards + wrongCards + gridCorrect + gridWrong;
+  const duration = Math.max(0, now - new Date(active.startedAt).getTime());
+  const gridDuration = active.gridStartedAt
+    ? Math.max(0, now - new Date(active.gridStartedAt).getTime())
+    : 0;
+  return {
+    duration,
+    correct: correctCards + gridCorrect,
+    wrong: wrongCards + gridWrong,
+    accuracy: attempts > 0 ? Math.round(((correctCards + gridCorrect) / attempts) * 100) : 100,
+    gridAccuracy: gridCorrect + gridWrong > 0
+      ? Math.round((gridCorrect / (gridCorrect + gridWrong)) * 100)
+      : 100,
+    gridDuration,
+  };
+}
+
+function renderDailyCompletion(active) {
+  const entry = appState.course.completedDays[active.dayIndex];
+  const courseStats = getCourseStats(appState.course);
+  const result = entry || calculateDailyResult(active);
+  elements.dailyCompleteDay.textContent = String(active.dayIndex + 1);
+  elements.dailyCompleteTime.textContent = formatDuration(result.duration || 0);
+  elements.dailyCompleteAccuracy.textContent = `${result.accuracy ?? 100}%`;
+  elements.dailyCompleteCourse.textContent = `${courseStats.completed} / ${COURSE_DAYS}`;
+  elements.dailyNextLesson.disabled = courseStats.complete;
+  elements.dailyNextLesson.textContent = courseStats.complete ? "125일 과정 완주" : "다음 8자 이어서";
+}
+
+function continueToNextDailyLesson() {
+  if (getCourseStats(appState.course).complete) return;
+  commit(function (state) {
+    state.course.activeLesson = null;
+    state.ui.mode = "today";
+  });
+  renderedDailyGridKey = "";
+  renderApp();
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+async function shareTodayLesson() {
+  const dayIndex = sharedChallengeDay ?? appState.course.activeLesson?.dayIndex ?? getCourseStats(appState.course).currentDay;
+  const lesson = getLesson(dayIndex);
+  const url = createChallengeUrl(window.location, dayIndex);
+  const shareData = {
+    title: `천자문 ${dayIndex + 1}일차 · 오늘의 8자 도전`,
+    text: `${lesson.couplet.data.hanja} — ${lesson.couplet.data.meaning}`,
+    url,
+  };
+  try {
+    if (navigator.share) await navigator.share(shareData);
+    else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(url);
+      showToast("회원가입 없이 푸는 도전 링크를 복사했습니다.");
+    } else {
+      window.prompt("도전 링크를 복사하세요.", url);
+    }
+  } catch (error) {
+    if (error && error.name !== "AbortError") showToast("공유하지 못했습니다. 다시 시도해 주세요.");
+  }
+}
+
+function renderSharedChallenge() {
+  const lesson = getLesson(sharedChallengeDay);
+  elements.sharedChallengeDay.textContent = String(lesson.dayNumber);
+  elements.sharedChallengeMeaning.textContent = lesson.couplet.data.meaning;
+  const phraseFragment = document.createDocumentFragment();
+  lesson.items.forEach(function (item) {
+    const span = document.createElement("span");
+    span.textContent = item.character;
+    phraseFragment.append(span);
+  });
+  elements.sharedChallengePhrase.replaceChildren(phraseFragment);
+  elements.startSharedChallenge.hidden = Boolean(sharedChallengeSession);
+  elements.sharedChallengePlay.hidden = !sharedChallengeSession || sharedChallengeSession.complete;
+  elements.sharedChallengeResult.hidden = !sharedChallengeSession?.complete;
+  if (sharedChallengeSession && !sharedChallengeSession.complete) {
+    renderCompactBoard(elements.sharedChallengeBoard, sharedChallengeSession);
+    updateSharedChallengeStatus();
+  }
+}
+
+function startSharedChallenge() {
+  const lesson = getLesson(sharedChallengeDay);
+  sharedChallengeSession = createGridSession({ indexes: lesson.indexes, boardSize: 8 });
+  sharedChallengeStartedAt = Date.now();
+  sharedChallengeWrong = 0;
+  elements.sharedChallengeResult.hidden = true;
+  elements.startSharedChallenge.hidden = true;
+  elements.sharedChallengePlay.hidden = false;
+  renderCompactBoard(elements.sharedChallengeBoard, sharedChallengeSession);
+  updateSharedChallengeStatus();
+  focusFirstCompactBoardCell(elements.sharedChallengeBoard);
+}
+
+function updateSharedChallengeStatus() {
+  const session = sharedChallengeSession;
+  if (!session) return;
+  const correct = session.targetPosition;
+  elements.sharedChallengeTarget.textContent = session.complete
+    ? "완료"
+    : CHARACTERS[session.targetCursor].reading;
+  elements.sharedChallengeProgress.textContent = `${correct} / 8`;
+  elements.sharedChallengeWrong.textContent = String(sharedChallengeWrong);
+}
+
+function handleSharedChallengeClick(event) {
+  const button = event.target.closest(".board-cell");
+  if (!button || button.disabled || !sharedChallengeSession || sharedChallengeSession.complete) return;
+  const selectedIndex = Number(button.dataset.index);
+  if (!Number.isInteger(selectedIndex)) return;
+  const targetIndex = sharedChallengeSession.targetCursor;
+  const result = selectGridIndex(sharedChallengeSession, selectedIndex);
+  if (!result.correct) {
+    sharedChallengeWrong += 1;
+    button.classList.remove("is-wrong");
+    requestAnimationFrame(function () { button.classList.add("is-wrong"); });
+    window.setTimeout(function () { button.classList.remove("is-wrong"); }, 260);
+    updateSharedChallengeStatus();
+    elements.sharedChallengeAnnouncement.textContent = "오답입니다. 글자 배치는 바뀌지 않았습니다.";
+    return;
+  }
+  const item = CHARACTERS[targetIndex];
+  sharedChallengeSession = result.session;
+  button.classList.add("is-correct");
+  button.dataset.index = "";
+  window.setTimeout(function () {
+    if (button.isConnected) {
+      renderBoardCellElement(
+        button,
+        Number.isInteger(result.replacementIndex) ? CHARACTERS[result.replacementIndex] : null,
+      );
+    }
+  }, 120);
+  tts.speak(item.reading, { kind: "shared-grid-feedback", onError: handleTtsError });
+  updateSharedChallengeStatus();
+  elements.sharedChallengeAnnouncement.textContent = result.completed
+    ? `정답, ${item.reading}. 도전을 완료했습니다.`
+    : `정답, ${item.reading}. 다음 글자를 찾으세요.`;
+  if (result.completed) finishSharedChallenge();
+}
+
+function finishSharedChallenge() {
+  const duration = Math.max(0, Date.now() - sharedChallengeStartedAt);
+  const accuracy = Math.round((8 / (8 + sharedChallengeWrong)) * 100);
+  elements.sharedChallengePlay.hidden = true;
+  elements.sharedChallengeResult.hidden = false;
+  elements.sharedChallengeTime.textContent = formatDuration(duration);
+  elements.sharedChallengeAccuracy.textContent = `${accuracy}%`;
+}
+
+function handleCompactBoardKeyboard(event) {
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+    return;
+  }
+  const button = event.target.closest(".board-cell");
+  if (!button) return;
+  event.preventDefault();
+  const buttons = Array.from(event.currentTarget.querySelectorAll(".board-cell:not(:disabled)"));
+  const current = buttons.indexOf(button);
+  let next = current;
+  if (event.key === "ArrowLeft") next -= 1;
+  if (event.key === "ArrowRight") next += 1;
+  if (event.key === "ArrowUp") next -= 4;
+  if (event.key === "ArrowDown") next += 4;
+  if (event.key === "Home") next = 0;
+  if (event.key === "End") next = buttons.length - 1;
+  buttons[Math.min(buttons.length - 1, Math.max(0, next))]?.focus();
+}
+
+function focusFirstCompactBoardCell(container) {
+  window.setTimeout(function () {
+    container.querySelector(".board-cell:not(:disabled)")?.focus({ preventScroll: true });
+  }, 0);
+}
+
+function scrollToDailyWorkflow() {
+  window.setTimeout(function () {
+    elements.dailyWorkflow.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  }, 0);
+}
+
+function leaveChallengeView() {
+  if (sharedChallengeDay === null) return;
+  sharedChallengeDay = null;
+  sharedChallengeSession = null;
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  window.history.replaceState({}, "", url);
 }
 
 function renderOverview() {
@@ -769,8 +1731,6 @@ function renderPassage() {
   });
   elements.selectedRelatedWords.replaceChildren(relatedWordsFragment);
   elements.relatedWordsSection.hidden = details.relatedWords.length === 0;
-  elements.playCharacterLabel.textContent = `${selected.contextHun} 듣기`;
-
   const allRecorded = couplet.items.every(function (item) {
     return appState.progress[item.index] && appState.progress[item.index].masteryLevel >= 2;
   });
@@ -802,13 +1762,6 @@ function renderPassageVisibility() {
     .forEach(function (definition) {
       definition.setAttribute("aria-hidden", String(concealMeaning));
     });
-  const concealed = concealReading || concealMeaning;
-  elements.playCharacter.setAttribute(
-    "aria-label",
-    concealed
-      ? "선택한 글자 훈음 듣기"
-      : `${CHARACTERS[appState.ui.selectedIndex].contextHun} 듣기`,
-  );
 }
 
 function handlePassageCharacterClick(event) {
@@ -954,6 +1907,7 @@ function renderGridScreen() {
   elements.sessionResult.hidden = true;
   elements.sessionBoardSize.value = String(appState.settings.boardSize);
   elements.resumeSession.hidden = true;
+  renderGridChallengeBest();
   renderCustomStartField();
 }
 
@@ -987,6 +1941,45 @@ function startStandardGridSession() {
   focusFirstBoardCell();
 }
 
+function getGridChallengeStart() {
+  const activeDay = appState.course.activeLesson?.dayIndex;
+  const courseDay = Number.isInteger(activeDay)
+    ? activeDay
+    : getCourseStats(appState.course).currentDay;
+  return Math.min(960, Math.max(0, courseDay * 8));
+}
+
+function renderGridChallengeBest() {
+  const best = appState.grid.bestScores[getGridChallengeStart()];
+  elements.gridChallengeBest.textContent = best
+    ? `${best.accuracy}% · ${formatDuration(best.duration)}`
+    : "아직 없음";
+}
+
+function startGridChallenge() {
+  stopAllSpeech();
+  const startIndex = getGridChallengeStart();
+  const boardSize = appState.settings.boardSize;
+  const engine = createGridSession({
+    startIndex,
+    endIndex: startIndex + 40,
+    boardSize,
+  });
+  const session = createSessionMetadata(engine, {
+    difficulty: "none",
+    scope: "challenge",
+    reviewMode: false,
+    challengeMode: true,
+  });
+  commit(function (state) {
+    state.grid.session = session;
+    state.grid.lastCursor = startIndex;
+  });
+  renderedSessionKey = "";
+  renderGridScreen();
+  focusFirstBoardCell();
+}
+
 function resolveSessionRange(scope) {
   const cursor = appState.grid.lastCursor >= 1000 ? 0 : appState.grid.lastCursor;
   if (scope === "current") {
@@ -1013,6 +2006,7 @@ function createSessionMetadata(engine, options) {
     difficulty: options.difficulty,
     scope: options.scope,
     reviewMode: Boolean(options.reviewMode),
+    challengeMode: Boolean(options.challengeMode),
     correctCount: 0,
     wrongCount: 0,
     wrongIndexes: [],
@@ -1069,11 +2063,10 @@ function answerGrid(selectedIndex, button) {
     : result.session.targetCursor;
 
   commit(function (state) {
-    state.progress = recordAttempt(state.progress, targetIndex, {
-      correct: true,
-      difficulty: session.difficulty,
-      review: session.reviewMode,
-    });
+    state.progress = recordSkillAttempt(state.progress, targetIndex, "order", { correct: true });
+    if (session.difficulty === "listening") {
+      state.progress = recordSkillAttempt(state.progress, targetIndex, "listening", { correct: true });
+    }
     state.grid.session = nextSession;
     state.grid.lastCursor = nextCursor;
   });
@@ -1107,9 +2100,28 @@ function answerGrid(selectedIndex, button) {
     : `정답, ${completedItem.reading}. 다음 글자를 찾으세요.`;
 
   if (result.completed) {
+    const endedAt = new Date().toISOString();
+    const completedSession = appState.grid.session;
+    const attempts = completedSession.correctCount + completedSession.wrongCount;
+    const candidate = {
+      accuracy: attempts > 0
+        ? Math.round((completedSession.correctCount / attempts) * 100)
+        : 100,
+      duration: Math.max(
+        0,
+        new Date(endedAt).getTime() - new Date(completedSession.startedAt).getTime(),
+      ),
+      completedAt: endedAt,
+    };
     commit(function (state) {
       state.grid.session.active = false;
-      state.grid.session.endedAt = new Date().toISOString();
+      state.grid.session.endedAt = endedAt;
+      if (
+        state.grid.session.challengeMode &&
+        isBetterScore(candidate, state.grid.bestScores[state.grid.session.startIndex])
+      ) {
+        state.grid.bestScores[state.grid.session.startIndex] = candidate;
+      }
     });
     window.setTimeout(function () {
       renderedSessionKey = "";
@@ -1122,11 +2134,10 @@ function handleWrongGridAnswer(targetIndex, button) {
   const session = appState.grid.session;
   const errors = (session.errorsByTarget[targetIndex] || 0) + 1;
   commit(function (state) {
-    state.progress = recordAttempt(state.progress, targetIndex, {
-      correct: false,
-      difficulty: session.difficulty,
-      review: session.reviewMode,
-    });
+    state.progress = recordSkillAttempt(state.progress, targetIndex, "order", { correct: false });
+    if (session.difficulty === "listening") {
+      state.progress = recordSkillAttempt(state.progress, targetIndex, "listening", { correct: false });
+    }
     state.grid.session.wrongCount += 1;
     state.grid.session.errorsByTarget[targetIndex] = errors;
     if (!state.grid.session.wrongIndexes.includes(targetIndex)) {
@@ -1288,6 +2299,7 @@ function restartGridSession() {
     difficulty: session.difficulty,
     scope: session.scope,
     reviewMode: session.reviewMode,
+    challengeMode: session.challengeMode,
   });
   commit(function (state) {
     state.grid.session = restarted;

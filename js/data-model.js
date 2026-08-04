@@ -1,6 +1,7 @@
 import { COUPLETS, TOTAL_CHARACTERS } from "../data.js";
 import { CHARACTER_HUN } from "../character-meta.js";
 import { CHARACTER_FORMS, CHARACTER_WORDS } from "../character-content.js";
+import { MODERN_VOCABULARY_BY_DAY } from "./lesson-content.js";
 import { normalizeSearch } from "./utils.js";
 
 const CONTEXT_HUN_OVERRIDES = new Map([
@@ -8,6 +9,27 @@ const CONTEXT_HUN_OVERRIDES = new Map([
   [238, "이 시"],
   [242, "섬길 사"],
 ]);
+
+const UNHELPFUL_WORD_DEFINITION =
+  /이름|성씨|지명|고을|중국의|나라의|왕조|사람을 이르는 말|옛말|방언|북한어|산 이름/;
+const CURATED_MODERN_WORDS = new Set(MODERN_VOCABULARY_BY_DAY.flat());
+
+function getVerifiedRelatedWords(character, reading) {
+  return (CHARACTER_WORDS[character] || []).filter(function (word) {
+    const origin = Array.from(word.origin || "");
+    const syllables = Array.from(word.word || "");
+    if (
+      !CURATED_MODERN_WORDS.has(word.word) ||
+      origin.length !== syllables.length ||
+      UNHELPFUL_WORD_DEFINITION.test(word.definition)
+    ) {
+      return false;
+    }
+    return origin.some(function (originCharacter, position) {
+      return originCharacter === character && syllables[position] === reading;
+    });
+  });
+}
 
 export function getHunOptions(hun) {
   return String(hun)
@@ -73,7 +95,7 @@ export const CHARACTERS = Object.freeze(
         meaning: couplet.meaning,
         radical: form[1],
         totalStrokes: form[2],
-        relatedWords: Object.freeze(CHARACTER_WORDS[character] || []),
+        relatedWords: Object.freeze(getVerifiedRelatedWords(character, readings[offset])),
       });
     });
   }),

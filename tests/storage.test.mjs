@@ -38,7 +38,7 @@ test("v1 learned·sequenceCursor·음성·가리기 설정을 v2로 안전하게
   const storage = memoryStorage({ [STORAGE_KEY_V1]: JSON.stringify(v1) });
   const loaded = loadStateFromStorage(storage, Date.UTC(2026, 7, 4));
   assert.equal(loaded.migrated, true);
-  assert.equal(loaded.state.ui.mode, "grid");
+  assert.equal(loaded.state.ui.mode, "today");
   assert.equal(loaded.state.grid.lastCursor, 83);
   assert.equal(loaded.state.progress[77].masteryLevel, 2);
   assert.equal(loaded.state.settings.hideReading, true);
@@ -114,9 +114,58 @@ test("학습 기록 JSON은 왕복 가능하고 잘못된 인덱스는 거부한
     lastWrongAt: null,
     dueAt: null,
   };
-  assert.deepEqual(parseImportJson(createExportJson(state)).progress[8], state.progress[8]);
+  const restored = parseImportJson(createExportJson(state));
+  assert.equal(restored.progress[8].masteryLevel, 2);
+  assert.deepEqual(Object.keys(restored.progress[8].skills), [
+    "reading",
+    "meaning",
+    "reverse",
+    "order",
+    "listening",
+  ]);
   const invalid = JSON.parse(createExportJson(state));
   invalid.state.progress[1001] = {};
   assert.throws(() => parseImportJson(JSON.stringify(invalid)), /인덱스/);
   assert.throws(() => parseImportJson("{}"), /v2 학습 기록/);
+});
+
+test("125일 과정과 진행 중 8자 학습 상태를 저장하고 복원한다", function () {
+  const state = createDefaultState();
+  state.course.completedDays[0] = {
+    completedAt: "2026-08-04T01:00:00.000Z",
+    duration: 240000,
+    accuracy: 92,
+    wrongCount: 2,
+  };
+  state.course.activeLesson = {
+    dayIndex: 1,
+    startedAt: "2026-08-04T02:00:00.000Z",
+    stage: "grid",
+    reviewItems: [{ index: 0, skill: "reading" }],
+    reviewResults: { 0: "correct" },
+    lessonOpened: true,
+    recallMode: "reverse",
+    recallCursor: 3,
+    recallResults: { reading: {}, meaning: {}, reverse: {} },
+    gridSession: createGridSession({ indexes: [8, 9, 10, 11, 12, 13, 14, 15], boardSize: 8 }),
+    gridWrongCount: 1,
+    gridStartedAt: "2026-08-04T02:03:00.000Z",
+    vocabularyOpened: false,
+  };
+  const restored = parseImportJson(createExportJson(state));
+  assert.equal(restored.course.completedDays[0].accuracy, 92);
+  assert.equal(restored.course.activeLesson.dayIndex, 1);
+  assert.equal(restored.course.activeLesson.gridSession.boardSize, 8);
+  assert.deepEqual(restored.course.activeLesson.gridSession.order, [8, 9, 10, 11, 12, 13, 14, 15]);
+});
+
+test("40자 챌린지 개인 최고 기록을 정답률·시간과 함께 보존한다", function () {
+  const state = createDefaultState();
+  state.grid.bestScores[40] = {
+    accuracy: 97,
+    duration: 43120,
+    completedAt: "2026-08-04T03:00:00.000Z",
+  };
+  const restored = parseImportJson(createExportJson(state));
+  assert.deepEqual(restored.grid.bestScores[40], state.grid.bestScores[40]);
 });

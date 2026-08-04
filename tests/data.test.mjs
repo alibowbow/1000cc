@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { CHARACTER_FORMS, CHARACTER_WORDS } from "../character-content.js";
 import { CHARACTER_HUN } from "../character-meta.js";
+import { MODERN_VOCABULARY_BY_DAY } from "../js/lesson-content.js";
 import {
   CHARACTERS,
   COUPLETS,
@@ -129,4 +130,27 @@ test("전체 보기 검색은 관련 한자어와 사전 뜻까지 찾는다", f
   assert.ok(findCharacterIndexes("천국").includes(0));
   assert.ok(findCharacterIndexes("평화롭고 모두가 행복").includes(0));
   assert.ok(findCharacterIndexes("天國").includes(0));
+});
+
+test("화면에 노출되는 현대 한자어는 해당 글자의 문맥 독음과 정확히 맞는다", function () {
+  const curated = new Set(MODERN_VOCABULARY_BY_DAY.flat());
+  CHARACTERS.forEach(function (item) {
+    item.relatedWords.forEach(function (word) {
+      assert.ok(curated.has(word.word));
+      const origins = Array.from(word.origin);
+      const readings = Array.from(word.word);
+      assert.equal(origins.length, readings.length);
+      assert.ok(origins.some(function (character, position) {
+        return character === item.character && readings[position] === item.reading;
+      }));
+    });
+  });
+
+  const su = CHARACTERS.find(function (item) {
+    return item.character === "宿";
+  });
+  assert.equal(su.reading, "수");
+  assert.ok(su.relatedWords.every(function (word) {
+    return !["숙제", "기숙사"].includes(word.word);
+  }));
 });
