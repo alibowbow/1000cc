@@ -1,4 +1,4 @@
-const CACHE_NAME = "1000cc-static-v4-20260804";
+const CACHE_NAME = "1000cc-static-v5-20260804";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./app.js",
   "./data.js",
   "./character-meta.js",
+  "./character-content.js",
   "./manifest.webmanifest",
   "./icon.svg",
   "./js/data-model.js",

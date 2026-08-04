@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { CHARACTER_FORMS, CHARACTER_WORDS } from "../character-content.js";
 import { CHARACTER_HUN } from "../character-meta.js";
 import {
   CHARACTERS,
@@ -8,6 +9,7 @@ import {
   getCouplet,
   getCharacterStudyDetails,
   getHunSound,
+  findCharacterIndexes,
 } from "../js/data-model.js";
 
 test("천자문 데이터는 8자 125연, 총 1,000자로 구성된다", function () {
@@ -77,23 +79,54 @@ test("1,000자 훈음은 원문·독음의 같은 인덱스에 빈 값 없이 �
   assert.equal(CHARACTERS.at(-1).contextHun, "어조사 야");
 });
 
-test("선택 글자 학습 정보는 4자구 훈음과 전체 위치를 정확히 제공한다", function () {
+test("1,000자 부수·총획 정보는 원문과 같은 순서로 대응한다", function () {
+  assert.equal(CHARACTER_FORMS.length, 1000);
+  CHARACTER_FORMS.forEach(function ([character, radical, totalStrokes], index) {
+    assert.equal(character, CHARACTERS[index].character);
+    assert.match(radical, /^\p{Script=Han}$/u);
+    assert.ok(Number.isInteger(totalStrokes) && totalStrokes > 0);
+    assert.equal(CHARACTERS[index].radical, radical);
+    assert.equal(CHARACTERS[index].totalStrokes, totalStrokes);
+  });
+  assert.deepEqual(CHARACTER_FORMS[0], ["天", "大", 4]);
+  assert.deepEqual(CHARACTER_FORMS[1], ["地", "土", 6]);
+});
+
+test("관련 한자어는 실제 표제어·한자·사전 정의를 빈 값 없이 제공한다", function () {
+  assert.ok(Object.keys(CHARACTER_WORDS).length >= 950);
+  Object.entries(CHARACTER_WORDS).forEach(function ([character, words]) {
+    assert.ok(words.length >= 1 && words.length <= 2);
+    words.forEach(function (word) {
+      assert.match(word.word, /^[가-힣]{2,5}$/);
+      assert.match(word.origin, /^\p{Script=Han}{2,5}$/u);
+      assert.ok(word.origin.includes(character));
+      assert.ok(word.definition.trim());
+      assert.doesNotMatch(word.definition, /TODO|임시 문구|뜻은 .*입니다|이 글귀에서는/i);
+    });
+  });
+  assert.deepEqual(CHARACTER_WORDS.天[0], {
+    word: "천국",
+    origin: "天國",
+    definition: "하늘에 있다는, 평화롭고 모두가 행복해하는 이상적인 세상.",
+  });
+});
+
+test("선택 글자 학습 정보는 훈음·짜임·실제 한자어를 제공한다", function () {
   const first = getCharacterStudyDetails(0);
-  assert.equal(first.phrase.hanja, "天地玄黃");
-  assert.equal(first.phrase.reading, "천 지 현 황");
-  assert.deepEqual(first.phrase.items.map((item) => item.contextHun), [
-    "하늘 천",
-    "땅 지",
-    "검을 현",
-    "누를 황",
-  ]);
-  assert.equal(first.phraseNumber, 1);
-  assert.equal(first.phrasePosition, 1);
-  assert.equal(first.coupletNumber, 1);
+  assert.equal(first.item.contextHun, "하늘 천");
+  assert.equal(first.radical, "大");
+  assert.equal(first.totalStrokes, 4);
+  assert.equal(first.relatedWords[0].word, "천국");
+  assert.equal(first.relatedWords[0].origin, "天國");
 
   const last = getCharacterStudyDetails(999);
-  assert.equal(last.phrase.hanja, "焉哉乎也");
-  assert.equal(last.phraseNumber, 250);
-  assert.equal(last.phrasePosition, 4);
-  assert.equal(last.coupletNumber, 125);
+  assert.equal(last.item.contextHun, "어조사 야");
+  assert.ok(last.radical);
+  assert.ok(last.totalStrokes > 0);
+});
+
+test("전체 보기 검색은 관련 한자어와 사전 뜻까지 찾는다", function () {
+  assert.ok(findCharacterIndexes("천국").includes(0));
+  assert.ok(findCharacterIndexes("평화롭고 모두가 행복").includes(0));
+  assert.ok(findCharacterIndexes("天國").includes(0));
 });

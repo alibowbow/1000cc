@@ -18,7 +18,7 @@
     <a class="skip-link" href="#main-content">학습 화면으로 바로가기</a>
 
     <header class="topbar">
-      <a class="brand" href="./" aria-label="천자문 처음으로">
+      <a class="brand" id="brand-home" href="./" aria-label="전체 보기로 돌아가기">
         <span class="brand__ko">천자문</span>
         <span class="brand__hanja" lang="zh-Hant">千字文</span>
         <span class="brand__seal" aria-hidden="true">千</span>
@@ -72,7 +72,7 @@
 
         <div class="overview-tools">
           <form class="character-search" id="overview-search-form" role="search">
-            <label for="overview-search">한자·독음·훈음·풀이 검색</label>
+            <label for="overview-search">한자·독음·훈음·한자어·풀이 검색</label>
             <div class="search-field">
               <input id="overview-search" type="search" autocomplete="off" placeholder="예: 天, 천, 하늘 천" />
               <button type="submit">찾기</button>
@@ -177,39 +177,36 @@
 
         <aside class="character-inspector" aria-label="선택한 글자 정보">
           <div class="character-inspector__glyph" aria-hidden="true">
-            <span id="selected-number">전체 1 / 1,000</span>
             <strong id="selected-character" lang="zh-Hant">天</strong>
           </div>
           <div class="character-inspector__body">
             <p class="eyebrow">선택한 글자</p>
             <h2 id="selected-hun"><span id="selected-gloss">하늘</span> <span id="selected-reading">천</span></h2>
-            <div class="character-position" aria-label="천자문 안의 위치">
-              <span id="selected-position">8자 연 1 / 125</span>
-              <span id="selected-role">4자구 1 / 250 · 1번째 글자</span>
-            </div>
-
-            <section class="phrase-breakdown-card" aria-labelledby="phrase-breakdown-title">
-              <div class="phrase-breakdown-card__heading">
-                <span id="phrase-breakdown-title">4자구 해체</span>
-                <strong id="selected-phrase" lang="zh-Hant">天地玄黃</strong>
-              </div>
-              <p class="phrase-reading" id="selected-phrase-reading">천 지 현 황</p>
-              <ol class="phrase-breakdown" id="selected-phrase-breakdown"></ol>
-            </section>
-
-            <dl class="character-context">
+            <dl class="character-facts" aria-label="글자 짜임">
               <div>
-                <dt>8자 연</dt>
-                <dd class="context-hanja" id="selected-couplet" lang="zh-Hant">天地玄黃宇宙洪荒</dd>
-                <dd class="context-reading" id="selected-couplet-reading">천지현황 우주홍황</dd>
+                <dt>부수</dt>
+                <dd id="selected-radical" lang="zh-Hant">大</dd>
+              </div>
+              <div>
+                <dt>총획</dt>
+                <dd><span id="selected-strokes">4</span>획</dd>
               </div>
             </dl>
+
+            <section class="related-words" id="related-words-section" aria-labelledby="related-words-title">
+              <div class="related-words__heading">
+                <h3 id="related-words-title">이 글자가 쓰인 말</h3>
+                <span>국립국어원 사전</span>
+              </div>
+              <ul id="selected-related-words"></ul>
+            </section>
+
             <button class="character-play" id="play-character" type="button" data-tts>
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M11 5 6 9H3v6h3l5 4V5Z" />
                 <path d="M15 9.5a4 4 0 0 1 0 5M17.7 6.8a7.5 7.5 0 0 1 0 10.4" />
               </svg>
-              <span id="play-character-label">선택 글자 훈음 듣기</span>
+              <span id="play-character-label">하늘 천 듣기</span>
             </button>
           </div>
         </aside>

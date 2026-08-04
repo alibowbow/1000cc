@@ -1,5 +1,6 @@
 import { COUPLETS, TOTAL_CHARACTERS } from "../data.js";
 import { CHARACTER_HUN } from "../character-meta.js";
+import { CHARACTER_FORMS, CHARACTER_WORDS } from "../character-content.js";
 import { normalizeSearch } from "./utils.js";
 
 const CONTEXT_HUN_OVERRIDES = new Map([
@@ -46,6 +47,10 @@ export const CHARACTERS = Object.freeze(
       const index = coupletIndex * 8 + offset;
       const hun = CHARACTER_HUN[index];
       const contextHun = selectContextHun(hun, readings[offset], index);
+      const form = CHARACTER_FORMS[index];
+      if (!form || form[0] !== character) {
+        throw new Error(`${index + 1}번째 글자의 부수·획수 정보가 원문과 일치하지 않습니다.`);
+      }
       const phraseStart = Math.floor(index / 4) * 4;
       return Object.freeze({
         index,
@@ -66,6 +71,9 @@ export const CHARACTERS = Object.freeze(
         couplet: couplet.hanja,
         coupletReading: couplet.reading,
         meaning: couplet.meaning,
+        radical: form[1],
+        totalStrokes: form[2],
+        relatedWords: Object.freeze(CHARACTER_WORDS[character] || []),
       });
     });
   }),
@@ -110,14 +118,11 @@ export function getCharacterStudyDetails(index) {
   const couplet = getCouplet(item.coupletIndex);
   return {
     item,
-    phrase,
     couplet,
-    phraseNumber: item.phraseIndex + 1,
-    phraseCount: TOTAL_CHARACTERS / 4,
-    phrasePosition: item.index - item.phraseStart + 1,
-    coupletNumber: item.coupletIndex + 1,
-    coupletCount: COUPLETS.length,
-    coupletPosition: item.offset + 1,
+    phrase,
+    radical: item.radical,
+    totalStrokes: item.totalStrokes,
+    relatedWords: item.relatedWords,
   };
 }
 
@@ -140,6 +145,9 @@ export function findCharacterIndexes(query) {
       item.couplet,
       item.coupletReading,
       item.meaning,
+      ...item.relatedWords.flatMap(function (word) {
+        return [word.word, word.origin, word.definition];
+      }),
       String(item.number),
     ].some(function (value) {
       return normalizeSearch(value).includes(needle);

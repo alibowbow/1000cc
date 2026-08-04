@@ -64,6 +64,7 @@ let completionTimer = 0;
 let renderedSessionKey = "";
 
 const elements = {
+  brandHome: document.querySelector("#brand-home"),
   masteredCount: document.querySelector("#mastered-count"),
   masteryProgress: document.querySelector("#mastery-progress"),
   modeButtons: Array.from(document.querySelectorAll("[data-mode]")),
@@ -98,17 +99,13 @@ const elements = {
   toggleReading: document.querySelector("#toggle-reading"),
   toggleMeaning: document.querySelector("#toggle-meaning"),
   revealAnswer: document.querySelector("#reveal-answer"),
-  selectedNumber: document.querySelector("#selected-number"),
   selectedCharacter: document.querySelector("#selected-character"),
   selectedGloss: document.querySelector("#selected-gloss"),
   selectedReading: document.querySelector("#selected-reading"),
-  selectedPosition: document.querySelector("#selected-position"),
-  selectedRole: document.querySelector("#selected-role"),
-  selectedPhrase: document.querySelector("#selected-phrase"),
-  selectedPhraseReading: document.querySelector("#selected-phrase-reading"),
-  selectedPhraseBreakdown: document.querySelector("#selected-phrase-breakdown"),
-  selectedCouplet: document.querySelector("#selected-couplet"),
-  selectedCoupletReading: document.querySelector("#selected-couplet-reading"),
+  selectedRadical: document.querySelector("#selected-radical"),
+  selectedStrokes: document.querySelector("#selected-strokes"),
+  relatedWordsSection: document.querySelector("#related-words-section"),
+  selectedRelatedWords: document.querySelector("#selected-related-words"),
   playCharacter: document.querySelector("#play-character"),
   playCharacterLabel: document.querySelector("#play-character-label"),
   gridSetup: document.querySelector("#grid-setup"),
@@ -240,6 +237,7 @@ function buildRangeControls() {
 }
 
 function bindEvents() {
+  elements.brandHome.addEventListener("click", goHome);
   elements.modeButtons.forEach(function (button) {
     button.addEventListener("click", function () {
       setMode(button.dataset.mode);
@@ -332,6 +330,7 @@ function bindEvents() {
       onError: handleTtsError,
     });
   });
+  elements.selectedRelatedWords.addEventListener("click", handleRelatedWordClick);
   elements.playCouplet.addEventListener("click", playCurrentCouplet);
   elements.continuousListen.addEventListener("click", toggleContinuousListening);
   elements.markCouplet.addEventListener("click", markCurrentCouplet);
@@ -476,6 +475,19 @@ function renderModes() {
   });
 }
 
+function goHome(event) {
+  event.preventDefault();
+  stopAllSpeech();
+  overviewRevealedIndexes = new Set();
+  commit(function (state) {
+    state.ui.mode = "overview";
+    state.ui.search = "";
+    state.ui.revealAnswer = false;
+  });
+  renderApp();
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
 function setMode(mode) {
   if (!["overview", "passage", "grid", "review"].includes(mode)) return;
   if (mode !== appState.ui.mode) stopAllSpeech();
@@ -549,6 +561,7 @@ function renderOverview() {
         masteryLevel: record ? record.masteryLevel : 0,
         concealMeaning:
           appState.settings.hideOverviewMeaning && !overviewRevealedIndexes.has(item.index),
+        meaningToggle: appState.settings.hideOverviewMeaning,
         revealed: overviewRevealedIndexes.has(item.index),
         contextOnly: !eligibleSet.has(item.index),
         recentWrong: appState.ui.highlightWrong && recentSet.has(item.index),
@@ -619,7 +632,12 @@ function handleOverviewClick(event) {
   const item = CHARACTERS[index];
   if (!item) return;
 
-  overviewRevealedIndexes.add(index);
+  const meaningWasRevealed = overviewRevealedIndexes.has(index);
+  const meaningIsRevealed = appState.settings.hideOverviewMeaning && !meaningWasRevealed;
+  if (appState.settings.hideOverviewMeaning) {
+    if (meaningIsRevealed) overviewRevealedIndexes.add(index);
+    else overviewRevealedIndexes.delete(index);
+  }
   commit(function (state) {
     state.ui.selectedIndex = index;
   });
@@ -628,16 +646,32 @@ function handleOverviewClick(event) {
     button.classList.remove("is-selected");
     button.setAttribute("aria-pressed", "false");
   });
-  cell.classList.add("is-selected", "is-revealed");
+  cell.classList.add("is-selected");
+  cell.classList.toggle("is-revealed", meaningIsRevealed);
   cell.setAttribute("aria-pressed", "true");
-  cell.title = item.contextHun;
+  if (appState.settings.hideOverviewMeaning) {
+    cell.setAttribute("aria-expanded", String(meaningIsRevealed));
+  } else {
+    cell.removeAttribute("aria-expanded");
+  }
+  cell.title = meaningIsRevealed
+    ? `${item.contextHun} · 다시 눌러 뜻 가리기`
+    : `${item.character} · 눌러서 뜻과 읽기 확인`;
   cell.setAttribute(
     "aria-label",
-    `${item.number}번째, ${item.contextHun}, 숙련도 ${appState.progress[index]?.masteryLevel || 0}단계`,
+    appState.settings.hideOverviewMeaning
+      ? meaningIsRevealed
+        ? `${item.number}번째, ${item.contextHun}, 다시 누르면 뜻 가림`
+        : `${item.number}번째 글자 ${item.character}, 뜻 가림, 눌러서 확인`
+      : `${item.number}번째, ${item.contextHun}, 숙련도 ${appState.progress[index]?.masteryLevel || 0}단계`,
   );
   const meaning = cell.querySelector(".overview-cell__meaning");
-  if (meaning) meaning.removeAttribute("aria-hidden");
-  elements.overviewAnnouncement.textContent = `${item.contextHun}.`;
+  if (meaning) meaning.setAttribute("aria-hidden", String(!meaningIsRevealed && appState.settings.hideOverviewMeaning));
+  elements.overviewAnnouncement.textContent = appState.settings.hideOverviewMeaning
+    ? meaningIsRevealed
+      ? `${item.contextHun}. 같은 글자를 다시 누르면 뜻을 가립니다.`
+      : `${item.character}의 뜻을 다시 가렸습니다.`
+    : `${item.contextHun}.`;
 
   if (appState.settings.tapToSpeak) {
     tts.speak(item.contextHun, { kind: "character", onError: handleTtsError });
@@ -714,41 +748,46 @@ function renderPassage() {
     grid.replaceChildren(fragment);
   });
 
-  elements.selectedNumber.textContent = `전체 ${selected.number} / 1,000`;
   elements.selectedCharacter.textContent = selected.character;
   elements.selectedGloss.textContent = selected.gloss;
   elements.selectedReading.textContent = selected.reading;
-  elements.selectedPosition.textContent = `8자 연 ${details.coupletNumber} / ${details.coupletCount}`;
-  elements.selectedRole.textContent = `4자구 ${details.phraseNumber} / ${details.phraseCount} · ${details.phrasePosition}번째 글자`;
-  elements.selectedPhrase.textContent = selected.phrase;
-  elements.selectedPhraseReading.textContent = selected.phraseReading;
-  const breakdownFragment = document.createDocumentFragment();
-  details.phrase.items.forEach(function (item) {
+  elements.selectedRadical.textContent = details.radical;
+  elements.selectedStrokes.textContent = String(details.totalStrokes);
+
+  const relatedWordsFragment = document.createDocumentFragment();
+  details.relatedWords.forEach(function (word) {
     const entry = document.createElement("li");
-    if (item.index === selected.index) {
-      entry.classList.add("is-current");
-      entry.setAttribute("aria-current", "true");
-    }
-    const character = document.createElement("strong");
-    character.className = "breakdown-character";
-    character.lang = "zh-Hant";
-    character.textContent = item.character;
-    const hun = document.createElement("span");
-    hun.className = "breakdown-hun";
-    const gloss = document.createElement("span");
-    gloss.className = "breakdown-gloss";
-    gloss.textContent = item.gloss;
-    const reading = document.createElement("span");
-    reading.className = "breakdown-reading";
-    reading.textContent = item.reading;
-    hun.append(gloss, reading);
-    entry.append(character, hun);
-    breakdownFragment.append(entry);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "related-word";
+    button.dataset.relatedWord = word.word;
+    button.dataset.relatedOrigin = word.origin;
+    button.dataset.relatedDefinition = word.definition;
+    button.setAttribute("aria-label", `${word.word}, ${word.origin}. ${word.definition} 듣기`);
+
+    const term = document.createElement("span");
+    term.className = "related-word__term";
+    const reading = document.createElement("strong");
+    reading.textContent = word.word;
+    const origin = document.createElement("span");
+    origin.lang = "zh-Hant";
+    origin.textContent = word.origin;
+    term.append(reading, origin);
+
+    const definition = document.createElement("span");
+    definition.className = "related-word__definition";
+    definition.textContent = word.definition;
+    const listen = document.createElement("span");
+    listen.className = "related-word__listen";
+    listen.setAttribute("aria-hidden", "true");
+    listen.textContent = "듣기";
+    button.append(term, definition, listen);
+    entry.append(button);
+    relatedWordsFragment.append(entry);
   });
-  elements.selectedPhraseBreakdown.replaceChildren(breakdownFragment);
-  elements.selectedCouplet.textContent = selected.couplet;
-  elements.selectedCoupletReading.textContent = selected.coupletReading;
-  elements.playCharacterLabel.textContent = "선택 글자 훈음 듣기";
+  elements.selectedRelatedWords.replaceChildren(relatedWordsFragment);
+  elements.relatedWordsSection.hidden = details.relatedWords.length === 0;
+  elements.playCharacterLabel.textContent = `${selected.contextHun} 듣기`;
 
   const allRecorded = couplet.items.every(function (item) {
     return appState.progress[item.index] && appState.progress[item.index].masteryLevel >= 2;
@@ -776,13 +815,15 @@ function renderPassageVisibility() {
   elements.coupletMeaning.setAttribute("aria-hidden", String(concealMeaning));
   elements.selectedGloss.setAttribute("aria-hidden", String(concealMeaning));
   elements.selectedReading.setAttribute("aria-hidden", String(concealReading));
-  elements.selectedPhraseReading.setAttribute("aria-hidden", String(concealReading));
-  elements.selectedCoupletReading.setAttribute("aria-hidden", String(concealReading));
-  elements.selectedPhraseBreakdown.querySelectorAll(".breakdown-gloss").forEach(function (node) {
-    node.setAttribute("aria-hidden", String(concealMeaning));
-  });
-  elements.selectedPhraseBreakdown.querySelectorAll(".breakdown-reading").forEach(function (node) {
-    node.setAttribute("aria-hidden", String(concealReading));
+  elements.selectedRelatedWords.querySelectorAll(".related-word").forEach(function (button) {
+    const definition = button.querySelector(".related-word__definition");
+    if (definition) definition.setAttribute("aria-hidden", String(concealMeaning));
+    button.setAttribute(
+      "aria-label",
+      concealMeaning
+        ? `${button.dataset.relatedWord}, ${button.dataset.relatedOrigin}, 듣기`
+        : `${button.dataset.relatedWord}, ${button.dataset.relatedOrigin}. ${button.dataset.relatedDefinition} 듣기`,
+    );
   });
   const concealed = concealReading || concealMeaning;
   elements.playCharacter.setAttribute(
@@ -804,6 +845,15 @@ function handlePassageCharacterClick(event) {
   if (appState.settings.tapToSpeak) {
     tts.speak(CHARACTERS[index].contextHun, { kind: "character", onError: handleTtsError });
   }
+}
+
+function handleRelatedWordClick(event) {
+  const button = event.target.closest("[data-related-word]");
+  if (!button) return;
+  tts.speak(button.dataset.relatedWord, {
+    kind: "word",
+    onError: handleTtsError,
+  });
 }
 
 function handleFourGridKeyboard(event) {
