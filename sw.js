@@ -1,9 +1,9 @@
-const CACHE_NAME = "1000cc-static-v25-20260805";
+const CACHE_NAME = "1000cc-static-v26-20260805";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=24",
-  "./theme-folio.css?v=25",
+  "./theme-folio.css?v=26",
   "./passage-folio-v25.css?v=25",
   "./app.js?v=24",
   "./data.js",
@@ -13,6 +13,8 @@ const APP_SHELL = [
   "./icon.svg",
   "./assets/learning-seasons-atlas.webp",
   "./assets/joseon-folio-spread.webp",
+  "./assets/cheonjamun-title.woff",
+  "./assets/cheonjamun-hanja.woff",
   "./assets/hanji-ivory-tile.webp",
   "./assets/hanji-gray-tile.webp",
   "./assets/hanji-charcoal-tile.webp",

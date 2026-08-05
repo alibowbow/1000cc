@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("펼친 조선 서첩과 독립 그림 기억 v25 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("펼친 조선 서첩과 독립 그림 기억 v26 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/joseon-folio-spread.webp",
     "assets/hanji-ivory-tile.webp",
@@ -22,7 +22,7 @@ test("펼친 조선 서첩과 독립 그림 기억 v25 학습 모드가 오프�
     "assets/ui-bamboo.webp",
     "assets/ui-mountains.webp",
   ];
-  const [html, app, styles, theme, passageTheme, serviceWorker, storage, seasonalAtlas, atlasAssets, memoryAtlases] = await Promise.all([
+  const [html, app, styles, theme, passageTheme, serviceWorker, storage, seasonalAtlas, titleFont, titleHanjaFont, atlasAssets, memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
     readFile(new URL("styles.css", root), "utf8"),
@@ -31,6 +31,8 @@ test("펼친 조선 서첩과 독립 그림 기억 v25 학습 모드가 오프�
     readFile(new URL("sw.js", root), "utf8"),
     readFile(new URL("js/storage.js", root), "utf8"),
     stat(new URL("assets/learning-seasons-atlas.webp", root)),
+    stat(new URL("assets/cheonjamun-title.woff", root)),
+    stat(new URL("assets/cheonjamun-hanja.woff", root)),
     Promise.all(atlasAssetPaths.map(function (path) { return stat(new URL(path, root)); })),
     Promise.all(Array.from({ length: 16 }, function (_, index) {
       return stat(new URL(`assets/memory-atlas-${String(index + 1).padStart(2, "0")}.webp`, root));
@@ -38,6 +40,7 @@ test("펼친 조선 서첩과 독립 그림 기억 v25 학습 모드가 오프�
   ]);
 
   assert.match(html, /theme-folio\.css/);
+  assert.match(html, /theme-folio\.css\?v=26/);
   assert.match(html, /passage-folio-v25\.css\?v=25/);
   assert.match(html, /app\.js\?v=24/);
   assert.match(html, /styles\.css\?v=24/);
@@ -135,6 +138,12 @@ test("펼친 조선 서첩과 독립 그림 기억 v25 학습 모드가 오프�
   assert.doesNotMatch(theme, /seodang-study-room\.webp/);
   assert.match(passageTheme, /font-size:\s*clamp\(2\.85rem, 68cqi, 4\.65rem\)/);
   assert.match(theme, /@media \(max-width: 1080px\)/);
+  assert.match(theme, /v24 · keep the masthead title/);
+  assert.match(theme, /font-family:\s*"Cheonjamun Title"/);
+  assert.match(theme, /font-family:\s*"Cheonjamun Hanja"/);
+  assert.match(theme, /\.brand\s*\{[\s\S]*flex-wrap:\s*nowrap;[\s\S]*white-space:\s*nowrap;[\s\S]*word-break:\s*keep-all/);
+  assert.match(theme, /\.brand__ko\s*\{[\s\S]*letter-spacing:\s*0/);
+  assert.match(theme, /@media \(min-width:\s*661px\) and \(max-width:\s*820px\)[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 48px/);
   assert.match(theme, /\.tacit-stage/);
   assert.match(theme, /\.tacit-visual/);
   assert.match(theme, /\.tacit-pairs/);
@@ -167,7 +176,9 @@ test("펼친 조선 서첩과 독립 그림 기억 v25 학습 모드가 오프�
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v25-20260805/);
+  assert.match(serviceWorker, /1000cc-static-v26-20260805/);
+  assert.match(serviceWorker, /assets\/cheonjamun-title\.woff/);
+  assert.match(serviceWorker, /assets\/cheonjamun-hanja\.woff/);
   assert.match(serviceWorker, /matching-engine\.js\?v=24/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
   assert.match(serviceWorker, /tts-manager\.js\?v=24/);
@@ -182,6 +193,10 @@ test("펼친 조선 서첩과 독립 그림 기억 v25 학습 모드가 오프�
   assert.match(serviceWorker, /assets\/memory-atlas-16\.webp/);
   assert.ok(seasonalAtlas.size > 50_000);
   assert.ok(seasonalAtlas.size < 250_000);
+  assert.ok(titleFont.size > 1_000);
+  assert.ok(titleFont.size < 20_000);
+  assert.ok(titleHanjaFont.size > 1_000);
+  assert.ok(titleHanjaFont.size < 20_000);
   assert.equal(atlasAssets.length, atlasAssetPaths.length);
   atlasAssets.forEach(function (asset) {
     assert.ok(asset.size > 2_000);
