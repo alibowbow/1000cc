@@ -10,22 +10,22 @@ import {
   createMatchingSession,
   getMatchingProgress,
   selectMatchingChoice,
-} from "./js/matching-engine.js?v=18";
+} from "./js/matching-engine.js?v=19";
 import {
   createChallengeUrl,
   createRandomDailyPick,
   getLesson,
   getRandomDailyPick,
   parseChallengeDay,
-} from "./js/course-engine.js?v=18";
+} from "./js/course-engine.js?v=19";
 import { recordSkillAttempt } from "./js/progress-engine.js";
 import { createOverviewCell, createPassageCharacter } from "./js/render.js";
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=18";
+} from "./js/storage.js?v=19";
 import { createStore } from "./js/state.js";
-import { TTSManager } from "./js/tts-manager.js?v=18";
+import { TTSManager } from "./js/tts-manager.js?v=19";
 import { formatDuration } from "./js/utils.js";
 
 const RANGE_SIZE = 100;
@@ -85,9 +85,9 @@ const elements = {
   shareSharedChallenge: document.querySelector("#share-shared-challenge"),
   sharedChallengeAnnouncement: document.querySelector("#shared-challenge-announcement"),
   todayDashboard: document.querySelector("#today-dashboard"),
-  todayRangeCopy: document.querySelector("#today-range-copy"),
+  todayRangePosition: document.querySelector("#today-range-position"),
+  todayRangeReading: document.querySelector("#today-range-reading"),
   todayCharacters: document.querySelector("#today-characters"),
-  todayMeaning: document.querySelector("#today-meaning"),
   todayMemoryScene: document.querySelector("#today-memory-scene"),
   todayMemoryArt: document.querySelector("#open-today-memory"),
   shuffleTodayLesson: document.querySelector("#shuffle-today-lesson"),
@@ -401,8 +401,8 @@ function renderTodayScreen() {
   elements.todayDashboard.dataset.sceneQuarter = String(
     Math.min(3, Math.floor(dayIndex / 32)),
   );
-  elements.todayRangeCopy.textContent = `${dayIndex * 8 + 1}–${dayIndex * 8 + 8}자 · ${lesson.couplet.data.reading}`;
-  elements.todayMeaning.textContent = lesson.couplet.data.meaning;
+  elements.todayRangePosition.textContent = `${dayIndex * 8 + 1}–${dayIndex * 8 + 8}자`;
+  elements.todayRangeReading.textContent = lesson.couplet.data.reading;
   elements.todayMemoryScene.textContent = lesson.memoryScene;
   applyMemoryAtlas(elements.todayMemoryArt, dayIndex);
   elements.todayMemoryArt.dataset.dayIndex = String(dayIndex);
@@ -1434,7 +1434,7 @@ function renderSpeechState() {
     speechState.speaking && speechState.kind === "couplet",
   );
   elements.playCouplet.querySelector("span").textContent =
-    speechState.speaking && speechState.kind === "couplet" ? "재생 정지" : "8자 연 듣기";
+    speechState.speaking && speechState.kind === "couplet" ? "재생 정지" : "8자 듣기";
   elements.continuousListen.setAttribute("aria-pressed", String(passageContinuous));
 }
 

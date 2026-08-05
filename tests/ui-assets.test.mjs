@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("모바일 하단 메뉴와 큰 기억 그림은 v18 오프라인 셸에 함께 연결된다", async function () {
+test("읽기 쉬운 8자 독음과 컴팩트한 조작부는 v19 오프라인 셸에 함께 연결된다", async function () {
   const [html, app, styles, theme, serviceWorker, seasonalAtlas, ...memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
@@ -18,8 +18,8 @@ test("모바일 하단 메뉴와 큰 기억 그림은 v18 오프라인 셸에 �
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /app\.js\?v=18/);
-  assert.match(html, /styles\.css\?v=18/);
+  assert.match(html, /app\.js\?v=19/);
+  assert.match(html, /styles\.css\?v=19/);
   assert.equal((html.match(/data-mode=/g) || []).length, 3);
   assert.match(html, />1자 보기</);
   assert.match(html, />8자 보기</);
@@ -35,6 +35,11 @@ test("모바일 하단 메뉴와 큰 기억 그림은 v18 오프라인 셸에 �
   assert.doesNotMatch(html, /<details class="related-words"/);
   assert.match(html, />\s*랜덤 8자\s*</);
   assert.doesNotMatch(html, />\s*다른 8자\s*</);
+  assert.match(html, /id="today-range-reading"/);
+  assert.doesNotMatch(html, />\s*전체 뜻\s*</);
+  assert.doesNotMatch(html, />\s*기억 그림\s*</);
+  assert.doesNotMatch(html, /id="today-meaning"/);
+  assert.match(html, />8자 듣기</);
   assert.match(html, /memory-scene__art/);
   assert.match(html, /id="passage-memory-image"/);
   assert.match(html, /id="passage-memory-clues"/);
@@ -53,10 +58,11 @@ test("모바일 하단 메뉴와 큰 기억 그림은 v18 오프라인 셸에 �
   assert.match(app, /createRandomDailyPick/);
   assert.match(app, /createRandomDailyPick\(\{\}/);
   assert.doesNotMatch(app, /elements\.revealAnswer/);
-  assert.match(app, /course-engine\.js\?v=18/);
-  assert.match(app, /matching-engine\.js\?v=18/);
-  assert.match(app, /storage\.js\?v=18/);
-  assert.match(app, /tts-manager\.js\?v=18/);
+  assert.match(app, /course-engine\.js\?v=19/);
+  assert.match(app, /matching-engine\.js\?v=19/);
+  assert.match(app, /storage\.js\?v=19/);
+  assert.match(app, /tts-manager\.js\?v=19/);
+  assert.doesNotMatch(app, /todayMeaning/);
   assert.match(app, /document\.body\.dataset\.screen = sharedChallengeDay !== null \? "challenge" : visibleMode/);
   assert.match(app, /selectedGloss\.removeAttribute\("aria-hidden"\)/);
   assert.match(app, /selectedReading\.removeAttribute\("aria-hidden"\)/);
@@ -77,11 +83,14 @@ test("모바일 하단 메뉴와 큰 기억 그림은 v18 오프라인 셸에 �
   assert.doesNotMatch(theme, /\.memory-scene__art\s*\{\s*width:\s*(?:46|62)px/);
   assert.match(theme, /\.today-hero__heading > :first-child[\s\S]*padding-left:\s*clamp\(30px, 3vw, 42px\)/);
   assert.match(theme, /\.overview-cell__meaning\s*\{[\s\S]*font-size:\s*clamp\(0\.82rem, 1\.45vw, 0\.94rem\)/);
+  assert.match(theme, /\.today-hero__range > strong\s*\{[\s\S]*font-size:\s*clamp\(1\.08rem, 1\.75vw, 1\.38rem\)/);
+  assert.match(theme, /#screen-passage \.passage-actions #play-couplet[\s\S]*min-height:\s*40px/);
+  assert.match(theme, /\.today-actions \.primary-action\s*\{[\s\S]*min-width:\s*136px[\s\S]*min-height:\s*44px/);
   assert.match(serviceWorker, /theme-folio\.css/);
-  assert.match(serviceWorker, /1000cc-static-v18-20260805/);
-  assert.match(serviceWorker, /matching-engine\.js\?v=18/);
+  assert.match(serviceWorker, /1000cc-static-v19-20260805/);
+  assert.match(serviceWorker, /matching-engine\.js\?v=19/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=18/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=19/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /assets\/memory-atlas-16\.webp/);
   assert.ok(seasonalAtlas.size > 50_000);

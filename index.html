@@ -10,10 +10,10 @@
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="manifest.webmanifest?v=18" />
-    <link rel="stylesheet" href="styles.css?v=18" />
-    <link rel="stylesheet" href="theme-folio.css?v=18" />
-    <script type="module" src="app.js?v=18"></script>
+    <link rel="manifest" href="manifest.webmanifest?v=19" />
+    <link rel="stylesheet" href="styles.css?v=19" />
+    <link rel="stylesheet" href="theme-folio.css?v=19" />
+    <script type="module" src="app.js?v=19"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -90,20 +90,18 @@
               </div>
               <div class="today-stage">
                 <div class="today-study">
-                  <p class="today-hero__range" id="today-range-copy">1–8자</p>
+                  <p class="today-hero__range" id="today-range-copy">
+                    <span id="today-range-position">1–8자</span>
+                    <strong id="today-range-reading">천지현황 우주홍황</strong>
+                  </p>
                   <div class="today-characters" id="today-characters" aria-label="오늘의 여덟 글자"></div>
-                  <div class="today-meaning">
-                    <span>전체 뜻</span>
-                    <p id="today-meaning"></p>
-                  </div>
                 </div>
                 <div class="memory-scene">
                   <div class="memory-scene__copy">
-                    <strong>기억 그림</strong>
                     <p id="today-memory-scene"></p>
                   </div>
-                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자 기억 그림을 8자 보기에서 열기">
-                    <span class="sr-only">기억 그림 자세히 보기</span>
+                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자 그림을 8자 보기에서 열기">
+                    <span class="sr-only">그림 자세히 보기</span>
                   </button>
                 </div>
               </div>
@@ -223,7 +221,7 @@
             <button class="primary-action" id="play-couplet" type="button" data-tts>
               <svg class="play-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z" /></svg>
               <svg class="stop-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 7h10v10H7z" /></svg>
-              <span>8자 연 듣기</span>
+              <span>8자 듣기</span>
             </button>
             <button class="toggle-chip" id="continuous-listen" type="button" aria-pressed="false" data-tts>
               연속 듣기
