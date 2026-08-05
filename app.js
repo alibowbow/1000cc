@@ -699,9 +699,13 @@ function leaveChallengeView() {
 
 function renderOverview() {
   const query = appState.ui.search.trim();
+  const rangeStart = Math.min(900, Math.max(0, appState.ui.rangeStart));
   const indexes = query
     ? findCharacterIndexes(query)
-    : Array.from({ length: TOTAL_CHARACTERS }, function (_, index) { return index; });
+    : Array.from(
+        { length: Math.min(RANGE_SIZE, TOTAL_CHARACTERS - rangeStart) },
+        function (_, offset) { return rangeStart + offset; },
+      );
   const fragment = document.createDocumentFragment();
 
   indexes.forEach(function (index) {
@@ -729,8 +733,10 @@ function renderOverview() {
   elements.overviewRange.value = String(appState.ui.rangeStart);
   elements.overviewRangeLabel.textContent = query
     ? `검색 · “${query}”`
-    : "1–1,000 · 한 글자씩";
-  elements.overviewResultCount.textContent = query ? `${indexes.length}개 결과` : "";
+    : `${rangeStart + 1}–${Math.min(rangeStart + RANGE_SIZE, TOTAL_CHARACTERS)} · 순지 필사판`;
+  elements.overviewResultCount.textContent = query
+    ? `${indexes.length}개 결과`
+    : `${Math.floor(rangeStart / RANGE_SIZE) + 1} / ${Math.ceil(TOTAL_CHARACTERS / RANGE_SIZE)}장`;
   elements.overviewToggleMeaning.setAttribute(
     "aria-pressed",
     String(appState.settings.hideOverviewMeaning),
@@ -838,9 +844,10 @@ function focusOverviewCell(index) {
     const cell = elements.overviewGrid.querySelector(`[data-index="${index}"]`);
     if (!cell) return;
     cell.focus({ preventScroll: true });
-    cell.scrollIntoView({
+    const gridTop = elements.overviewGrid.getBoundingClientRect().top + window.scrollY - 12;
+    window.scrollTo({
+      top: Math.max(0, gridTop),
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "center",
     });
   }, 0);
 }

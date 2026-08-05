@@ -4,9 +4,12 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("펼친 조선 서첩과 독립 그림 기억 v26 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/joseon-folio-spread.webp",
+    "assets/joseon-folio-single.webp",
+    "assets/sunji-fiber-tile.webp",
+    "assets/study-canvas-atmosphere.webp",
     "assets/hanji-ivory-tile.webp",
     "assets/hanji-gray-tile.webp",
     "assets/hanji-charcoal-tile.webp",
@@ -22,12 +25,13 @@ test("펼친 조선 서첩과 독립 그림 기억 v26 학습 모드가 오프�
     "assets/ui-bamboo.webp",
     "assets/ui-mountains.webp",
   ];
-  const [html, app, styles, theme, passageTheme, serviceWorker, storage, seasonalAtlas, titleFont, titleHanjaFont, atlasAssets, memoryAtlases] = await Promise.all([
+  const [html, app, styles, theme, passageTheme, compactTheme, serviceWorker, storage, seasonalAtlas, titleFont, titleHanjaFont, atlasAssets, memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
     readFile(new URL("styles.css", root), "utf8"),
     readFile(new URL("theme-folio.css", root), "utf8"),
     readFile(new URL("passage-folio-v25.css", root), "utf8"),
+    readFile(new URL("compact-sunji-v26.css", root), "utf8"),
     readFile(new URL("sw.js", root), "utf8"),
     readFile(new URL("js/storage.js", root), "utf8"),
     stat(new URL("assets/learning-seasons-atlas.webp", root)),
@@ -42,6 +46,7 @@ test("펼친 조선 서첩과 독립 그림 기억 v26 학습 모드가 오프�
   assert.match(html, /theme-folio\.css/);
   assert.match(html, /theme-folio\.css\?v=26/);
   assert.match(html, /passage-folio-v25\.css\?v=25/);
+  assert.match(html, /compact-sunji-v26\.css\?v=26/);
   assert.match(html, /app\.js\?v=24/);
   assert.match(html, /styles\.css\?v=24/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
@@ -108,6 +113,8 @@ test("펼친 조선 서첩과 독립 그림 기억 v26 학습 모드가 오프�
   assert.match(app, /storage\.js\?v=24/);
   assert.match(app, /tts-manager\.js\?v=24/);
   assert.match(app, /document\.body\.dataset\.sceneQuarter/);
+  assert.match(app, /TOTAL_CHARACTERS - rangeStart/);
+  assert.match(app, /rangeStart \+ offset/);
   assert.match(app, /todayDashboard\.dataset\.courseQuarter/);
   assert.match(storage, /matching-engine\.js\?v=24/);
   assert.match(app, /function renderMemoryMode\(\)/);
@@ -169,6 +176,14 @@ test("펼친 조선 서첩과 독립 그림 기억 v26 학습 모드가 오프�
   assert.match(theme, /\.overview-cell__meaning\s*\{[\s\S]*font-size:\s*clamp\(0\.82rem, 1\.45vw, 0\.94rem\)/);
   assert.match(theme, /\.today-hero__range > strong\s*\{[\s\S]*font-size:\s*clamp\(1\.08rem, 1\.75vw, 1\.38rem\)/);
   assert.match(passageTheme, /#screen-passage \.passage-actions button\s*\{[\s\S]*min-height:\s*44px/);
+  assert.match(compactTheme, /--sunji-fiber-image:\s*url\("\.\/assets\/sunji-fiber-tile\.webp"\)/);
+  assert.match(compactTheme, /--folio-single-image:\s*url\("\.\/assets\/joseon-folio-single\.webp"\)/);
+  assert.match(compactTheme, /--study-atmosphere-image:\s*url\("\.\/assets\/study-canvas-atmosphere\.webp"\)/);
+  assert.match(compactTheme, /#screen-overview \.overview-grid\s*\{[\s\S]*repeat\(14, minmax\(0, 1fr\)\)/);
+  assert.match(compactTheme, /@media \(max-width: 660px\) and \(orientation: portrait\)/);
+  assert.match(compactTheme, /aspect-ratio:\s*9 \/ 16/);
+  assert.match(compactTheme, /aspect-ratio:\s*3 \/ 2/);
+  assert.match(compactTheme, /background-size:\s*auto, contain, 512px 512px/);
   assert.match(passageTheme, /grid-template-areas:[\s\S]*"folio-header folio-header"[\s\S]*"sequence sequence"[\s\S]*"main inspector"/);
   assert.match(passageTheme, /#screen-passage \.passage-sequence\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 20px minmax\(0, 1fr\)/);
   assert.match(passageTheme, /#screen-passage \.character-inspector\s*\{[\s\S]*top:\s*auto/);
@@ -184,7 +199,11 @@ test("펼친 조선 서첩과 독립 그림 기억 v26 학습 모드가 오프�
   assert.match(serviceWorker, /tts-manager\.js\?v=24/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /passage-folio-v25\.css\?v=25/);
+  assert.match(serviceWorker, /compact-sunji-v26\.css\?v=26/);
   assert.match(serviceWorker, /assets\/joseon-folio-spread\.webp/);
+  assert.match(serviceWorker, /assets\/joseon-folio-single\.webp/);
+  assert.match(serviceWorker, /assets\/sunji-fiber-tile\.webp/);
+  assert.match(serviceWorker, /assets\/study-canvas-atmosphere\.webp/);
   assert.doesNotMatch(serviceWorker, /assets\/seodang-study-room\.webp/);
   assert.doesNotMatch(serviceWorker, /assets\/ui-asset-atlas-v1\.webp/);
   assert.doesNotMatch(serviceWorker, /assets\/ui-directions\.webp/);
