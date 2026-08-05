@@ -14,8 +14,8 @@
     <link rel="stylesheet" href="styles.css?v=24" />
     <link rel="stylesheet" href="theme-folio.css?v=26" />
     <link rel="stylesheet" href="passage-folio-v25.css?v=26" />
-    <link rel="stylesheet" href="compact-sunji-v26.css?v=27" />
-    <script type="module" src="app.js?v=25"></script>
+    <link rel="stylesheet" href="compact-sunji-v26.css?v=28" />
+    <script type="module" src="app.js?v=28"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -136,12 +136,16 @@
           </form>
 
           <label class="select-control">
-            <span>100자 필사판</span>
-            <select id="overview-range" aria-label="100자 단위 필사판 선택"></select>
+            <span id="overview-range-caption">200자 필사판</span>
+            <select id="overview-range" aria-label="200자 단위 필사판 선택"></select>
           </label>
 
           <div class="highlight-tools" aria-label="보기 설정">
             <button class="toggle-chip" id="overview-toggle-meaning" type="button" aria-pressed="false">뜻 가리기</button>
+            <button class="toggle-chip overview-shuffle" id="overview-shuffle" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
+              <span>랜덤 배열</span>
+            </button>
             <button class="text-button" id="clear-search" type="button" hidden>검색 지우기</button>
             <span id="overview-result-count" aria-live="polite"></span>
           </div>
@@ -252,7 +256,6 @@
             <h1 id="memory-title">그림으로 기억하기</h1>
             <p class="memory-mode-heading__meta">
               <span id="memory-position">1 / 125</span>
-              <strong id="memory-heading-reading">천지현황 우주홍황</strong>
             </p>
           </div>
           <button class="arrow-button" id="next-memory" type="button" aria-label="다음 그림 장면">

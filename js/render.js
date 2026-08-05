@@ -23,7 +23,10 @@ export function createOverviewCell(item, options) {
   button.innerHTML =
     `<span class="overview-cell__number">${item.number}</span>` +
     `<span class="overview-cell__hanja" lang="zh-Hant">${item.character}</span>` +
-    `<span class="overview-cell__meaning"${options.concealMeaning ? ' aria-hidden="true"' : ""}>${item.contextHun}</span>`;
+    `<span class="overview-cell__meaning"${options.concealMeaning ? ' aria-hidden="true"' : ""}>` +
+      `<span class="overview-cell__gloss">${item.gloss}</span> ` +
+      `<strong class="overview-cell__reading">${item.reading}</strong>` +
+    `</span>`;
   return button;
 }
 

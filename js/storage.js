@@ -60,7 +60,7 @@ export function migrateV1(value, now = Date.now()) {
   // 기존 진도와 마지막 위치는 보존하되, 새 125일 과정의 첫 진입점은 오늘의 학습으로 통일한다.
   next.ui.mode = "today";
   next.ui.selectedIndex = validIndex(value.selectedIndex, 0);
-  next.ui.rangeStart = normalizeRange(value.rangeStart);
+  next.ui.rangeStart = normalizeOverviewRange(value.rangeStart);
   next.settings.hideReading = Boolean(value.hideReading);
   next.settings.hideMeaning = Boolean(value.hideMeaning);
   next.settings.tapToSpeak =
@@ -98,7 +98,7 @@ export function normalizeV2(value) {
 
   defaults.ui.mode = MODES.includes(ui.mode) ? ui.mode : "today";
   defaults.ui.selectedIndex = validIndex(ui.selectedIndex, 0);
-  defaults.ui.rangeStart = normalizeRange(ui.rangeStart);
+  defaults.ui.rangeStart = normalizeOverviewRange(ui.rangeStart);
   defaults.ui.overviewGroupSize = Number(ui.overviewGroupSize) === 8 ? 8 : 4;
   defaults.ui.statusFilter = ["all", "unseen", "learning", "mastered"].includes(ui.statusFilter)
     ? ui.statusFilter
@@ -383,6 +383,10 @@ function validIndex(value, fallback) {
 
 function normalizeRange(value) {
   return Math.min(900, Math.max(0, Math.floor((Number(value) || 0) / 100) * 100));
+}
+
+function normalizeOverviewRange(value) {
+  return Math.min(999, Math.max(0, Math.floor(Number(value) || 0)));
 }
 
 function clampCursor(value) {

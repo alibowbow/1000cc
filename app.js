@@ -18,8 +18,15 @@ import {
   getRandomDailyPick,
   parseChallengeDay,
 } from "./js/course-engine.js?v=24";
+import {
+  createOverviewIndexes,
+  createOverviewRangeStarts,
+  getOverviewPageSize,
+  normalizeOverviewRangeStart,
+  shuffleOverviewIndexes,
+} from "./js/overview-layout.js?v=28";
 import { recordSkillAttempt } from "./js/progress-engine.js";
-import { createOverviewCell, createPassageCharacter } from "./js/render.js";
+import { createOverviewCell, createPassageCharacter } from "./js/render.js?v=28";
 import {
   loadStateFromStorage,
   saveStateToStorage,
@@ -28,19 +35,8 @@ import { createStore } from "./js/state.js";
 import { TTSManager } from "./js/tts-manager.js?v=24";
 import { formatDuration } from "./js/utils.js";
 
-const RANGE_SIZE = 100;
-const RANGE_NAMES = [
-  "첫째 마당",
-  "둘째 마당",
-  "셋째 마당",
-  "넷째 마당",
-  "다섯째 마당",
-  "여섯째 마당",
-  "일곱째 마당",
-  "여덟째 마당",
-  "아홉째 마당",
-  "열째 마당",
-];
+const OVERVIEW_COMPACT_QUERY =
+  "(max-width: 660px), (max-width: 920px) and (max-height: 520px)";
 
 const loaded = loadStateFromStorage(window.localStorage);
 const store = createStore(loaded.state, function (value) {
@@ -54,6 +50,10 @@ let appState = store.get();
 let passageContinuous = false;
 let speechState = { speaking: false, kind: "" };
 let overviewRevealedIndexes = new Set();
+const overviewCompactMedia = window.matchMedia(OVERVIEW_COMPACT_QUERY);
+let overviewPageSize = getOverviewPageSize(overviewCompactMedia.matches);
+let overviewShuffleKey = "";
+let overviewShuffledIndexes = [];
 let toastTimer = 0;
 let matchingAdvanceTimer = 0;
 let matchingTransitioning = false;
@@ -94,6 +94,7 @@ const elements = {
   shareTodayChallenge: document.querySelector("#share-today-challenge"),
   openTodayPassage: document.querySelector("#open-today-passage"),
   overviewRangeLabel: document.querySelector("#overview-range-label"),
+  overviewRangeCaption: document.querySelector("#overview-range-caption"),
   overviewRange: document.querySelector("#overview-range"),
   overviewSearchForm: document.querySelector("#overview-search-form"),
   overviewSearch: document.querySelector("#overview-search"),
@@ -102,6 +103,7 @@ const elements = {
   overviewResetFilters: document.querySelector("#overview-reset-filters"),
   overviewResultCount: document.querySelector("#overview-result-count"),
   overviewToggleMeaning: document.querySelector("#overview-toggle-meaning"),
+  overviewShuffle: document.querySelector("#overview-shuffle"),
   overviewAnnouncement: document.querySelector("#overview-announcement"),
   clearSearch: document.querySelector("#clear-search"),
   previousCouplet: document.querySelector("#previous-couplet"),
@@ -126,7 +128,6 @@ const elements = {
   previousMemory: document.querySelector("#previous-memory"),
   nextMemory: document.querySelector("#next-memory"),
   memoryPosition: document.querySelector("#memory-position"),
-  memoryHeadingReading: document.querySelector("#memory-heading-reading"),
   memoryImage: document.querySelector("#memory-image"),
   memoryClues: document.querySelector("#memory-clues"),
   memorySceneCopy: document.querySelector("#memory-scene-copy"),
@@ -204,6 +205,7 @@ function initialize() {
   if (CHARACTERS.length !== 1000 || COUPLETS.length !== 125) {
     throw new Error("천자문 데이터가 올바르지 않습니다.");
   }
+  normalizeOverviewStateForViewport(appState.ui.selectedIndex);
   buildRangeControls();
   bindEvents();
   tts.start();
@@ -226,15 +228,21 @@ function commit(mutator) {
 
 function buildRangeControls() {
   const overviewFragment = document.createDocumentFragment();
+  const starts = createOverviewRangeStarts(overviewPageSize, TOTAL_CHARACTERS);
 
-  RANGE_NAMES.forEach(function (name, rangeIndex) {
-    const start = rangeIndex * RANGE_SIZE;
-    const label = `${name} · ${start + 1}–${start + RANGE_SIZE}`;
+  starts.forEach(function (start, rangeIndex) {
+    const end = Math.min(start + overviewPageSize, TOTAL_CHARACTERS);
+    const label = `${rangeIndex + 1}장 · ${start + 1}–${end}자`;
     const overviewOption = new Option(label, String(start));
     overviewFragment.append(overviewOption);
   });
 
-  elements.overviewRange.append(overviewFragment);
+  elements.overviewRange.replaceChildren(overviewFragment);
+  elements.overviewRangeCaption.textContent = `${overviewPageSize}자 필사판`;
+  elements.overviewRange.setAttribute(
+    "aria-label",
+    `${overviewPageSize}자 단위 필사판 선택`,
+  );
 }
 
 function bindEvents() {
@@ -258,6 +266,7 @@ function bindEvents() {
 
   elements.overviewSearchForm.addEventListener("submit", function (event) {
     event.preventDefault();
+    resetOverviewShuffle();
     commit(function (state) {
       state.ui.search = elements.overviewSearch.value.trim();
     });
@@ -268,6 +277,7 @@ function bindEvents() {
   elements.overviewRange.addEventListener("change", function () {
     setOverviewRange(Number(elements.overviewRange.value));
   });
+  elements.overviewShuffle.addEventListener("click", shuffleOverviewGrid);
   elements.overviewToggleMeaning.addEventListener("click", function () {
     const willHide = !appState.settings.hideOverviewMeaning;
     overviewRevealedIndexes = new Set();
@@ -280,6 +290,11 @@ function bindEvents() {
       : "모든 글자의 뜻을 표시했습니다.";
   });
   elements.overviewGrid.addEventListener("click", handleInfiniteOverviewClick);
+  if (typeof overviewCompactMedia.addEventListener === "function") {
+    overviewCompactMedia.addEventListener("change", handleOverviewViewportChange);
+  } else {
+    overviewCompactMedia.addListener(handleOverviewViewportChange);
+  }
 
   elements.previousCouplet.addEventListener("click", function () {
     moveCouplet(-1);
@@ -499,7 +514,7 @@ function openMemory(index) {
   renderedMemoryDay = -1;
   commit(function (state) {
     state.ui.selectedIndex = index;
-    state.ui.rangeStart = Math.floor(index / 100) * 100;
+    state.ui.rangeStart = normalizeOverviewRangeStart(index, overviewPageSize, TOTAL_CHARACTERS);
     state.ui.mode = "memory";
     state.ui.revealAnswer = false;
   });
@@ -698,13 +713,20 @@ function leaveChallengeView() {
 
 function renderOverview() {
   const query = appState.ui.search.trim();
-  const rangeStart = Math.min(900, Math.max(0, appState.ui.rangeStart));
-  const indexes = query
+  const rangeStart = normalizeOverviewRangeStart(
+    appState.ui.rangeStart,
+    overviewPageSize,
+    TOTAL_CHARACTERS,
+  );
+  const baseIndexes = query
     ? findCharacterIndexes(query)
-    : Array.from(
-        { length: Math.min(RANGE_SIZE, TOTAL_CHARACTERS - rangeStart) },
-        function (_, offset) { return rangeStart + offset; },
-      );
+    : createOverviewIndexes(rangeStart, overviewPageSize, TOTAL_CHARACTERS);
+  const shuffleKey = getOverviewShuffleKey(query, rangeStart);
+  const isShuffled =
+    overviewShuffleKey === shuffleKey &&
+    overviewShuffledIndexes.length === baseIndexes.length;
+  const indexes = isShuffled ? overviewShuffledIndexes : baseIndexes;
+  if (!isShuffled) resetOverviewShuffle();
   const fragment = document.createDocumentFragment();
 
   indexes.forEach(function (index) {
@@ -729,17 +751,75 @@ function renderOverview() {
   elements.overviewGrid.hidden = indexes.length === 0;
   elements.clearSearch.hidden = !query;
   elements.overviewSearch.value = query;
-  elements.overviewRange.value = String(appState.ui.rangeStart);
+  elements.overviewRange.value = String(rangeStart);
   elements.overviewRangeLabel.textContent = query
     ? `검색 · “${query}”`
-    : `${rangeStart + 1}–${Math.min(rangeStart + RANGE_SIZE, TOTAL_CHARACTERS)} · 순지 필사판`;
+    : `${rangeStart + 1}–${Math.min(rangeStart + overviewPageSize, TOTAL_CHARACTERS)} · 순지 필사판`;
   elements.overviewResultCount.textContent = query
     ? `${indexes.length}개 결과`
-    : `${Math.floor(rangeStart / RANGE_SIZE) + 1} / ${Math.ceil(TOTAL_CHARACTERS / RANGE_SIZE)}장`;
+    : `${Math.floor(rangeStart / overviewPageSize) + 1} / ${Math.ceil(TOTAL_CHARACTERS / overviewPageSize)}장`;
   elements.overviewToggleMeaning.setAttribute(
     "aria-pressed",
     String(appState.settings.hideOverviewMeaning),
   );
+  elements.overviewShuffle.classList.toggle("is-shuffled", isShuffled);
+  elements.overviewShuffle.setAttribute(
+    "aria-label",
+    isShuffled ? "현재 글자를 다시 무작위로 배열" : "현재 글자를 무작위로 배열",
+  );
+}
+
+function getOverviewShuffleKey(query, rangeStart) {
+  return `${overviewPageSize}:${rangeStart}:${query}`;
+}
+
+function resetOverviewShuffle() {
+  overviewShuffleKey = "";
+  overviewShuffledIndexes = [];
+}
+
+function shuffleOverviewGrid() {
+  const query = appState.ui.search.trim();
+  const rangeStart = normalizeOverviewRangeStart(
+    appState.ui.rangeStart,
+    overviewPageSize,
+    TOTAL_CHARACTERS,
+  );
+  const indexes = query
+    ? findCharacterIndexes(query)
+    : createOverviewIndexes(rangeStart, overviewPageSize, TOTAL_CHARACTERS);
+  if (indexes.length < 2) {
+    elements.overviewAnnouncement.textContent = "섞을 글자가 두 개 이상 필요합니다.";
+    return;
+  }
+  overviewShuffleKey = getOverviewShuffleKey(query, rangeStart);
+  overviewShuffledIndexes = shuffleOverviewIndexes(indexes, secureRandomUnit);
+  renderOverview();
+  elements.overviewAnnouncement.textContent =
+    `현재 ${indexes.length}자를 무작위로 배열했습니다. 다시 누르면 새 배열이 됩니다.`;
+}
+
+function normalizeOverviewStateForViewport(anchorIndex) {
+  const rangeStart = normalizeOverviewRangeStart(
+    anchorIndex,
+    overviewPageSize,
+    TOTAL_CHARACTERS,
+  );
+  if (rangeStart === appState.ui.rangeStart) return;
+  commit(function (state) {
+    state.ui.rangeStart = rangeStart;
+  });
+}
+
+function handleOverviewViewportChange(event) {
+  const nextPageSize = getOverviewPageSize(event.matches);
+  if (nextPageSize === overviewPageSize) return;
+  overviewPageSize = nextPageSize;
+  overviewRevealedIndexes = new Set();
+  resetOverviewShuffle();
+  normalizeOverviewStateForViewport(appState.ui.selectedIndex);
+  buildRangeControls();
+  if (appState.ui.mode === "overview") renderOverview();
 }
 
 function handleInfiniteOverviewClick(event) {
@@ -757,7 +837,7 @@ function handleInfiniteOverviewClick(event) {
   }
   commit(function (state) {
     state.ui.selectedIndex = index;
-    state.ui.rangeStart = Math.floor(index / RANGE_SIZE) * RANGE_SIZE;
+    state.ui.rangeStart = normalizeOverviewRangeStart(index, overviewPageSize, TOTAL_CHARACTERS);
   });
 
   elements.overviewGrid.querySelectorAll(".overview-cell.is-selected").forEach(function (button) {
@@ -802,7 +882,7 @@ function openPassage(index, speak) {
   stopAllSpeech();
   commit(function (state) {
     state.ui.selectedIndex = index;
-    state.ui.rangeStart = Math.floor(index / 100) * 100;
+    state.ui.rangeStart = normalizeOverviewRangeStart(index, overviewPageSize, TOTAL_CHARACTERS);
     state.ui.mode = "passage";
     state.ui.revealAnswer = false;
   });
@@ -813,6 +893,7 @@ function openPassage(index, speak) {
 }
 
 function clearOverviewSearch() {
+  resetOverviewShuffle();
   commit(function (state) {
     state.ui.search = "";
   });
@@ -820,6 +901,7 @@ function clearOverviewSearch() {
 }
 
 function resetOverviewFilters() {
+  resetOverviewShuffle();
   commit(function (state) {
     state.ui.search = "";
     state.ui.statusFilter = "all";
@@ -829,9 +911,11 @@ function resetOverviewFilters() {
 
 function setOverviewRange(start) {
   stopAllSpeech();
+  resetOverviewShuffle();
+  const rangeStart = normalizeOverviewRangeStart(start, overviewPageSize, TOTAL_CHARACTERS);
   commit(function (state) {
-    state.ui.rangeStart = Math.min(900, Math.max(0, start));
-    state.ui.selectedIndex = state.ui.rangeStart;
+    state.ui.rangeStart = rangeStart;
+    state.ui.selectedIndex = rangeStart;
     state.ui.search = "";
   });
   renderOverview();
@@ -926,7 +1010,6 @@ function renderMemoryMode() {
   }
 
   elements.memoryPosition.textContent = `${lesson.dayNumber} / 125`;
-  elements.memoryHeadingReading.textContent = couplet.data.reading;
   elements.previousMemory.disabled = couplet.index === 0;
   elements.nextMemory.disabled = couplet.index === 124;
   applyMemoryAtlas(elements.memoryImage, lesson.dayIndex);
@@ -1028,7 +1111,11 @@ function moveMemoryCouplet(delta) {
   renderedMemoryDay = -1;
   commit(function (state) {
     state.ui.selectedIndex = next * 8;
-    state.ui.rangeStart = Math.floor(state.ui.selectedIndex / 100) * 100;
+    state.ui.rangeStart = normalizeOverviewRangeStart(
+      state.ui.selectedIndex,
+      overviewPageSize,
+      TOTAL_CHARACTERS,
+    );
     state.ui.revealAnswer = false;
   });
   renderMemoryMode();
@@ -1108,7 +1195,11 @@ function moveCouplet(delta) {
   const next = Math.min(124, Math.max(0, current + delta));
   commit(function (state) {
     state.ui.selectedIndex = next * 8;
-    state.ui.rangeStart = Math.floor(state.ui.selectedIndex / 100) * 100;
+    state.ui.rangeStart = normalizeOverviewRangeStart(
+      state.ui.selectedIndex,
+      overviewPageSize,
+      TOTAL_CHARACTERS,
+    );
     state.ui.revealAnswer = false;
   });
   renderPassage();
@@ -1145,7 +1236,11 @@ function toggleContinuousListening() {
         const coupletIndex = startCouplet + offset;
         commit(function (state) {
           state.ui.selectedIndex = coupletIndex * 8;
-          state.ui.rangeStart = Math.floor(state.ui.selectedIndex / 100) * 100;
+          state.ui.rangeStart = normalizeOverviewRangeStart(
+            state.ui.selectedIndex,
+            overviewPageSize,
+            TOTAL_CHARACTERS,
+          );
           state.ui.revealAnswer = false;
         });
         renderPassage();

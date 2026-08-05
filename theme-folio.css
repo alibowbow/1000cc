@@ -2944,13 +2944,6 @@ body[data-screen="memory"] .site-footer { display: none; }
   font-size: 0.72rem;
 }
 
-.memory-mode-heading__meta strong {
-  color: var(--ink-soft);
-  font-family: "Noto Serif KR", "AppleMyungjo", serif;
-  font-size: 0.9rem;
-  letter-spacing: 0.04em;
-}
-
 .tacit-stage {
   min-width: 0;
   min-height: 0;
@@ -3448,14 +3441,6 @@ body[data-screen="memory"] .site-footer { display: none; }
   }
 
   .memory-mode-heading__meta span { flex: 0 0 auto; font-size: 0.62rem; }
-  .memory-mode-heading__meta strong {
-    min-width: 0;
-    overflow: hidden;
-    font-size: 0.72rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .tacit-stage {
     position: relative;
     height: 100%;
