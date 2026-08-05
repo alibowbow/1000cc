@@ -791,11 +791,8 @@ progress::-moz-progress-bar { background: var(--pine); border-radius: 999px; }
   background: transparent;
   cursor: pointer;
 }
-.is-reading-hidden .phrase-character__reading,
-.is-reading-hidden #selected-reading { visibility: hidden; }
-.is-meaning-hidden .passage-meaning p,
-.is-meaning-hidden #selected-gloss,
-.is-meaning-hidden .related-word__definition { visibility: hidden; }
+.is-reading-hidden .phrase-character__reading { visibility: hidden; }
+.is-meaning-hidden .passage-meaning p { visibility: hidden; }
 .is-answer-revealed .phrase-character__reading,
 .is-answer-revealed #selected-reading,
 .is-answer-revealed .passage-meaning p,

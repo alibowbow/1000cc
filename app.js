@@ -10,22 +10,22 @@ import {
   createMatchingSession,
   getMatchingProgress,
   selectMatchingChoice,
-} from "./js/matching-engine.js?v=14";
+} from "./js/matching-engine.js?v=16";
 import {
   createChallengeUrl,
   createRandomDailyPick,
   getLesson,
   getRandomDailyPick,
   parseChallengeDay,
-} from "./js/course-engine.js?v=14";
+} from "./js/course-engine.js?v=16";
 import { recordSkillAttempt } from "./js/progress-engine.js";
 import { createOverviewCell, createPassageCharacter } from "./js/render.js";
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=14";
+} from "./js/storage.js?v=16";
 import { createStore } from "./js/state.js";
-import { TTSManager } from "./js/tts-manager.js?v=14";
+import { TTSManager } from "./js/tts-manager.js?v=16";
 import { formatDuration } from "./js/utils.js";
 
 const RANGE_SIZE = 100;
@@ -115,7 +115,6 @@ const elements = {
   continuousListen: document.querySelector("#continuous-listen"),
   toggleReading: document.querySelector("#toggle-reading"),
   toggleMeaning: document.querySelector("#toggle-meaning"),
-  revealAnswer: document.querySelector("#reveal-answer"),
   selectedCharacter: document.querySelector("#selected-character"),
   selectedGloss: document.querySelector("#selected-gloss"),
   selectedReading: document.querySelector("#selected-reading"),
@@ -297,13 +296,6 @@ function bindEvents() {
     renderPassage();
     syncSettingsControls();
   });
-  elements.revealAnswer.addEventListener("click", function () {
-    commit(function (state) {
-      state.ui.revealAnswer = true;
-    });
-    renderPassageVisibility();
-  });
-
   elements.startCurrentMatch.addEventListener("click", startCurrentMatchingGame);
   elements.startRandomMatch.addEventListener("click", startRandomMatchingGame);
   elements.continuousBoard.addEventListener("click", handleMatchingChoiceClick);
@@ -821,7 +813,7 @@ function renderPassage() {
       fragment.append(
         createPassageCharacter(item, {
           selected: item.index === selected.index,
-          concealReading: appState.settings.hideReading && !appState.ui.revealAnswer,
+          concealReading: appState.settings.hideReading,
         }),
       );
     });
@@ -955,24 +947,19 @@ function resetMemoryClues() {
 }
 
 function renderPassageVisibility() {
-  const reveal = appState.ui.revealAnswer;
-  const concealReading = appState.settings.hideReading && !reveal;
-  const concealMeaning = appState.settings.hideMeaning && !reveal;
+  const concealMeaning = appState.settings.hideMeaning;
   elements.passageScreen.classList.toggle("is-reading-hidden", appState.settings.hideReading);
   elements.passageScreen.classList.toggle("is-meaning-hidden", appState.settings.hideMeaning);
-  elements.passageScreen.classList.toggle("is-answer-revealed", reveal);
+  elements.passageScreen.classList.remove("is-answer-revealed");
   elements.toggleReading.setAttribute("aria-pressed", String(appState.settings.hideReading));
   elements.toggleMeaning.setAttribute("aria-pressed", String(appState.settings.hideMeaning));
-  elements.revealAnswer.hidden = !(
-    (appState.settings.hideReading || appState.settings.hideMeaning) && !reveal
-  );
   elements.coupletMeaning.setAttribute("aria-hidden", String(concealMeaning));
-  elements.selectedGloss.setAttribute("aria-hidden", String(concealMeaning));
-  elements.selectedReading.setAttribute("aria-hidden", String(concealReading));
+  elements.selectedGloss.removeAttribute("aria-hidden");
+  elements.selectedReading.removeAttribute("aria-hidden");
   elements.selectedRelatedWords
     .querySelectorAll(".related-word__definition")
     .forEach(function (definition) {
-      definition.setAttribute("aria-hidden", String(concealMeaning));
+      definition.removeAttribute("aria-hidden");
     });
 }
 

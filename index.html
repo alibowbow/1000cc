@@ -10,10 +10,10 @@
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="manifest.webmanifest?v=14" />
-    <link rel="stylesheet" href="styles.css?v=14" />
-    <link rel="stylesheet" href="theme-folio.css?v=14" />
-    <script type="module" src="app.js?v=14"></script>
+    <link rel="manifest" href="manifest.webmanifest?v=16" />
+    <link rel="stylesheet" href="styles.css?v=16" />
+    <link rel="stylesheet" href="theme-folio.css?v=16" />
+    <script type="module" src="app.js?v=16"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -174,7 +174,6 @@
         <div class="passage-toolbar">
           <button class="toggle-chip" id="toggle-reading" type="button" aria-pressed="false">독음 가리기</button>
           <button class="toggle-chip" id="toggle-meaning" type="button" aria-pressed="false">뜻 가리기</button>
-          <button class="quiet-button" id="reveal-answer" type="button" hidden>정답 보기</button>
         </div>
 
         <article class="passage-card" id="passage-card">
@@ -206,13 +205,13 @@
                 </dl>
               </div>
 
-              <details class="related-words" id="related-words-section" aria-labelledby="related-words-title">
-                <summary class="related-words__heading">
+              <section class="related-words" id="related-words-section" aria-labelledby="related-words-title">
+                <header class="related-words__heading">
                   <span id="related-words-title">이 글자가 쓰인 말</span>
                   <small>국립국어원 사전</small>
-                </summary>
+                </header>
                 <ul id="selected-related-words"></ul>
-              </details>
+              </section>
             </div>
           </aside>
 
