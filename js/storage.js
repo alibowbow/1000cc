@@ -1,4 +1,4 @@
-import { restoreGridSession } from "./grid-engine.js?v=12";
+import { restoreMatchingSession } from "./matching-engine.js?v=14";
 import { createProgressRecord } from "./progress-engine.js";
 import { isPlainObject, toIsoString, uniqueValidIndexes } from "./utils.js";
 
@@ -31,7 +31,6 @@ export function createDefaultState() {
       tapToSpeak: true,
       rate: 0.85,
       voiceURI: "",
-      readFourOnComplete: true,
       vibrate: true,
       boardSize: 16,
     },
@@ -117,8 +116,6 @@ export function normalizeV2(value) {
   defaults.settings.rate = validRate(settings.rate);
   defaults.settings.voiceURI =
     typeof settings.voiceURI === "string" ? settings.voiceURI.slice(0, 300) : "";
-  defaults.settings.readFourOnComplete =
-    typeof settings.readFourOnComplete === "boolean" ? settings.readFourOnComplete : true;
   defaults.settings.vibrate =
     typeof settings.vibrate === "boolean" ? settings.vibrate : true;
   defaults.settings.boardSize = Number(settings.boardSize) === 25 ? 25 : 16;
@@ -220,7 +217,7 @@ function normalizeProgress(value) {
 function normalizeSavedSession(value) {
   if (!isPlainObject(value)) return null;
   try {
-    const engine = restoreGridSession(value);
+    const engine = restoreMatchingSession(value);
     const errorsByTarget = {};
     if (isPlainObject(value.errorsByTarget)) {
       Object.entries(value.errorsByTarget).forEach(function ([key, count]) {
@@ -234,10 +231,7 @@ function normalizeSavedSession(value) {
       ...engine,
       active: value.active !== false && !engine.complete,
       paused: Boolean(value.paused),
-      difficulty: DIFFICULTIES.includes(value.difficulty) ? value.difficulty : "character",
       scope: typeof value.scope === "string" ? value.scope : "continue",
-      reviewMode: Boolean(value.reviewMode),
-      challengeMode: Boolean(value.challengeMode),
       correctCount: Math.max(0, Math.floor(Number(value.correctCount) || 0)),
       wrongCount: Math.max(0, Math.floor(Number(value.wrongCount) || 0)),
       wrongIndexes: uniqueValidIndexes(value.wrongIndexes),
@@ -270,7 +264,7 @@ function normalizeActiveLesson(value) {
   let gridSession = null;
   if (value.gridSession) {
     try {
-      gridSession = restoreGridSession(value.gridSession);
+      gridSession = restoreMatchingSession(value.gridSession);
     } catch (error) {
       gridSession = null;
     }
@@ -375,7 +369,7 @@ function assertStrictState(value) {
     );
   });
   if (value.grid && value.grid.session && !normalizeSavedSession(value.grid.session)) {
-    throw new Error("저장된 한자 순서 게임 세션이 올바르지 않습니다.");
+    throw new Error("저장된 한자 맞추기 게임 세션이 올바르지 않습니다.");
   }
   if (value.course?.activeLesson && !normalizeActiveLesson(value.course.activeLesson)) {
     throw new Error("저장된 오늘의 학습 기록이 올바르지 않습니다.");

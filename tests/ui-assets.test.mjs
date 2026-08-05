@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("세 메뉴와 125개 기억 그림은 UI와 v12 오프라인 셸에 함께 연결된다", async function () {
+test("세 메뉴와 125개 기억 그림, 한자 맞추기 게임은 v14 오프라인 셸에 함께 연결된다", async function () {
   const [html, app, theme, serviceWorker, seasonalAtlas, ...memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
@@ -17,15 +17,25 @@ test("세 메뉴와 125개 기억 그림은 UI와 v12 오프라인 셸에 함께
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /app\.js\?v=12/);
-  assert.match(html, /styles\.css\?v=12/);
+  assert.match(html, /app\.js\?v=14/);
+  assert.match(html, /styles\.css\?v=14/);
   assert.equal((html.match(/data-mode=/g) || []).length, 3);
   assert.match(html, />1자 보기</);
   assert.match(html, />8자 보기</);
-  assert.match(html, />순서 게임</);
+  assert.match(html, />한자 맞추기</);
+  assert.doesNotMatch(html, />순서 게임</);
+  assert.match(html, />\s*랜덤 8자\s*</);
+  assert.doesNotMatch(html, />\s*다른 8자\s*</);
   assert.match(html, /memory-scene__art/);
   assert.match(html, /id="passage-memory-image"/);
   assert.match(html, /id="passage-memory-clues"/);
+  assert.match(html, /class="matching-launch"/);
+  assert.match(html, /class="matching-choices"/);
+  assert.match(html, /class="shared-match-board"/);
+  assert.ok(
+    html.indexOf('class="character-inspector"') < html.indexOf('class="memory-study"'),
+    "선택 글자 정보는 기억 그림보다 먼저 배치되어야 합니다.",
+  );
   assert.doesNotMatch(html, /daily-path/);
   assert.doesNotMatch(html, /today-tools/);
   assert.doesNotMatch(html, /course-rail/);
@@ -33,15 +43,22 @@ test("세 메뉴와 125개 기억 그림은 UI와 v12 오프라인 셸에 함께
   assert.match(app, /memory-atlas-/);
   assert.match(app, /createRandomDailyPick/);
   assert.match(app, /createRandomDailyPick\(\{\}/);
-  assert.match(app, /course-engine\.js\?v=12/);
-  assert.match(app, /storage\.js\?v=12/);
-  assert.match(app, /tts-manager\.js\?v=12/);
+  assert.match(app, /course-engine\.js\?v=14/);
+  assert.match(app, /matching-engine\.js\?v=14/);
+  assert.match(app, /storage\.js\?v=14/);
+  assert.match(app, /tts-manager\.js\?v=14/);
   assert.match(theme, /learning-seasons-atlas\.webp/);
   assert.match(theme, /\.memory-clue/);
   assert.match(theme, /\.memory-scene__art[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
+  assert.match(theme, /Compact 8-character view/);
+  assert.match(theme, /\.matching-choices/);
+  assert.match(theme, /\.today-hero__heading > :first-child[\s\S]*padding-left:\s*clamp\(30px, 3vw, 42px\)/);
+  assert.match(theme, /\.overview-cell__meaning\s*\{[\s\S]*font-size:\s*clamp\(0\.82rem, 1\.45vw, 0\.94rem\)/);
   assert.match(serviceWorker, /theme-folio\.css/);
-  assert.match(serviceWorker, /1000cc-static-v12-20260805/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=12/);
+  assert.match(serviceWorker, /1000cc-static-v14-20260805/);
+  assert.match(serviceWorker, /matching-engine\.js\?v=14/);
+  assert.doesNotMatch(serviceWorker, /grid-engine/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=14/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /assets\/memory-atlas-16\.webp/);
   assert.ok(seasonalAtlas.size > 50_000);

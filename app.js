@@ -5,29 +5,27 @@ import {
   findCharacterIndexes,
   getCharacterStudyDetails,
   getCouplet,
-  getPhrase,
 } from "./js/data-model.js";
-import { createGridSession, getSessionProgress, selectGridIndex } from "./js/grid-engine.js?v=12";
+import {
+  createMatchingSession,
+  getMatchingProgress,
+  selectMatchingChoice,
+} from "./js/matching-engine.js?v=14";
 import {
   createChallengeUrl,
   createRandomDailyPick,
   getLesson,
   getRandomDailyPick,
-  isBetterScore,
   parseChallengeDay,
-} from "./js/course-engine.js?v=12";
+} from "./js/course-engine.js?v=14";
 import { recordSkillAttempt } from "./js/progress-engine.js";
-import {
-  createOverviewCell,
-  createPassageCharacter,
-  renderBoardCellElement,
-} from "./js/render.js";
+import { createOverviewCell, createPassageCharacter } from "./js/render.js";
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=12";
+} from "./js/storage.js?v=14";
 import { createStore } from "./js/state.js";
-import { TTSManager } from "./js/tts-manager.js?v=12";
+import { TTSManager } from "./js/tts-manager.js?v=14";
 import { formatDuration } from "./js/utils.js";
 
 const RANGE_SIZE = 100;
@@ -57,8 +55,8 @@ let passageContinuous = false;
 let speechState = { speaking: false, kind: "" };
 let overviewRevealedIndexes = new Set();
 let toastTimer = 0;
-let completionTimer = 0;
-let renderedSessionKey = "";
+let matchingAdvanceTimer = 0;
+let matchingTransitioning = false;
 let memoryClueRevealed = new Set();
 let renderedMemoryDay = -1;
 let sharedChallengeDay = parseChallengeDay(window.location.search);
@@ -133,31 +131,18 @@ const elements = {
   gridSetup: document.querySelector("#grid-setup"),
   gridSession: document.querySelector("#grid-session"),
   sessionResult: document.querySelector("#session-result"),
-  gridChallengeBest: document.querySelector("#grid-challenge-best"),
-  startGridChallenge: document.querySelector("#start-grid-challenge"),
-  sessionForm: document.querySelector("#session-form"),
-  sessionScope: document.querySelector("#session-scope"),
-  customStartField: document.querySelector("#custom-start-field"),
-  sessionStart: document.querySelector("#session-start"),
-  sessionDifficulty: document.querySelector("#session-difficulty"),
-  sessionBoardSize: document.querySelector("#session-board-size"),
-  resumeSession: document.querySelector("#resume-session"),
-  resumeSessionDetail: document.querySelector("#resume-session-detail"),
-  gridOverallProgress: document.querySelector("#grid-overall-progress"),
+  matchingRangeCopy: document.querySelector("#matching-range-copy"),
+  startCurrentMatch: document.querySelector("#start-current-match"),
+  startRandomMatch: document.querySelector("#start-random-match"),
   gridSessionProgress: document.querySelector("#grid-session-progress"),
   gridAccuracy: document.querySelector("#grid-accuracy"),
   gridWrongCount: document.querySelector("#grid-wrong-count"),
-  pauseSession: document.querySelector("#pause-session"),
   targetPanel: document.querySelector("#target-panel"),
   targetPrompt: document.querySelector("#target-prompt"),
   targetPosition: document.querySelector("#target-position"),
   continuousBoard: document.querySelector("#continuous-board"),
-  currentPhraseProgress: document.querySelector("#current-phrase-progress"),
-  completionStrip: document.querySelector("#completion-strip"),
-  completionTitle: document.querySelector("#completion-title"),
-  completionCopy: document.querySelector("#completion-copy"),
+  matchingFeedback: document.querySelector("#matching-feedback"),
   replayTarget: document.querySelector("#replay-target"),
-  showHint: document.querySelector("#show-hint"),
   restartSession: document.querySelector("#restart-session"),
   endSession: document.querySelector("#end-session"),
   gridAnnouncement: document.querySelector("#grid-announcement"),
@@ -174,7 +159,6 @@ const elements = {
   rateSelect: document.querySelector("#rate-select"),
   voiceNote: document.querySelector("#voice-note"),
   settingTapToSpeak: document.querySelector("#setting-tap-to-speak"),
-  settingReadFour: document.querySelector("#setting-read-four"),
   settingVibrate: document.querySelector("#setting-vibrate"),
   toast: document.querySelector("#toast"),
 };
@@ -320,20 +304,11 @@ function bindEvents() {
     renderPassageVisibility();
   });
 
-  elements.sessionScope.addEventListener("change", renderCustomStartField);
-  elements.sessionForm.addEventListener("submit", function (event) {
-    event.preventDefault();
-    startStandardGridSession();
-  });
-  elements.startGridChallenge.addEventListener("click", startGridChallenge);
-  elements.resumeSession.addEventListener("click", function () {
-    renderGridScreen();
-  });
-  elements.continuousBoard.addEventListener("click", handleBoardClick);
-  elements.continuousBoard.addEventListener("keydown", handleBoardKeyboard);
-  elements.pauseSession.addEventListener("click", toggleSessionPause);
+  elements.startCurrentMatch.addEventListener("click", startCurrentMatchingGame);
+  elements.startRandomMatch.addEventListener("click", startRandomMatchingGame);
+  elements.continuousBoard.addEventListener("click", handleMatchingChoiceClick);
+  elements.continuousBoard.addEventListener("keydown", handleMatchingChoiceKeyboard);
   elements.replayTarget.addEventListener("click", speakGridTarget);
-  elements.showHint.addEventListener("click", revealGridHint);
   elements.restartSession.addEventListener("click", restartGridSession);
   elements.endSession.addEventListener("click", endGridSession);
   elements.retryWrong.addEventListener("click", retryWrongCharacters);
@@ -362,11 +337,6 @@ function bindEvents() {
   elements.settingTapToSpeak.addEventListener("change", function () {
     commit(function (state) {
       state.settings.tapToSpeak = elements.settingTapToSpeak.checked;
-    });
-  });
-  elements.settingReadFour.addEventListener("change", function () {
-    commit(function (state) {
-      state.settings.readFourOnComplete = elements.settingReadFour.checked;
     });
   });
   elements.settingVibrate.addEventListener("change", function () {
@@ -477,7 +447,7 @@ function shuffleTodayLesson() {
   getOrCreateTodayLessonDay({ force: true, excludeDay: previous });
   renderApp();
   window.scrollTo({ top: 0, behavior: "auto" });
-  showToast("다른 8자를 무작위로 골랐습니다.");
+  showToast("랜덤 8자를 골랐습니다.");
 }
 
 function openTodayPassage() {
@@ -546,14 +516,16 @@ async function shareTodayLesson() {
   }
 }
 
-function renderCompactBoard(container, session) {
+function renderSharedMatchingChoices(container, session) {
   const fragment = document.createDocumentFragment();
-  session.boardIndexes.forEach(function (index, slot) {
+  session.choiceIndexes.forEach(function (index) {
+    const item = CHARACTERS[index];
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "board-cell";
-    button.dataset.slot = String(slot);
-    renderBoardCellElement(button, Number.isInteger(index) ? CHARACTERS[index] : null);
+    button.className = "shared-match-choice";
+    button.dataset.index = String(index);
+    button.setAttribute("aria-label", `후보 한자 ${item.character}`);
+    button.innerHTML = `<span lang="zh-Hant">${item.character}</span>`;
     fragment.append(button);
   });
   container.replaceChildren(fragment);
@@ -574,69 +546,69 @@ function renderSharedChallenge() {
   elements.sharedChallengePlay.hidden = !sharedChallengeSession || sharedChallengeSession.complete;
   elements.sharedChallengeResult.hidden = !sharedChallengeSession?.complete;
   if (sharedChallengeSession && !sharedChallengeSession.complete) {
-    renderCompactBoard(elements.sharedChallengeBoard, sharedChallengeSession);
+    renderSharedMatchingChoices(elements.sharedChallengeBoard, sharedChallengeSession);
     updateSharedChallengeStatus();
   }
 }
 
 function startSharedChallenge() {
   const lesson = getLesson(sharedChallengeDay);
-  sharedChallengeSession = createGridSession({ indexes: lesson.indexes, boardSize: 8 });
+  sharedChallengeSession = createMatchingSession({ indexes: lesson.indexes, choiceCount: 4 });
   sharedChallengeStartedAt = Date.now();
   sharedChallengeWrong = 0;
   elements.sharedChallengeResult.hidden = true;
   elements.startSharedChallenge.hidden = true;
   elements.sharedChallengePlay.hidden = false;
-  renderCompactBoard(elements.sharedChallengeBoard, sharedChallengeSession);
+  renderSharedMatchingChoices(elements.sharedChallengeBoard, sharedChallengeSession);
   updateSharedChallengeStatus();
-  focusFirstCompactBoardCell(elements.sharedChallengeBoard);
+  focusFirstSharedMatchingChoice();
 }
 
 function updateSharedChallengeStatus() {
   const session = sharedChallengeSession;
   if (!session) return;
-  const correct = session.targetPosition;
   elements.sharedChallengeTarget.textContent = session.complete
     ? "완료"
-    : CHARACTERS[session.targetCursor].reading;
-  elements.sharedChallengeProgress.textContent = `${correct} / 8`;
+    : CHARACTERS[session.targetIndex].contextHun;
+  elements.sharedChallengeProgress.textContent = `${Math.min(8, session.questionPosition + 1)} / 8`;
   elements.sharedChallengeWrong.textContent = String(sharedChallengeWrong);
 }
 
 function handleSharedChallengeClick(event) {
-  const button = event.target.closest(".board-cell");
+  const button = event.target.closest(".shared-match-choice");
   if (!button || button.disabled || !sharedChallengeSession || sharedChallengeSession.complete) return;
   const selectedIndex = Number(button.dataset.index);
   if (!Number.isInteger(selectedIndex)) return;
-  const targetIndex = sharedChallengeSession.targetCursor;
-  const result = selectGridIndex(sharedChallengeSession, selectedIndex);
+  const targetIndex = sharedChallengeSession.targetIndex;
+  const result = selectMatchingChoice(sharedChallengeSession, selectedIndex);
   if (!result.correct) {
     sharedChallengeWrong += 1;
     button.classList.remove("is-wrong");
     requestAnimationFrame(function () { button.classList.add("is-wrong"); });
     window.setTimeout(function () { button.classList.remove("is-wrong"); }, 260);
     updateSharedChallengeStatus();
-    elements.sharedChallengeAnnouncement.textContent = "오답입니다. 글자 배치는 바뀌지 않았습니다.";
+    elements.sharedChallengeAnnouncement.textContent = "오답입니다. 같은 문제에서 다시 고를 수 있습니다.";
     return;
   }
   const item = CHARACTERS[targetIndex];
   sharedChallengeSession = result.session;
   button.classList.add("is-correct");
-  button.dataset.index = "";
+  elements.sharedChallengeBoard.querySelectorAll(".shared-match-choice").forEach(function (choice) {
+    choice.disabled = true;
+  });
   window.setTimeout(function () {
-    if (button.isConnected) {
-      renderBoardCellElement(
-        button,
-        Number.isInteger(result.replacementIndex) ? CHARACTERS[result.replacementIndex] : null,
-      );
+    if (result.completed) finishSharedChallenge();
+    else {
+      renderSharedMatchingChoices(elements.sharedChallengeBoard, sharedChallengeSession);
+      updateSharedChallengeStatus();
+      focusFirstSharedMatchingChoice();
     }
-  }, 120);
-  tts.speak(item.reading, { kind: "shared-grid-feedback", onError: handleTtsError });
+  }, 220);
+  tts.speak(item.contextHun, { kind: "shared-matching-feedback", onError: handleTtsError });
   updateSharedChallengeStatus();
   elements.sharedChallengeAnnouncement.textContent = result.completed
-    ? `정답, ${item.reading}. 도전을 완료했습니다.`
-    : `정답, ${item.reading}. 다음 글자를 찾으세요.`;
-  if (result.completed) finishSharedChallenge();
+    ? `정답, ${item.contextHun}. 도전을 완료했습니다.`
+    : `정답, ${item.contextHun}. 다음 문제를 보여 줍니다.`;
 }
 
 function finishSharedChallenge() {
@@ -652,24 +624,26 @@ function handleCompactBoardKeyboard(event) {
   if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
     return;
   }
-  const button = event.target.closest(".board-cell");
+  const button = event.target.closest(".shared-match-choice");
   if (!button) return;
   event.preventDefault();
-  const buttons = Array.from(event.currentTarget.querySelectorAll(".board-cell:not(:disabled)"));
+  const buttons = Array.from(event.currentTarget.querySelectorAll(".shared-match-choice:not(:disabled)"));
   const current = buttons.indexOf(button);
   let next = current;
   if (event.key === "ArrowLeft") next -= 1;
   if (event.key === "ArrowRight") next += 1;
-  if (event.key === "ArrowUp") next -= 4;
-  if (event.key === "ArrowDown") next += 4;
+  if (event.key === "ArrowUp") next -= 2;
+  if (event.key === "ArrowDown") next += 2;
   if (event.key === "Home") next = 0;
   if (event.key === "End") next = buttons.length - 1;
   buttons[Math.min(buttons.length - 1, Math.max(0, next))]?.focus();
 }
 
-function focusFirstCompactBoardCell(container) {
+function focusFirstSharedMatchingChoice() {
   window.setTimeout(function () {
-    container.querySelector(".board-cell:not(:disabled)")?.focus({ preventScroll: true });
+    elements.sharedChallengeBoard
+      .querySelector(".shared-match-choice:not(:disabled)")
+      ?.focus({ preventScroll: true });
   }, 0);
 }
 
@@ -1105,11 +1079,6 @@ function renderGridScreen() {
     elements.gridSetup.hidden = true;
     elements.sessionResult.hidden = true;
     elements.gridSession.hidden = false;
-    const sessionKey = `${session.startedAt}-${session.startIndex}-${session.boardSize}`;
-    if (renderedSessionKey !== sessionKey) {
-      renderContinuousBoard(session);
-      renderedSessionKey = sessionKey;
-    }
     renderGridSessionStatus();
     return;
   }
@@ -1123,105 +1092,47 @@ function renderGridScreen() {
   elements.gridSetup.hidden = false;
   elements.gridSession.hidden = true;
   elements.sessionResult.hidden = true;
-  elements.sessionBoardSize.value = String(appState.settings.boardSize);
-  elements.resumeSession.hidden = true;
-  renderGridChallengeBest();
-  renderCustomStartField();
+  renderMatchingLaunch();
 }
 
-function renderCustomStartField() {
-  elements.customStartField.hidden = elements.sessionScope.value !== "custom";
+function renderMatchingLaunch() {
+  const selected = CHARACTERS[appState.ui.selectedIndex];
+  const couplet = getCouplet(selected.coupletIndex);
+  elements.matchingRangeCopy.textContent = `현재 8자 · ${couplet.data.hanja}`;
 }
 
-function startStandardGridSession() {
+function startCurrentMatchingGame() {
+  const selected = CHARACTERS[appState.ui.selectedIndex];
+  const indexes = getCouplet(selected.coupletIndex).items.map(function (item) { return item.index; });
+  startMatchingSession(indexes, "current");
+}
+
+function startRandomMatchingGame() {
+  const couplet = getCouplet(Math.floor(Math.random() * COUPLETS.length));
+  startMatchingSession(couplet.items.map(function (item) { return item.index; }), "random");
+}
+
+function startMatchingSession(indexes, scope) {
   stopAllSpeech();
-  const scope = elements.sessionScope.value;
-  const range = resolveSessionRange(scope);
-  const boardSize = Number(elements.sessionBoardSize.value);
-  const engine = createGridSession({
-    startIndex: range.startIndex,
-    endIndex: range.endIndex,
-    boardSize,
-  });
-  const session = createSessionMetadata(engine, {
-    difficulty: elements.sessionDifficulty.value,
+  window.clearTimeout(matchingAdvanceTimer);
+  matchingTransitioning = false;
+  const session = createMatchingSessionMetadata(
+    createMatchingSession({ indexes, choiceCount: 4 }),
     scope,
-    reviewMode: false,
-  });
-  commit(function (state) {
-    state.settings.boardSize = boardSize;
-    state.grid.session = session;
-    state.grid.lastCursor = range.startIndex;
-  });
-  renderedSessionKey = "";
-  renderGridScreen();
-  if (session.difficulty === "listening") speakGridTarget();
-  focusFirstBoardCell();
-}
-
-function getGridChallengeStart() {
-  const cursor = appState.grid.lastCursor >= TOTAL_CHARACTERS ? 0 : appState.grid.lastCursor;
-  return Math.min(960, Math.max(0, cursor));
-}
-
-function renderGridChallengeBest() {
-  const best = appState.grid.bestScores[getGridChallengeStart()];
-  elements.gridChallengeBest.textContent = best
-    ? `${best.accuracy}% · ${formatDuration(best.duration)}`
-    : "아직 없음";
-}
-
-function startGridChallenge() {
-  stopAllSpeech();
-  const startIndex = getGridChallengeStart();
-  const boardSize = appState.settings.boardSize;
-  const engine = createGridSession({
-    startIndex,
-    endIndex: startIndex + 40,
-    boardSize,
-  });
-  const session = createSessionMetadata(engine, {
-    difficulty: "none",
-    scope: "challenge",
-    reviewMode: false,
-    challengeMode: true,
-  });
+  );
   commit(function (state) {
     state.grid.session = session;
-    state.grid.lastCursor = startIndex;
+    state.grid.lastCursor = indexes[0];
   });
-  renderedSessionKey = "";
   renderGridScreen();
-  focusFirstBoardCell();
+  focusFirstMatchingChoice();
 }
 
-function resolveSessionRange(scope) {
-  const cursor = appState.grid.lastCursor >= 1000 ? 0 : appState.grid.lastCursor;
-  if (scope === "current") {
-    return { startIndex: appState.ui.rangeStart, endIndex: appState.ui.rangeStart + 100 };
-  }
-  if (scope === "1000") return { startIndex: 0, endIndex: 1000 };
-  if (["40", "100", "200"].includes(scope)) {
-    const length = Number(scope);
-    const startIndex = Math.min(cursor, 1000 - length);
-    return { startIndex, endIndex: startIndex + length };
-  }
-  if (scope === "custom") {
-    const startIndex = Math.min(999, Math.max(0, Number(elements.sessionStart.value) - 1 || 0));
-    return { startIndex, endIndex: Math.min(1000, startIndex + 100) };
-  }
-  return { startIndex: cursor, endIndex: 1000 };
-}
-
-function createSessionMetadata(engine, options) {
+function createMatchingSessionMetadata(engine, scope) {
   return {
     ...engine,
     active: true,
-    paused: false,
-    difficulty: options.difficulty,
-    scope: options.scope,
-    reviewMode: Boolean(options.reviewMode),
-    challengeMode: Boolean(options.challengeMode),
+    scope,
     correctCount: 0,
     wrongCount: 0,
     wrongIndexes: [],
@@ -1231,72 +1142,65 @@ function createSessionMetadata(engine, options) {
   };
 }
 
-function renderContinuousBoard(session) {
+function renderMatchingChoices(session) {
   const fragment = document.createDocumentFragment();
-  session.boardIndexes.forEach(function (index, slot) {
+  session.choiceIndexes.forEach(function (index) {
+    const item = CHARACTERS[index];
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "board-cell";
-    button.dataset.slot = String(slot);
-    renderBoardCellElement(button, Number.isInteger(index) ? CHARACTERS[index] : null);
+    button.className = "match-choice";
+    button.dataset.index = String(index);
+    button.setAttribute("aria-label", `후보 한자 ${item.character}`);
+    button.innerHTML = `<span lang="zh-Hant">${item.character}</span>`;
     fragment.append(button);
   });
-  elements.continuousBoard.dataset.size = String(session.boardSize);
   elements.continuousBoard.replaceChildren(fragment);
 }
 
-function handleBoardClick(event) {
-  const button = event.target.closest(".board-cell");
-  if (!button || button.disabled) return;
+function handleMatchingChoiceClick(event) {
+  const button = event.target.closest(".match-choice");
+  if (!button || button.disabled || matchingTransitioning) return;
   const index = Number(button.dataset.index);
   if (!Number.isInteger(index)) return;
-  answerGrid(index, button);
+  answerMatchingChoice(index, button);
 }
 
-function answerGrid(selectedIndex, button) {
+function answerMatchingChoice(selectedIndex, button) {
   const session = appState.grid.session;
-  if (!session || !session.active || session.paused || session.complete) return;
-  const targetIndex = session.targetCursor;
-  const result = selectGridIndex(session, selectedIndex);
+  if (!session || !session.active || session.complete) return;
+  const targetIndex = session.targetIndex;
+  const result = selectMatchingChoice(session, selectedIndex);
 
   if (!result.correct) {
-    handleWrongGridAnswer(targetIndex, button);
+    handleWrongMatchingAnswer(targetIndex, button);
     return;
   }
 
-  const completedItem = CHARACTERS[targetIndex];
-  const completedFour = (targetIndex + 1) % 4 === 0;
-  const completedEight = (targetIndex + 1) % 8 === 0;
-  const previousMetadata = session;
+  const item = CHARACTERS[targetIndex];
   const nextSession = {
-    ...previousMetadata,
+    ...session,
     ...result.session,
-    correctCount: previousMetadata.correctCount + 1,
+    correctCount: session.correctCount + 1,
   };
-  const nextCursor = result.completed
-    ? Math.min(1000, targetIndex + 1)
-    : result.session.targetCursor;
+  const endedAt = result.completed ? new Date().toISOString() : null;
 
   commit(function (state) {
-    state.progress = recordSkillAttempt(state.progress, targetIndex, "order", { correct: true });
-    if (session.difficulty === "listening") {
-      state.progress = recordSkillAttempt(state.progress, targetIndex, "listening", { correct: true });
-    }
-    state.grid.session = nextSession;
-    state.grid.lastCursor = nextCursor;
+    state.progress = recordSkillAttempt(state.progress, targetIndex, "reverse", { correct: true });
+    state.grid.session = {
+      ...nextSession,
+      active: !result.completed,
+      endedAt,
+    };
+    state.grid.lastCursor = result.session.targetIndex ?? targetIndex;
   });
 
+  matchingTransitioning = true;
   button.classList.add("is-correct");
-  button.dataset.index = "";
-  button.setAttribute("aria-label", `정답, ${completedItem.reading}`);
-  window.setTimeout(function () {
-    if (button.isConnected) {
-      renderBoardCellElement(
-        button,
-        Number.isInteger(result.replacementIndex) ? CHARACTERS[result.replacementIndex] : null,
-      );
-    }
-  }, 140);
+  button.setAttribute("aria-label", `정답, ${item.contextHun}`);
+  elements.continuousBoard.querySelectorAll(".match-choice").forEach(function (choice) {
+    choice.disabled = true;
+  });
+  elements.matchingFeedback.textContent = `정답 · ${item.contextHun}`;
 
   if (
     appState.settings.vibrate &&
@@ -1306,52 +1210,23 @@ function answerGrid(selectedIndex, button) {
     navigator.vibrate(10);
   }
 
-  showGridCompletion(completedItem, completedFour, completedEight);
-  playGridFeedback(completedItem, completedFour, result.completed);
-  renderGridSessionStatus();
+  tts.speak(item.contextHun, { kind: "matching-feedback", onError: handleTtsError });
   elements.gridAnnouncement.textContent = result.completed
-    ? `정답, ${completedItem.reading}. 세션을 완료했습니다.`
-    : `정답, ${completedItem.reading}. 다음 글자를 찾으세요.`;
+    ? `정답, ${item.contextHun}. 8문제를 모두 마쳤습니다.`
+    : `정답, ${item.contextHun}. 다음 문제를 보여 줍니다.`;
 
-  if (result.completed) {
-    const endedAt = new Date().toISOString();
-    const completedSession = appState.grid.session;
-    const attempts = completedSession.correctCount + completedSession.wrongCount;
-    const candidate = {
-      accuracy: attempts > 0
-        ? Math.round((completedSession.correctCount / attempts) * 100)
-        : 100,
-      duration: Math.max(
-        0,
-        new Date(endedAt).getTime() - new Date(completedSession.startedAt).getTime(),
-      ),
-      completedAt: endedAt,
-    };
-    commit(function (state) {
-      state.grid.session.active = false;
-      state.grid.session.endedAt = endedAt;
-      if (
-        state.grid.session.challengeMode &&
-        isBetterScore(candidate, state.grid.bestScores[state.grid.session.startIndex])
-      ) {
-        state.grid.bestScores[state.grid.session.startIndex] = candidate;
-      }
-    });
-    window.setTimeout(function () {
-      renderedSessionKey = "";
-      renderGridScreen();
-    }, 180);
-  }
+  matchingAdvanceTimer = window.setTimeout(function () {
+    matchingTransitioning = false;
+    renderGridScreen();
+    if (!result.completed) focusFirstMatchingChoice();
+  }, 260);
 }
 
-function handleWrongGridAnswer(targetIndex, button) {
+function handleWrongMatchingAnswer(targetIndex, button) {
   const session = appState.grid.session;
   const errors = (session.errorsByTarget[targetIndex] || 0) + 1;
   commit(function (state) {
-    state.progress = recordSkillAttempt(state.progress, targetIndex, "order", { correct: false });
-    if (session.difficulty === "listening") {
-      state.progress = recordSkillAttempt(state.progress, targetIndex, "listening", { correct: false });
-    }
+    state.progress = recordSkillAttempt(state.progress, targetIndex, "reverse", { correct: false });
     state.grid.session.wrongCount += 1;
     state.grid.session.errorsByTarget[targetIndex] = errors;
     if (!state.grid.session.wrongIndexes.includes(targetIndex)) {
@@ -1365,174 +1240,76 @@ function handleWrongGridAnswer(targetIndex, button) {
   window.setTimeout(function () {
     button.classList.remove("is-wrong");
   }, 260);
-  renderGridSessionStatus();
-  elements.gridAnnouncement.textContent =
-    errors >= 3
-      ? "오답입니다. 진행 위치는 그대로입니다. 원하면 힌트 버튼을 누르세요."
-      : "오답입니다. 진행 위치와 글자 배치는 바뀌지 않았습니다.";
+  elements.gridWrongCount.textContent = String(appState.grid.session.wrongCount);
+  const attempts = appState.grid.session.correctCount + appState.grid.session.wrongCount;
+  elements.gridAccuracy.textContent = `${Math.round((appState.grid.session.correctCount / attempts) * 100)}%`;
+  elements.matchingFeedback.textContent = "다시 살펴보고 고르세요.";
+  elements.gridAnnouncement.textContent = "오답입니다. 같은 문제에서 다시 고를 수 있습니다.";
 }
 
 function renderGridSessionStatus() {
   const session = appState.grid.session;
   if (!session) return;
-  const progress = getSessionProgress(session);
+  const progress = getMatchingProgress(session);
   const attempts = session.correctCount + session.wrongCount;
   const accuracy = attempts > 0 ? Math.round((session.correctCount / attempts) * 100) : null;
-  const target = session.complete ? null : CHARACTERS[session.targetCursor];
-  elements.gridSession.classList.toggle("is-paused", session.paused);
-  elements.gridOverallProgress.textContent = session.complete
-    ? `${Math.min(1000, session.endIndex)} / 1,000`
-    : `${session.targetCursor + 1} / 1,000`;
-  elements.gridSessionProgress.textContent = `${progress.completed} / ${progress.total}`;
+  const target = session.complete ? null : CHARACTERS[session.targetIndex];
+  elements.gridSessionProgress.textContent = `${Math.min(progress.total, progress.completed + 1)} / ${progress.total}`;
   elements.gridAccuracy.textContent = accuracy === null ? "—" : `${accuracy}%`;
   elements.gridWrongCount.textContent = String(session.wrongCount);
-  elements.pauseSession.textContent = session.paused ? "계속하기" : "일시정지";
-  elements.pauseSession.setAttribute("aria-pressed", String(session.paused));
 
   if (target) {
-    renderGridTarget(target, session);
-    renderCurrentPhraseProgress(target.index, session);
-    const errors = session.errorsByTarget[target.index] || 0;
-    elements.showHint.hidden = errors < 3;
-    elements.replayTarget.hidden = session.difficulty !== "listening";
+    renderMatchingTarget(target, progress);
+    renderMatchingChoices(session);
+    elements.matchingFeedback.textContent = "맞는 한자를 고르세요.";
   }
 }
 
-function renderGridTarget(target, session) {
-  elements.targetPanel.classList.toggle(
-    "is-concealed",
-    session.difficulty === "listening" || session.difficulty === "none",
-  );
-  if (session.difficulty === "character") {
-    elements.targetPrompt.textContent = `${target.character} · ${target.reading}`;
-  } else if (session.difficulty === "reading") {
-    elements.targetPrompt.textContent = target.reading;
-  } else if (session.difficulty === "listening") {
-    elements.targetPrompt.textContent = "소리를 듣고 찾으세요";
-  } else {
-    elements.targetPrompt.textContent = "순서를 기억해 찾으세요";
-  }
-  elements.targetPosition.textContent = `전체 ${target.number}번째`;
-}
-
-function renderCurrentPhraseProgress(targetIndex, session) {
-  const phraseStart = Math.floor(targetIndex / 4) * 4;
-  const text = CHARACTERS.slice(phraseStart, phraseStart + 4)
-    .map(function (item) {
-      const completed =
-        session.order.includes(item.index) &&
-        session.order.indexOf(item.index) < session.targetPosition;
-      return completed ? item.character : "□";
-    })
-    .join(" ");
-  elements.currentPhraseProgress.textContent = text;
-}
-
-function showGridCompletion(item, completedFour, completedEight) {
-  window.clearTimeout(completionTimer);
-  if (!completedFour && !completedEight) {
-    elements.completionStrip.hidden = true;
-    return;
-  }
-  if (completedEight) {
-    const couplet = getCouplet(item.coupletIndex);
-    elements.completionTitle.textContent = couplet.data.hanja;
-    elements.completionCopy.textContent = couplet.data.meaning;
-  } else {
-    const phrase = getPhrase(item.index);
-    elements.completionTitle.textContent = phrase.hanja;
-    elements.completionCopy.textContent = phrase.reading;
-  }
-  elements.completionStrip.hidden = false;
-  completionTimer = window.setTimeout(function () {
-    elements.completionStrip.hidden = true;
-  }, 3200);
-}
-
-function playGridFeedback(item, completedFour, sessionCompleted) {
-  const session = appState.grid.session;
-  const queue = [item.reading];
-  if (completedFour && appState.settings.readFourOnComplete) {
-    queue.push(getPhrase(item.index).reading);
-  }
-  if (session.difficulty === "listening" && !sessionCompleted && !session.complete) {
-    queue.push(CHARACTERS[session.targetCursor].reading);
-  }
-  tts.speakSequence(queue, { kind: "grid-feedback", onError: handleTtsError });
+function renderMatchingTarget(target, progress) {
+  elements.targetPanel.classList.remove("is-concealed");
+  elements.targetPrompt.textContent = target.contextHun;
+  elements.targetPosition.textContent = `문제 ${progress.completed + 1} / ${progress.total}`;
 }
 
 function speakGridTarget() {
   const session = appState.grid.session;
   if (!session || session.complete) return;
-  tts.speak(CHARACTERS[session.targetCursor].reading, {
-    kind: "grid-target",
+  tts.speak(CHARACTERS[session.targetIndex].contextHun, {
+    kind: "matching-target",
     onError: handleTtsError,
   });
-}
-
-function revealGridHint() {
-  const session = appState.grid.session;
-  if (!session || (session.errorsByTarget[session.targetCursor] || 0) < 3) return;
-  const button = elements.continuousBoard.querySelector(
-    `[data-index="${session.targetCursor}"]`,
-  );
-  if (!button) return;
-  button.classList.add("is-hint");
-  button.focus({ preventScroll: true });
-  elements.gridAnnouncement.textContent = `힌트: ${CHARACTERS[session.targetCursor].character} 글자 위치를 표시했습니다.`;
-  window.setTimeout(function () {
-    button.classList.remove("is-hint");
-  }, 1400);
-}
-
-function toggleSessionPause() {
-  const session = appState.grid.session;
-  if (!session || !session.active) return;
-  stopAllSpeech();
-  commit(function (state) {
-    state.grid.session.paused = !state.grid.session.paused;
-  });
-  renderGridSessionStatus();
-  if (!appState.grid.session.paused && appState.grid.session.difficulty === "listening") {
-    speakGridTarget();
-  }
 }
 
 function restartGridSession() {
   const session = appState.grid.session;
   if (!session) return;
-  const confirmed = window.confirm("이번 세션을 같은 범위의 첫 글자부터 다시 시작할까요?");
+  const confirmed = window.confirm("이번 게임을 처음부터 다시 시작할까요?");
   if (!confirmed) return;
   stopAllSpeech();
-  const engine = createGridSession({
-    indexes: session.order,
-    boardSize: session.boardSize,
-  });
-  const restarted = createSessionMetadata(engine, {
-    difficulty: session.difficulty,
-    scope: session.scope,
-    reviewMode: session.reviewMode,
-    challengeMode: session.challengeMode,
-  });
+  window.clearTimeout(matchingAdvanceTimer);
+  matchingTransitioning = false;
+  const restarted = createMatchingSessionMetadata(
+    createMatchingSession({ indexes: session.questionIndexes, choiceCount: session.choiceCount }),
+    session.scope,
+  );
   commit(function (state) {
     state.grid.session = restarted;
-    state.grid.lastCursor = restarted.targetCursor;
+    state.grid.lastCursor = restarted.targetIndex;
   });
-  renderedSessionKey = "";
   renderGridScreen();
-  if (restarted.difficulty === "listening") speakGridTarget();
-  focusFirstBoardCell();
+  focusFirstMatchingChoice();
 }
 
 function endGridSession() {
   const session = appState.grid.session;
   if (!session) return;
   stopAllSpeech();
+  window.clearTimeout(matchingAdvanceTimer);
+  matchingTransitioning = false;
   commit(function (state) {
     state.grid.session.active = false;
     state.grid.session.endedAt = new Date().toISOString();
   });
-  renderedSessionKey = "";
   renderGridScreen();
 }
 
@@ -1560,24 +1337,7 @@ function retryWrongCharacters() {
   const session = appState.grid.session;
   if (!session || session.wrongIndexes.length === 0) return;
   const indexes = Array.from(new Set(session.wrongIndexes));
-  const engine = createGridSession({
-    indexes,
-    boardSize: session.boardSize,
-  });
-  const retrySession = createSessionMetadata(engine, {
-    difficulty: session.difficulty,
-    scope: "wrong",
-    reviewMode: false,
-  });
-  commit(function (state) {
-    state.grid.session = retrySession;
-    state.grid.lastCursor = indexes[0];
-    state.ui.mode = "grid";
-  });
-  renderedSessionKey = "";
-  renderGridScreen();
-  if (retrySession.difficulty === "listening") speakGridTarget();
-  focusFirstBoardCell();
+  startMatchingSession(indexes, "wrong");
 }
 
 function closeSessionResult() {
@@ -1587,16 +1347,16 @@ function closeSessionResult() {
   renderGridScreen();
 }
 
-function handleBoardKeyboard(event) {
+function handleMatchingChoiceKeyboard(event) {
   if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
     return;
   }
-  const button = event.target.closest(".board-cell");
+  const button = event.target.closest(".match-choice");
   if (!button) return;
   event.preventDefault();
-  const buttons = Array.from(elements.continuousBoard.querySelectorAll(".board-cell:not(:disabled)"));
+  const buttons = Array.from(elements.continuousBoard.querySelectorAll(".match-choice:not(:disabled)"));
   const current = buttons.indexOf(button);
-  const columns = Number(appState.grid.session.boardSize) === 25 ? 5 : 4;
+  const columns = 2;
   let next = current;
   if (event.key === "ArrowLeft") next = current - 1;
   if (event.key === "ArrowRight") next = current + 1;
@@ -1608,9 +1368,9 @@ function handleBoardKeyboard(event) {
   buttons[next].focus();
 }
 
-function focusFirstBoardCell() {
+function focusFirstMatchingChoice() {
   window.setTimeout(function () {
-    const button = elements.continuousBoard.querySelector(".board-cell:not(:disabled)");
+    const button = elements.continuousBoard.querySelector(".match-choice:not(:disabled)");
     if (button) button.focus({ preventScroll: true });
   }, 0);
 }
@@ -1667,7 +1427,6 @@ function renderVoiceNote() {
 
 function syncSettingsControls() {
   elements.settingTapToSpeak.checked = appState.settings.tapToSpeak;
-  elements.settingReadFour.checked = appState.settings.readFourOnComplete;
   elements.settingVibrate.checked = appState.settings.vibrate;
   elements.rateSelect.value = String(appState.settings.rate);
   elements.voiceSelect.value = appState.settings.voiceURI;

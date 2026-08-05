@@ -46,22 +46,6 @@ export function createPassageCharacter(item, options) {
   return button;
 }
 
-export function renderBoardCellElement(button, item) {
-  button.classList.remove("is-correct", "is-wrong", "is-hint", "is-empty");
-  if (!item) {
-    button.dataset.index = "";
-    button.disabled = true;
-    button.classList.add("is-empty");
-    button.replaceChildren();
-    button.setAttribute("aria-label", "빈 칸");
-    return;
-  }
-  button.disabled = false;
-  button.dataset.index = String(item.index);
-  button.innerHTML = `<span class="board-cell__hanja" lang="zh-Hant">${item.character}</span>`;
-  button.setAttribute("aria-label", `후보 글자 ${item.character}, ${item.number}번째`);
-}
-
 export function createReviewItem(item, options) {
   const button = document.createElement("button");
   button.type = "button";

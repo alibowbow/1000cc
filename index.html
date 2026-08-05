@@ -6,14 +6,14 @@
     <meta name="theme-color" content="#f4f0e7" />
     <meta
       name="description"
-      content="천 글자 전체 보기, 8자 보기, 순서 게임을 담은 천자문 앱"
+      content="천 글자 전체 보기, 8자 보기, 한자 맞추기 게임을 담은 천자문 앱"
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="manifest.webmanifest?v=12" />
-    <link rel="stylesheet" href="styles.css?v=12" />
-    <link rel="stylesheet" href="theme-folio.css?v=12" />
-    <script type="module" src="app.js?v=12"></script>
+    <link rel="manifest" href="manifest.webmanifest?v=14" />
+    <link rel="stylesheet" href="styles.css?v=14" />
+    <link rel="stylesheet" href="theme-folio.css?v=14" />
+    <script type="module" src="app.js?v=14"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -33,7 +33,7 @@
           <span aria-hidden="true">八</span><strong>8자 보기</strong>
         </button>
         <button type="button" data-mode="grid" aria-pressed="false">
-          <span aria-hidden="true">遊</span><strong>순서 게임</strong>
+          <span aria-hidden="true">答</span><strong>한자 맞추기</strong>
         </button>
       </nav>
       <button class="icon-button" id="settings-button" type="button" aria-haspopup="dialog" aria-label="설정 열기">
@@ -56,11 +56,11 @@
           <button class="primary-action" id="start-shared-challenge" type="button">도전 시작</button>
           <div class="shared-challenge-play" id="shared-challenge-play" hidden>
             <div class="daily-grid-status">
-              <span>다음 독음 <strong id="shared-challenge-target">천</strong></span>
-              <span><strong id="shared-challenge-progress">0 / 8</strong></span>
+              <span>뜻과 독음 <strong id="shared-challenge-target">하늘 천</strong></span>
+              <span>문제 <strong id="shared-challenge-progress">1 / 8</strong></span>
               <span>오답 <strong id="shared-challenge-wrong">0</strong></span>
             </div>
-            <div class="daily-board" id="shared-challenge-board" aria-label="공유 8자 도전 게임판"></div>
+            <div class="shared-match-board" id="shared-challenge-board" aria-label="공유 8자 한자 후보"></div>
           </div>
           <div class="shared-challenge-result" id="shared-challenge-result" hidden>
             <strong>도전 완료</strong>
@@ -85,7 +85,7 @@
                 <div class="today-hero__actions">
                   <button class="share-button shuffle-button" id="shuffle-today-lesson" type="button">
                     <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
-                    다른 8자
+                    랜덤 8자
                   </button>
                 </div>
               </div>
@@ -186,6 +186,36 @@
             <div class="phrase-characters" data-phrase-grid="1" aria-label="두 번째 4자구"></div>
           </div>
 
+          <aside class="character-inspector" aria-label="선택한 글자 정보">
+            <div class="character-inspector__glyph" aria-hidden="true">
+              <strong id="selected-character" lang="zh-Hant">天</strong>
+            </div>
+            <div class="character-inspector__body">
+              <div class="character-inspector__summary">
+                <p class="eyebrow">선택한 글자</p>
+                <h2 id="selected-hun"><span id="selected-gloss">하늘</span> <span id="selected-reading">천</span></h2>
+                <dl class="character-facts" aria-label="글자 짜임">
+                  <div>
+                    <dt>부수</dt>
+                    <dd id="selected-radical" lang="zh-Hant">大</dd>
+                  </div>
+                  <div>
+                    <dt>총획</dt>
+                    <dd><span id="selected-strokes">4</span>획</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <details class="related-words" id="related-words-section" aria-labelledby="related-words-title">
+                <summary class="related-words__heading">
+                  <span id="related-words-title">이 글자가 쓰인 말</span>
+                  <small>국립국어원 사전</small>
+                </summary>
+                <ul id="selected-related-words"></ul>
+              </details>
+            </div>
+          </aside>
+
           <div class="passage-meaning">
             <span>8자 문맥 풀이</span>
             <p id="couplet-meaning"></p>
@@ -225,35 +255,6 @@
               </div>
             </div>
           </section>
-
-          <aside class="character-inspector" aria-label="선택한 글자 정보">
-          <div class="character-inspector__glyph" aria-hidden="true">
-            <strong id="selected-character" lang="zh-Hant">天</strong>
-          </div>
-          <div class="character-inspector__body">
-            <p class="eyebrow">선택한 글자</p>
-            <h2 id="selected-hun"><span id="selected-gloss">하늘</span> <span id="selected-reading">천</span></h2>
-            <dl class="character-facts" aria-label="글자 짜임">
-              <div>
-                <dt>부수</dt>
-                <dd id="selected-radical" lang="zh-Hant">大</dd>
-              </div>
-              <div>
-                <dt>총획</dt>
-                <dd><span id="selected-strokes">4</span>획</dd>
-              </div>
-            </dl>
-
-            <section class="related-words" id="related-words-section" aria-labelledby="related-words-title">
-              <div class="related-words__heading">
-                <h3 id="related-words-title">이 글자가 쓰인 말</h3>
-                <span>국립국어원 사전</span>
-              </div>
-              <ul id="selected-related-words"></ul>
-            </section>
-
-          </div>
-          </aside>
         </div>
       </section>
 
@@ -261,99 +262,46 @@
         <div class="grid-setup" id="grid-setup">
           <div class="screen-heading">
             <div>
-              <p class="eyebrow">부가 기능 · 다음 글자 찾기</p>
-              <h1 id="grid-title">순서 게임</h1>
+              <p class="eyebrow">부가 기능 · 4지선다</p>
+              <h1 id="grid-title">한자 맞추기 게임</h1>
             </div>
-            <p class="screen-summary">정답 칸만 다음 글자로 바뀌어 흐름이 끊기지 않습니다.</p>
+            <p class="screen-summary">뜻과 독음을 보고 맞는 한자를 고릅니다.</p>
           </div>
 
-          <section class="grid-challenge-card" aria-labelledby="grid-challenge-title">
-            <div>
-              <p class="eyebrow">개인 최고 기록</p>
-              <h2 id="grid-challenge-title">40자 연속 챌린지</h2>
-            <p>마지막 게임 위치부터 힌트 없이 40자를 잇습니다.</p>
+          <section class="matching-launch" aria-labelledby="matching-launch-title">
+            <div class="matching-launch__copy">
+              <p class="eyebrow">8문제 · 네 개의 후보</p>
+              <h2 id="matching-launch-title">한 글자씩 바로 확인</h2>
+              <p id="matching-range-copy">현재 보고 있는 8자로 시작합니다.</p>
             </div>
-            <div class="grid-challenge-best">
-              <span>최고 기록</span>
-              <strong id="grid-challenge-best">아직 없음</strong>
+            <div class="matching-launch__actions">
+              <button class="primary-action" id="start-current-match" type="button">현재 8자 시작</button>
+              <button class="quiet-button" id="start-random-match" type="button">랜덤 8자</button>
             </div>
-            <button class="primary-action" id="start-grid-challenge" type="button">도전 시작</button>
           </section>
-
-          <form class="session-form" id="session-form">
-            <label class="select-control">
-              <span>게임 범위</span>
-              <select id="session-scope">
-                <option value="continue">마지막 위치에서 이어서</option>
-                <option value="current">현재 100자 범위</option>
-                <option value="40">40자</option>
-                <option value="100">100자</option>
-                <option value="200">200자</option>
-                <option value="1000">전체 1,000자</option>
-                <option value="custom">시작 위치 직접 선택</option>
-              </select>
-            </label>
-            <label class="select-control" id="custom-start-field" hidden>
-              <span>시작 번호</span>
-              <input id="session-start" type="number" min="1" max="1000" value="1" />
-            </label>
-            <label class="select-control">
-              <span>난이도</span>
-              <select id="session-difficulty">
-                <option value="character">글자 힌트</option>
-                <option value="reading">독음 힌트</option>
-                <option value="listening">듣고 찾기</option>
-                <option value="none">힌트 없음</option>
-              </select>
-            </label>
-            <label class="select-control">
-              <span>게임판 크기</span>
-              <select id="session-board-size">
-                <option value="16">4 × 4 · 16칸</option>
-                <option value="25">5 × 5 · 25칸</option>
-              </select>
-            </label>
-            <button class="primary-action session-start" type="submit">게임 시작</button>
-          </form>
-
-          <button class="resume-session" id="resume-session" type="button" hidden>
-            <span><strong>진행 중인 세션</strong><small id="resume-session-detail"></small></span>
-            <span>이어하기 →</span>
-          </button>
+          <p class="matching-launch__hint">8자 보기에서 연을 바꾼 뒤, 같은 8자로 바로 풀 수 있습니다.</p>
         </div>
 
         <div class="grid-session" id="grid-session" hidden>
           <div class="session-topline">
-            <div><span>전체 진행</span><strong id="grid-overall-progress">1 / 1,000</strong></div>
-            <div><span>이번 세션</span><strong id="grid-session-progress">0 / 100</strong></div>
+            <div><span>이번 게임</span><strong id="grid-session-progress">1 / 8</strong></div>
             <div><span>정답률</span><strong id="grid-accuracy">—</strong></div>
             <div><span>오답</span><strong id="grid-wrong-count">0</strong></div>
-            <button class="quiet-button" id="pause-session" type="button">일시정지</button>
           </div>
 
           <div class="target-panel" id="target-panel">
-            <span class="target-panel__label">다음 글자</span>
-            <strong id="target-prompt">天 · 천</strong>
-            <span id="target-position">전체 1번째</span>
+            <span class="target-panel__label">뜻과 독음</span>
+            <strong id="target-prompt">하늘 · 천</strong>
+            <span id="target-position">문제 1 / 8</span>
           </div>
 
-            <div class="continuous-board" id="continuous-board" aria-label="한자 순서 게임판"></div>
-
-          <div class="phrase-progress">
-            <span>현재 4자구</span>
-            <strong id="current-phrase-progress" lang="zh-Hant">□ □ □ □</strong>
-          </div>
-
-          <div class="completion-strip" id="completion-strip" aria-live="polite" hidden>
-            <strong id="completion-title"></strong>
-            <span id="completion-copy"></span>
-          </div>
+          <div class="matching-choices" id="continuous-board" aria-label="한자 후보"></div>
+          <p class="matching-feedback" id="matching-feedback" aria-live="polite"></p>
 
           <div class="session-controls">
-            <button class="quiet-button" id="replay-target" type="button" data-tts>음성 다시 듣기</button>
-            <button class="quiet-button hint-button" id="show-hint" type="button" hidden>힌트 보기</button>
-            <button class="text-button" id="restart-session" type="button">처음부터</button>
-            <button class="text-button" id="end-session" type="button">세션 종료</button>
+            <button class="quiet-button" id="replay-target" type="button" data-tts>훈음 듣기</button>
+            <button class="text-button" id="restart-session" type="button">다시 시작</button>
+            <button class="text-button" id="end-session" type="button">그만하기</button>
           </div>
         </div>
 
@@ -368,8 +316,8 @@
           </div>
           <div class="result-characters" id="result-characters"></div>
           <div class="result-actions">
-            <button class="quiet-button" id="retry-wrong" type="button">틀린 글자 다시 게임</button>
-            <button class="quiet-button" id="close-result" type="button">결과 닫기</button>
+            <button class="quiet-button" id="retry-wrong" type="button">틀린 글자 다시 풀기</button>
+            <button class="quiet-button" id="close-result" type="button">게임 끝내기</button>
           </div>
         </div>
         <p class="sr-only" id="grid-announcement" aria-live="assertive" aria-atomic="true"></p>
@@ -417,10 +365,6 @@
         <label class="setting-row">
           <span><strong>글자를 누르면 훈음 재생</strong><small>천자 보기와 8자 보기에서 ‘하늘 천’처럼 읽습니다.</small></span>
           <input id="setting-tap-to-speak" type="checkbox" />
-        </label>
-        <label class="setting-row">
-          <span><strong>4자 완성 시 읽기</strong><small>한자 순서 게임에서 완성한 네 글자를 또박또박 읽습니다.</small></span>
-          <input id="setting-read-four" type="checkbox" />
         </label>
         <label class="setting-row">
           <span><strong>정답 진동</strong><small>지원되는 기기에서 10ms의 가벼운 진동을 사용합니다.</small></span>

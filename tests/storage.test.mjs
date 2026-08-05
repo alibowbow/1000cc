@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createGridSession } from "../js/grid-engine.js";
+import { createMatchingSession } from "../js/matching-engine.js";
 import {
   STORAGE_KEY_V1,
   STORAGE_KEY_V2,
@@ -77,16 +77,13 @@ test("전체 보기 뜻 가리기 설정은 저장되고 기존 v2에는 안전�
   assert.equal(normalizeV2(oldV2).settings.hideOverviewMeaning, false);
 });
 
-test("진행 중 boardIndexes를 포함한 v2 세션을 저장하고 복원한다", function () {
+test("진행 중인 한자 맞추기 후보와 문제 위치를 저장하고 복원한다", function () {
   const storage = memoryStorage();
   const state = createDefaultState();
   state.grid.session = {
-    ...createGridSession({ startIndex: 40, endIndex: 80, boardSize: 16 }),
+    ...createMatchingSession({ indexes: [40, 41, 42, 43, 44, 45, 46, 47] }),
     active: true,
-    paused: false,
-    difficulty: "reading",
-    scope: "40",
-    reviewMode: false,
+    scope: "current",
     correctCount: 0,
     wrongCount: 0,
     wrongIndexes: [],
@@ -96,9 +93,9 @@ test("진행 중 boardIndexes를 포함한 v2 세션을 저장하고 복원한�
   };
   saveStateToStorage(storage, state);
   const loaded = loadStateFromStorage(storage);
-  assert.deepEqual(loaded.state.grid.session.boardIndexes, state.grid.session.boardIndexes);
-  assert.equal(loaded.state.grid.session.targetCursor, 40);
-  assert.equal(loaded.state.grid.session.supplyCursor, 56);
+  assert.deepEqual(loaded.state.grid.session.choiceIndexes, state.grid.session.choiceIndexes);
+  assert.equal(loaded.state.grid.session.targetIndex, 40);
+  assert.equal(loaded.state.grid.session.questionPosition, 0);
 });
 
 test("학습 기록 JSON은 왕복 가능하고 잘못된 인덱스는 거부한다", function () {
@@ -148,7 +145,7 @@ test("오늘의 무작위 8자는 보존하고 예전 진행 중 학습 단계�
     recallMode: "reverse",
     recallCursor: 3,
     recallResults: { reading: {}, meaning: {}, reverse: {} },
-    gridSession: createGridSession({ indexes: [8, 9, 10, 11, 12, 13, 14, 15], boardSize: 8 }),
+    gridSession: createMatchingSession({ indexes: [8, 9, 10, 11, 12, 13, 14, 15] }),
     gridWrongCount: 1,
     gridStartedAt: "2026-08-04T02:03:00.000Z",
     vocabularyOpened: false,
