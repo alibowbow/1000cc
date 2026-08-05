@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("세 메뉴와 125개 기억 그림, 한자 맞추기 게임은 v16 오프라인 셸에 함께 연결된다", async function () {
+test("모바일 하단 메뉴와 한 화면 홈은 v17 오프라인 셸에 함께 연결된다", async function () {
   const [html, app, styles, theme, serviceWorker, seasonalAtlas, ...memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
@@ -18,12 +18,16 @@ test("세 메뉴와 125개 기억 그림, 한자 맞추기 게임은 v16 오프�
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /app\.js\?v=16/);
-  assert.match(html, /styles\.css\?v=16/);
+  assert.match(html, /app\.js\?v=17/);
+  assert.match(html, /styles\.css\?v=17/);
   assert.equal((html.match(/data-mode=/g) || []).length, 3);
   assert.match(html, />1자 보기</);
   assert.match(html, />8자 보기</);
   assert.match(html, />한자 맞추기</);
+  assert.match(html, /aria-label="설정 열기"/);
+  const settingsButtonMarkup = html.match(/<button[^>]+id="settings-button"[\s\S]*?<\/button>/)?.[0];
+  assert.ok(settingsButtonMarkup);
+  assert.doesNotMatch(settingsButtonMarkup, />\s*설정\s*</);
   assert.doesNotMatch(html, />순서 게임</);
   assert.doesNotMatch(html, /id="reveal-answer"/);
   assert.doesNotMatch(html, />\s*정답 보기\s*</);
@@ -49,10 +53,11 @@ test("세 메뉴와 125개 기억 그림, 한자 맞추기 게임은 v16 오프�
   assert.match(app, /createRandomDailyPick/);
   assert.match(app, /createRandomDailyPick\(\{\}/);
   assert.doesNotMatch(app, /elements\.revealAnswer/);
-  assert.match(app, /course-engine\.js\?v=16/);
-  assert.match(app, /matching-engine\.js\?v=16/);
-  assert.match(app, /storage\.js\?v=16/);
-  assert.match(app, /tts-manager\.js\?v=16/);
+  assert.match(app, /course-engine\.js\?v=17/);
+  assert.match(app, /matching-engine\.js\?v=17/);
+  assert.match(app, /storage\.js\?v=17/);
+  assert.match(app, /tts-manager\.js\?v=17/);
+  assert.match(app, /document\.body\.dataset\.screen = sharedChallengeDay !== null \? "challenge" : visibleMode/);
   assert.match(app, /selectedGloss\.removeAttribute\("aria-hidden"\)/);
   assert.match(app, /selectedReading\.removeAttribute\("aria-hidden"\)/);
   assert.match(app, /definition\.removeAttribute\("aria-hidden"\)/);
@@ -64,13 +69,16 @@ test("세 메뉴와 125개 기억 그림, 한자 맞추기 게임은 v16 오프�
   assert.match(theme, /Compact 8-character view/);
   assert.doesNotMatch(theme, /\.related-words\[open\]/);
   assert.match(theme, /\.matching-choices/);
+  assert.match(theme, /Mobile one-screen home and bottom navigation/);
+  assert.match(theme, /\.primary-nav\s*\{[\s\S]*position:\s*fixed[\s\S]*bottom:\s*0/);
+  assert.match(theme, /body\[data-screen="today"\][\s\S]*overflow:\s*hidden/);
   assert.match(theme, /\.today-hero__heading > :first-child[\s\S]*padding-left:\s*clamp\(30px, 3vw, 42px\)/);
   assert.match(theme, /\.overview-cell__meaning\s*\{[\s\S]*font-size:\s*clamp\(0\.82rem, 1\.45vw, 0\.94rem\)/);
   assert.match(serviceWorker, /theme-folio\.css/);
-  assert.match(serviceWorker, /1000cc-static-v16-20260805/);
-  assert.match(serviceWorker, /matching-engine\.js\?v=16/);
+  assert.match(serviceWorker, /1000cc-static-v17-20260805/);
+  assert.match(serviceWorker, /matching-engine\.js\?v=17/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=16/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=17/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /assets\/memory-atlas-16\.webp/);
   assert.ok(seasonalAtlas.size > 50_000);
