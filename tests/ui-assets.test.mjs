@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("ImageGen folio atlas와 독립 그림 기억 v22 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("ImageGen folio atlas와 독립 그림 기억 v23 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/ui-asset-atlas-v1.webp",
     "assets/hanji-ivory-tile.webp",
@@ -36,8 +36,8 @@ test("ImageGen folio atlas와 독립 그림 기억 v22 학습 모드가 오프�
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /app\.js\?v=22/);
-  assert.match(html, /styles\.css\?v=22/);
+  assert.match(html, /app\.js\?v=23/);
+  assert.match(html, /styles\.css\?v=23/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
   assert.match(html, />8자 보기</);
@@ -96,10 +96,10 @@ test("ImageGen folio atlas와 독립 그림 기억 v22 학습 모드가 오프�
   assert.match(app, /createRandomDailyPick/);
   assert.match(app, /createRandomDailyPick\(\{\}/);
   assert.doesNotMatch(app, /elements\.revealAnswer/);
-  assert.match(app, /course-engine\.js\?v=22/);
-  assert.match(app, /matching-engine\.js\?v=22/);
-  assert.match(app, /storage\.js\?v=22/);
-  assert.match(app, /tts-manager\.js\?v=22/);
+  assert.match(app, /course-engine\.js\?v=23/);
+  assert.match(app, /matching-engine\.js\?v=23/);
+  assert.match(app, /storage\.js\?v=23/);
+  assert.match(app, /tts-manager\.js\?v=23/);
   assert.match(app, /function renderMemoryMode\(\)/);
   assert.match(app, /elements\.passagePairs\.replaceChildren/);
   assert.match(app, /memoryClueRevealed\.size === 4/);
@@ -123,10 +123,13 @@ test("ImageGen folio atlas와 독립 그림 기억 v22 학습 모드가 오프�
   assert.match(theme, /ui-eight\.webp/);
   assert.match(theme, /ui-quiz\.webp/);
   assert.match(theme, /\.memory-clue/);
-  assert.match(theme, /v22 · 그림 기억 독립 모드/);
+  assert.match(theme, /v23 · 그림 기억 원본 비율 보존/);
   assert.match(theme, /\.tacit-stage/);
   assert.match(theme, /\.tacit-visual/);
   assert.match(theme, /\.tacit-pairs/);
+  assert.match(theme, /\.tacit-stage\s*\{[\s\S]*align-content:\s*center/);
+  assert.match(theme, /\.tacit-visual-panel\s*\{[\s\S]*aspect-ratio:\s*3 \/ 4;[\s\S]*container-type:\s*size/);
+  assert.match(theme, /\.tacit-visual\s*\{[\s\S]*width:\s*min\(100%, calc\(100cqh \* 3 \/ 4\)\);[\s\S]*height:\s*auto;[\s\S]*aspect-ratio:\s*3 \/ 4/);
   assert.match(theme, /body\[data-screen="memory"\][\s\S]*height:\s*100dvh;[\s\S]*overflow:\s*hidden/);
   assert.match(theme, /body\[data-screen="memory"\] \.app-shell[\s\S]*flex:\s*1 1 0;[\s\S]*overflow:\s*hidden/);
   assert.match(theme, /#screen-memory:not\(\[hidden\]\)[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
@@ -153,10 +156,10 @@ test("ImageGen folio atlas와 독립 그림 기억 v22 학습 모드가 오프�
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v22-20260805/);
-  assert.match(serviceWorker, /matching-engine\.js\?v=22/);
+  assert.match(serviceWorker, /1000cc-static-v23-20260805/);
+  assert.match(serviceWorker, /matching-engine\.js\?v=23/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=22/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=23/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /assets\/ui-asset-atlas-v1\.webp/);
   assert.match(serviceWorker, /assets\/hanji-ivory-tile\.webp/);
