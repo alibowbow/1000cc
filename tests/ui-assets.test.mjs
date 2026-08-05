@@ -4,9 +4,9 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("사계 서당 환경과 독립 그림 기억 v24 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("펼친 조선 서첩과 독립 그림 기억 v25 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
-    "assets/seodang-study-room.webp",
+    "assets/joseon-folio-spread.webp",
     "assets/hanji-ivory-tile.webp",
     "assets/hanji-gray-tile.webp",
     "assets/hanji-charcoal-tile.webp",
@@ -22,11 +22,12 @@ test("사계 서당 환경과 독립 그림 기억 v24 학습 모드가 오프�
     "assets/ui-bamboo.webp",
     "assets/ui-mountains.webp",
   ];
-  const [html, app, styles, theme, serviceWorker, storage, seasonalAtlas, atlasAssets, memoryAtlases] = await Promise.all([
+  const [html, app, styles, theme, passageTheme, serviceWorker, storage, seasonalAtlas, atlasAssets, memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
     readFile(new URL("styles.css", root), "utf8"),
     readFile(new URL("theme-folio.css", root), "utf8"),
+    readFile(new URL("passage-folio-v25.css", root), "utf8"),
     readFile(new URL("sw.js", root), "utf8"),
     readFile(new URL("js/storage.js", root), "utf8"),
     stat(new URL("assets/learning-seasons-atlas.webp", root)),
@@ -37,6 +38,7 @@ test("사계 서당 환경과 독립 그림 기억 v24 학습 모드가 오프�
   ]);
 
   assert.match(html, /theme-folio\.css/);
+  assert.match(html, /passage-folio-v25\.css\?v=25/);
   assert.match(html, /app\.js\?v=24/);
   assert.match(html, /styles\.css\?v=24/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
@@ -128,9 +130,10 @@ test("사계 서당 환경과 독립 그림 기억 v24 학습 모드가 오프�
   assert.match(theme, /ui-eight\.webp/);
   assert.match(theme, /ui-quiz\.webp/);
   assert.match(theme, /\.memory-clue/);
-  assert.match(theme, /v24 · 사계 서당 환경/);
-  assert.match(theme, /seodang-study-room\.webp/);
-  assert.match(theme, /font-size:\s*clamp\(2\.8rem, 68cqi, 4\.45rem\)/);
+  assert.match(theme, /v25 · 펼친 조선 서첩/);
+  assert.match(theme, /joseon-folio-spread\.webp/);
+  assert.doesNotMatch(theme, /seodang-study-room\.webp/);
+  assert.match(passageTheme, /font-size:\s*clamp\(2\.85rem, 68cqi, 4\.65rem\)/);
   assert.match(theme, /@media \(max-width: 1080px\)/);
   assert.match(theme, /\.tacit-stage/);
   assert.match(theme, /\.tacit-visual/);
@@ -142,7 +145,7 @@ test("사계 서당 환경과 독립 그림 기억 v24 학습 모드가 오프�
   assert.match(theme, /body\[data-screen="memory"\] \.app-shell[\s\S]*flex:\s*1 1 0;[\s\S]*overflow:\s*hidden/);
   assert.match(theme, /#screen-memory:not\(\[hidden\]\)[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
   assert.match(theme, /\.tacit-recall\s*\{[\s\S]*position:\s*absolute;[\s\S]*height:\s*clamp\(214px, 28dvh, 236px\)/);
-  assert.match(theme, /#screen-passage #passage-pairs/);
+  assert.match(passageTheme, /#screen-passage #passage-pairs/);
   assert.match(theme, /\.memory-scene__art[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
   assert.match(theme, /Compact 8-character view/);
   assert.doesNotMatch(theme, /\.related-words\[open\]/);
@@ -156,20 +159,22 @@ test("사계 서당 환경과 독립 그림 기억 v24 학습 모드가 오프�
   assert.match(theme, /\.today-hero__heading > :first-child[\s\S]*padding-left:\s*clamp\(30px, 3vw, 42px\)/);
   assert.match(theme, /\.overview-cell__meaning\s*\{[\s\S]*font-size:\s*clamp\(0\.82rem, 1\.45vw, 0\.94rem\)/);
   assert.match(theme, /\.today-hero__range > strong\s*\{[\s\S]*font-size:\s*clamp\(1\.08rem, 1\.75vw, 1\.38rem\)/);
-  assert.match(theme, /#screen-passage \.passage-actions button\s*\{[\s\S]*min-height:\s*44px/);
-  assert.match(theme, /grid-template-areas:\s*"main inspector"/);
-  assert.match(theme, /\.passage-sequence\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 18px minmax\(0, 1fr\)/);
-  assert.match(theme, /#screen-passage \.character-inspector\s*\{\s*top:\s*auto/);
+  assert.match(passageTheme, /#screen-passage \.passage-actions button\s*\{[\s\S]*min-height:\s*44px/);
+  assert.match(passageTheme, /grid-template-areas:[\s\S]*"folio-header folio-header"[\s\S]*"sequence sequence"[\s\S]*"main inspector"/);
+  assert.match(passageTheme, /#screen-passage \.passage-sequence\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 20px minmax\(0, 1fr\)/);
+  assert.match(passageTheme, /#screen-passage \.character-inspector\s*\{[\s\S]*top:\s*auto/);
   assert.match(theme, /\.today-actions \.primary-action\s*\{[\s\S]*min-width:\s*118px[\s\S]*min-height:\s*40px/);
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v24-20260805/);
+  assert.match(serviceWorker, /1000cc-static-v25-20260805/);
   assert.match(serviceWorker, /matching-engine\.js\?v=24/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
   assert.match(serviceWorker, /tts-manager\.js\?v=24/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
-  assert.match(serviceWorker, /assets\/seodang-study-room\.webp/);
+  assert.match(serviceWorker, /passage-folio-v25\.css\?v=25/);
+  assert.match(serviceWorker, /assets\/joseon-folio-spread\.webp/);
+  assert.doesNotMatch(serviceWorker, /assets\/seodang-study-room\.webp/);
   assert.doesNotMatch(serviceWorker, /assets\/ui-asset-atlas-v1\.webp/);
   assert.doesNotMatch(serviceWorker, /assets\/ui-directions\.webp/);
   assert.match(serviceWorker, /assets\/hanji-ivory-tile\.webp/);

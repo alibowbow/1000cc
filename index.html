@@ -12,7 +12,8 @@
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="manifest" href="manifest.webmanifest?v=24" />
     <link rel="stylesheet" href="styles.css?v=24" />
-    <link rel="stylesheet" href="theme-folio.css?v=24" />
+    <link rel="stylesheet" href="theme-folio.css?v=25" />
+    <link rel="stylesheet" href="passage-folio-v25.css?v=25" />
     <script type="module" src="app.js?v=24"></script>
   </head>
   <body>
@@ -155,37 +156,39 @@
       </section>
 
       <section class="screen" id="screen-passage" data-screen="passage" aria-labelledby="passage-title" hidden>
-        <div class="screen-heading passage-heading">
-          <button class="arrow-button" id="previous-couplet" type="button" aria-label="이전 8자 연">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg>
-          </button>
-          <div>
-            <p class="eyebrow">원문 · 훈음 · 현대 뜻</p>
-            <h1 id="passage-title">8자 보기</h1>
-            <span class="sr-only" id="couplet-position" aria-live="polite" aria-atomic="true">1 / 125</span>
-          </div>
-          <button class="arrow-button" id="next-couplet" type="button" aria-label="다음 8자 연">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
-          </button>
-        </div>
-
-        <div class="passage-toolbar">
-          <button class="toggle-chip" id="toggle-reading" type="button" aria-pressed="false">독음 가리기</button>
-          <button class="toggle-chip" id="toggle-meaning" type="button" aria-pressed="false">뜻 가리기</button>
-        </div>
-
         <article class="passage-card" id="passage-card">
-          <div class="passage-main">
-            <div class="passage-sequence" aria-label="현재 8자 원문">
-              <div class="phrase-study" id="first-phrase">
-                <div class="phrase-characters" data-phrase-grid="0" aria-label="첫 번째 4자구"></div>
+          <header class="passage-folio-header">
+            <div class="screen-heading passage-heading">
+              <button class="arrow-button" id="previous-couplet" type="button" aria-label="이전 8자 연">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg>
+              </button>
+              <div>
+                <p class="eyebrow">원문 · 훈음 · 현대 뜻</p>
+                <h1 id="passage-title">8자 보기</h1>
+                <span class="sr-only" id="couplet-position" aria-live="polite" aria-atomic="true">1 / 125</span>
               </div>
-              <div class="phrase-divider" aria-hidden="true"></div>
-              <div class="phrase-study" id="second-phrase">
-                <div class="phrase-characters" data-phrase-grid="1" aria-label="두 번째 4자구"></div>
-              </div>
+              <button class="arrow-button" id="next-couplet" type="button" aria-label="다음 8자 연">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+              </button>
             </div>
 
+            <div class="passage-toolbar">
+              <button class="toggle-chip" id="toggle-reading" type="button" aria-pressed="false">독음 가리기</button>
+              <button class="toggle-chip" id="toggle-meaning" type="button" aria-pressed="false">뜻 가리기</button>
+            </div>
+          </header>
+
+          <div class="passage-sequence" aria-label="현재 8자 원문">
+            <div class="phrase-study" id="first-phrase">
+              <div class="phrase-characters" data-phrase-grid="0" aria-label="첫 번째 4자구"></div>
+            </div>
+            <div class="phrase-divider" aria-hidden="true"></div>
+            <div class="phrase-study" id="second-phrase">
+              <div class="phrase-characters" data-phrase-grid="1" aria-label="두 번째 4자구"></div>
+            </div>
+          </div>
+
+          <div class="passage-main">
             <div class="passage-meaning">
               <span>8자 문맥 풀이</span>
               <p id="couplet-meaning"></p>

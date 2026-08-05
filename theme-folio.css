@@ -2510,9 +2510,9 @@ body {
   .primary-nav button > span { transition: none; transform: none !important; }
 }
 
-/* v24 · 사계 서당 환경과 칸 너비에 반응하는 8자 학습첩 */
+/* v25 · 펼친 조선 서첩과 칸 너비에 반응하는 8자 학습첩 */
 :root {
-  --seodang-room-image: url("./assets/seodang-study-room.webp");
+  --folio-spread-image: url("./assets/joseon-folio-spread.webp");
   --season-position: 0% 0%;
 }
 
@@ -2521,27 +2521,50 @@ body[data-scene-quarter="2"] { --season-position: 0% 100%; }
 body[data-scene-quarter="3"] { --season-position: 100% 100%; }
 
 body {
-  background-color: #eee5d6;
+  background-color: #d8cfbe;
   background-image:
-    linear-gradient(rgba(247, 242, 232, 0.14), rgba(236, 226, 209, 0.3)),
-    var(--seodang-room-image),
-    var(--hanji-ivory-image);
-  background-position: center, center top, center;
-  background-size: 100% 100%, max(100vw, 1280px) auto, 512px 512px;
-  background-repeat: no-repeat, no-repeat, repeat;
+    linear-gradient(rgba(224, 216, 200, 0.87), rgba(208, 197, 178, 0.91)),
+    radial-gradient(circle at 16% 20%, rgba(70, 58, 41, 0.11) 0 0.8px, transparent 1.1px),
+    var(--hanji-gray-image);
+  background-position: center, 0 0, center;
+  background-size: auto, 19px 23px, 512px 512px;
+  background-repeat: no-repeat, repeat, repeat;
 }
 
 @media (min-width: 900px) {
-  body { background-attachment: scroll, fixed, scroll; }
+  body { background-attachment: fixed, fixed, scroll; }
 }
 
 .topbar {
   grid-template-columns: minmax(190px, 1fr) minmax(560px, 720px) 48px;
-  box-shadow: 0 14px 36px rgba(48, 35, 22, 0.08);
+  border-bottom: 3px double rgba(102, 82, 57, 0.4);
+  background-color: rgba(241, 232, 214, 0.96);
+  background-image:
+    linear-gradient(rgba(247, 240, 226, 0.9), rgba(235, 224, 204, 0.94)),
+    var(--hanji-ivory-image);
+  box-shadow: 0 7px 18px rgba(55, 43, 28, 0.1);
 }
 
 .primary-nav {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid rgba(126, 101, 70, 0.38);
+  border-radius: 2px;
+  background: rgba(249, 243, 231, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(255, 252, 244, 0.58);
+}
+
+.primary-nav button {
+  border-radius: 0;
+}
+
+.primary-nav button[aria-pressed="true"] {
+  color: #f3ead9;
+  background-color: #2f3934;
+  background-image:
+    linear-gradient(rgba(39, 49, 44, 0.94), rgba(30, 38, 34, 0.98)),
+    var(--hanji-charcoal-image);
+  box-shadow: inset 0 0 0 1px rgba(209, 181, 132, 0.2);
 }
 
 .primary-nav button[data-mode="memory"] > span {
