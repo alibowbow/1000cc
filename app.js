@@ -10,22 +10,22 @@ import {
   createMatchingSession,
   getMatchingProgress,
   selectMatchingChoice,
-} from "./js/matching-engine.js?v=23";
+} from "./js/matching-engine.js?v=24";
 import {
   createChallengeUrl,
   createRandomDailyPick,
   getLesson,
   getRandomDailyPick,
   parseChallengeDay,
-} from "./js/course-engine.js?v=23";
+} from "./js/course-engine.js?v=24";
 import { recordSkillAttempt } from "./js/progress-engine.js";
 import { createOverviewCell, createPassageCharacter } from "./js/render.js";
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=23";
+} from "./js/storage.js?v=24";
 import { createStore } from "./js/state.js";
-import { TTSManager } from "./js/tts-manager.js?v=23";
+import { TTSManager } from "./js/tts-manager.js?v=24";
 import { formatDuration } from "./js/utils.js";
 
 const RANGE_SIZE = 100;
@@ -378,6 +378,11 @@ function renderApp() {
 
 function renderModes() {
   const visibleMode = sharedChallengeDay !== null ? "today" : appState.ui.mode;
+  setSceneQuarter(
+    sharedChallengeDay !== null
+      ? sharedChallengeDay
+      : Math.floor(appState.ui.selectedIndex / 8),
+  );
   document.body.dataset.screen = sharedChallengeDay !== null ? "challenge" : visibleMode;
   elements.modeButtons.forEach(function (button) {
     button.setAttribute("aria-pressed", String(button.dataset.mode === visibleMode));
@@ -385,6 +390,12 @@ function renderModes() {
   elements.screens.forEach(function (screen) {
     screen.hidden = screen.dataset.screen !== visibleMode;
   });
+}
+
+function setSceneQuarter(dayIndex) {
+  const quarter = Math.min(3, Math.max(0, Math.floor(dayIndex / 32)));
+  document.body.dataset.sceneQuarter = String(quarter);
+  elements.todayDashboard.dataset.courseQuarter = String(quarter);
 }
 
 function goHome(event) {
@@ -424,9 +435,7 @@ function renderTodayScreen() {
   elements.todayDashboard.hidden = false;
   const dayIndex = getOrCreateTodayLessonDay();
   const lesson = getLesson(dayIndex);
-  elements.todayDashboard.dataset.sceneQuarter = String(
-    Math.min(3, Math.floor(dayIndex / 32)),
-  );
+  setSceneQuarter(dayIndex);
   elements.todayRangePosition.textContent = `${dayIndex * 8 + 1}–${dayIndex * 8 + 8}자`;
   elements.todayRangeReading.textContent = lesson.couplet.data.reading;
   elements.todayMemoryScene.textContent = lesson.memoryScene;
@@ -1073,9 +1082,17 @@ function handlePassageCharacterClick(event) {
     state.ui.selectedIndex = index;
   });
   renderPassage();
+  focusPassageCharacter(index);
   if (appState.settings.tapToSpeak) {
     tts.speak(CHARACTERS[index].contextHun, { kind: "character", onError: handleTtsError });
   }
+}
+
+function focusPassageCharacter(index) {
+  window.setTimeout(function () {
+    const button = elements.passageScreen.querySelector(`.phrase-character[data-index="${index}"]`);
+    if (button) button.focus({ preventScroll: true });
+  }, 0);
 }
 
 function handleFourGridKeyboard(event) {
@@ -1083,7 +1100,9 @@ function handleFourGridKeyboard(event) {
   const button = event.target.closest(".phrase-character");
   if (!button) return;
   event.preventDefault();
-  const buttons = Array.from(event.currentTarget.querySelectorAll(".phrase-character"));
+  const buttons = elements.phraseGrids.flatMap(function (grid) {
+    return Array.from(grid.querySelectorAll(".phrase-character"));
+  });
   const position = buttons.indexOf(button);
   let next = position;
   if (event.key === "ArrowLeft") next = Math.max(0, position - 1);
