@@ -10,10 +10,10 @@
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="manifest.webmanifest?v=19" />
-    <link rel="stylesheet" href="styles.css?v=19" />
-    <link rel="stylesheet" href="theme-folio.css?v=19" />
-    <script type="module" src="app.js?v=19"></script>
+    <link rel="manifest" href="manifest.webmanifest?v=20" />
+    <link rel="stylesheet" href="styles.css?v=20" />
+    <link rel="stylesheet" href="theme-folio.css?v=20" />
+    <script type="module" src="app.js?v=20"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -95,19 +95,17 @@
                     <strong id="today-range-reading">천지현황 우주홍황</strong>
                   </p>
                   <div class="today-characters" id="today-characters" aria-label="오늘의 여덟 글자"></div>
+                  <p class="today-meaning-copy" id="today-memory-scene"></p>
+                  <div class="today-actions">
+                    <button class="primary-action" id="open-today-passage" type="button">8자로 보기</button>
+                    <button class="quiet-button" id="share-today-challenge" type="button">도전 공유</button>
+                  </div>
                 </div>
                 <div class="memory-scene">
-                  <div class="memory-scene__copy">
-                    <p id="today-memory-scene"></p>
-                  </div>
                   <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자 그림을 8자 보기에서 열기">
                     <span class="sr-only">그림 자세히 보기</span>
                   </button>
                 </div>
-              </div>
-              <div class="today-actions">
-                <button class="primary-action" id="open-today-passage" type="button">8자로 보기</button>
-                <button class="quiet-button" id="share-today-challenge" type="button">도전 공유</button>
               </div>
             </article>
           </div>

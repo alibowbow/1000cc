@@ -4,22 +4,40 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("읽기 쉬운 8자 독음과 컴팩트한 조작부는 v19 오프라인 셸에 함께 연결된다", async function () {
-  const [html, app, styles, theme, serviceWorker, seasonalAtlas, ...memoryAtlases] = await Promise.all([
+test("ImageGen folio atlas와 균형 잡힌 v20 레이아웃이 오프라인 셸에 함께 연결된다", async function () {
+  const atlasAssetPaths = [
+    "assets/ui-asset-atlas-v1.webp",
+    "assets/hanji-ivory-tile.webp",
+    "assets/hanji-gray-tile.webp",
+    "assets/hanji-charcoal-tile.webp",
+    "assets/ink-wash-tile.webp",
+    "assets/ui-listen.webp",
+    "assets/ui-shuffle.webp",
+    "assets/ui-share.webp",
+    "assets/ui-settings.webp",
+    "assets/ui-single.webp",
+    "assets/ui-eight.webp",
+    "assets/ui-quiz.webp",
+    "assets/ui-bookmark.webp",
+    "assets/ui-bamboo.webp",
+    "assets/ui-mountains.webp",
+  ];
+  const [html, app, styles, theme, serviceWorker, seasonalAtlas, atlasAssets, memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
     readFile(new URL("styles.css", root), "utf8"),
     readFile(new URL("theme-folio.css", root), "utf8"),
     readFile(new URL("sw.js", root), "utf8"),
     stat(new URL("assets/learning-seasons-atlas.webp", root)),
-    ...Array.from({ length: 16 }, function (_, index) {
+    Promise.all(atlasAssetPaths.map(function (path) { return stat(new URL(path, root)); })),
+    Promise.all(Array.from({ length: 16 }, function (_, index) {
       return stat(new URL(`assets/memory-atlas-${String(index + 1).padStart(2, "0")}.webp`, root));
-    }),
+    })),
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /app\.js\?v=19/);
-  assert.match(html, /styles\.css\?v=19/);
+  assert.match(html, /app\.js\?v=20/);
+  assert.match(html, /styles\.css\?v=20/);
   assert.equal((html.match(/data-mode=/g) || []).length, 3);
   assert.match(html, />1자 보기</);
   assert.match(html, />8자 보기</);
@@ -41,6 +59,15 @@ test("읽기 쉬운 8자 독음과 컴팩트한 조작부는 v19 오프라인 �
   assert.doesNotMatch(html, /id="today-meaning"/);
   assert.match(html, />8자 듣기</);
   assert.match(html, /memory-scene__art/);
+  assert.ok(
+    html.indexOf('id="today-characters"') < html.indexOf('id="today-memory-scene"') &&
+      html.indexOf('id="today-memory-scene"') < html.indexOf('class="memory-scene"'),
+    "8자 뜻풀이는 그림 칸이 아니라 8자 선택판 바로 아래에 있어야 합니다.",
+  );
+  assert.ok(
+    html.indexOf('class="today-actions"') < html.indexOf('class="memory-scene"'),
+    "오늘의 행동 버튼은 8자 학습 묶음 안에 있어야 합니다.",
+  );
   assert.match(html, /id="passage-memory-image"/);
   assert.match(html, /id="passage-memory-clues"/);
   assert.match(html, /class="matching-launch"/);
@@ -58,10 +85,10 @@ test("읽기 쉬운 8자 독음과 컴팩트한 조작부는 v19 오프라인 �
   assert.match(app, /createRandomDailyPick/);
   assert.match(app, /createRandomDailyPick\(\{\}/);
   assert.doesNotMatch(app, /elements\.revealAnswer/);
-  assert.match(app, /course-engine\.js\?v=19/);
-  assert.match(app, /matching-engine\.js\?v=19/);
-  assert.match(app, /storage\.js\?v=19/);
-  assert.match(app, /tts-manager\.js\?v=19/);
+  assert.match(app, /course-engine\.js\?v=20/);
+  assert.match(app, /matching-engine\.js\?v=20/);
+  assert.match(app, /storage\.js\?v=20/);
+  assert.match(app, /tts-manager\.js\?v=20/);
   assert.doesNotMatch(app, /todayMeaning/);
   assert.match(app, /document\.body\.dataset\.screen = sharedChallengeDay !== null \? "challenge" : visibleMode/);
   assert.match(app, /selectedGloss\.removeAttribute\("aria-hidden"\)/);
@@ -70,6 +97,16 @@ test("읽기 쉬운 8자 독음과 컴팩트한 조작부는 v19 오프라인 �
   assert.doesNotMatch(styles, /\.is-meaning-hidden[^{}]*#selected-gloss/);
   assert.doesNotMatch(styles, /\.is-reading-hidden[^{}]*#selected-reading/);
   assert.match(theme, /learning-seasons-atlas\.webp/);
+  assert.match(theme, /ImageGen folio atlas/);
+  assert.match(theme, /hanji-ivory-tile\.webp/);
+  assert.match(theme, /hanji-charcoal-tile\.webp/);
+  assert.match(theme, /ui-listen\.webp/);
+  assert.match(theme, /ui-shuffle\.webp/);
+  assert.match(theme, /ui-share\.webp/);
+  assert.match(theme, /ui-settings\.webp/);
+  assert.match(theme, /ui-single\.webp/);
+  assert.match(theme, /ui-eight\.webp/);
+  assert.match(theme, /ui-quiz\.webp/);
   assert.match(theme, /\.memory-clue/);
   assert.match(theme, /\.memory-scene__art[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
   assert.match(theme, /Compact 8-character view/);
@@ -78,23 +115,37 @@ test("읽기 쉬운 8자 독음과 컴팩트한 조작부는 v19 오프라인 �
   assert.match(theme, /Mobile one-screen home and bottom navigation/);
   assert.match(theme, /\.primary-nav\s*\{[\s\S]*position:\s*fixed[\s\S]*bottom:\s*0/);
   assert.match(theme, /body\[data-screen="today"\][\s\S]*overflow:\s*hidden/);
-  assert.match(theme, /\.today-stage\s*\{[\s\S]*grid-template-rows:\s*auto minmax\(132px, 1fr\)/);
+  assert.match(theme, /\.today-stage\s*\{[\s\S]*grid-template-rows:\s*auto auto auto minmax\(112px, 1fr\) auto/);
   assert.match(theme, /\.memory-scene__art\s*\{[\s\S]*width:\s*auto;[\s\S]*height:\s*100%;/);
   assert.doesNotMatch(theme, /\.memory-scene__art\s*\{\s*width:\s*(?:46|62)px/);
   assert.match(theme, /\.today-hero__heading > :first-child[\s\S]*padding-left:\s*clamp\(30px, 3vw, 42px\)/);
   assert.match(theme, /\.overview-cell__meaning\s*\{[\s\S]*font-size:\s*clamp\(0\.82rem, 1\.45vw, 0\.94rem\)/);
   assert.match(theme, /\.today-hero__range > strong\s*\{[\s\S]*font-size:\s*clamp\(1\.08rem, 1\.75vw, 1\.38rem\)/);
   assert.match(theme, /#screen-passage \.passage-actions #play-couplet[\s\S]*min-height:\s*40px/);
-  assert.match(theme, /\.today-actions \.primary-action\s*\{[\s\S]*min-width:\s*136px[\s\S]*min-height:\s*44px/);
+  assert.match(
+    theme,
+    /grid-template-areas:\s*"first divider second"\s*"inspector inspector inspector"\s*"meaning meaning meaning"\s*"actions actions actions"/,
+  );
+  assert.match(theme, /#screen-passage \.character-inspector\s*\{\s*top:\s*auto/);
+  assert.match(theme, /\.today-actions \.primary-action\s*\{[\s\S]*min-width:\s*118px[\s\S]*min-height:\s*40px/);
+  assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
-  assert.match(serviceWorker, /1000cc-static-v19-20260805/);
-  assert.match(serviceWorker, /matching-engine\.js\?v=19/);
+  assert.match(serviceWorker, /1000cc-static-v20-20260805/);
+  assert.match(serviceWorker, /matching-engine\.js\?v=20/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=19/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=20/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
+  assert.match(serviceWorker, /assets\/ui-asset-atlas-v1\.webp/);
+  assert.match(serviceWorker, /assets\/hanji-ivory-tile\.webp/);
+  assert.match(serviceWorker, /assets\/ui-listen\.webp/);
   assert.match(serviceWorker, /assets\/memory-atlas-16\.webp/);
   assert.ok(seasonalAtlas.size > 50_000);
   assert.ok(seasonalAtlas.size < 250_000);
+  assert.equal(atlasAssets.length, atlasAssetPaths.length);
+  atlasAssets.forEach(function (asset) {
+    assert.ok(asset.size > 2_000);
+    assert.ok(asset.size < 180_000);
+  });
   assert.equal(memoryAtlases.length, 16);
   memoryAtlases.forEach(function (atlas) {
     assert.ok(atlas.size > 100_000);
