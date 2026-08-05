@@ -1,4 +1,4 @@
-import { restoreMatchingSession } from "./matching-engine.js?v=16";
+import { restoreMatchingSession } from "./matching-engine.js?v=21";
 import { createProgressRecord } from "./progress-engine.js";
 import { isPlainObject, toIsoString, uniqueValidIndexes } from "./utils.js";
 
@@ -6,7 +6,7 @@ export const STORAGE_KEY_V1 = "cheonjamun-study-v1";
 export const STORAGE_KEY_V2 = "cheonjamun-study-v2";
 export const EXPORT_SCHEMA = "1000cc-study-record";
 
-const MODES = ["today", "overview", "passage", "grid"];
+const MODES = ["today", "overview", "passage", "memory", "grid"];
 const DIFFICULTIES = ["character", "reading", "listening", "none"];
 const SKILLS = ["reading", "meaning", "reverse", "order", "listening"];
 

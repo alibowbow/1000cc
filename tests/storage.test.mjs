@@ -77,6 +77,15 @@ test("전체 보기 뜻 가리기 설정은 저장되고 기존 v2에는 안전�
   assert.equal(normalizeV2(oldV2).settings.hideOverviewMeaning, false);
 });
 
+test("암묵지 모드는 새로고침 뒤에도 현재 8자 위치와 함께 보존된다", function () {
+  const state = createDefaultState();
+  state.ui.mode = "memory";
+  state.ui.selectedIndex = 312;
+  const restored = normalizeV2(state);
+  assert.equal(restored.ui.mode, "memory");
+  assert.equal(restored.ui.selectedIndex, 312);
+});
+
 test("진행 중인 한자 맞추기 후보와 문제 위치를 저장하고 복원한다", function () {
   const storage = memoryStorage();
   const state = createDefaultState();

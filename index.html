@@ -6,14 +6,14 @@
     <meta name="theme-color" content="#f4f0e7" />
     <meta
       name="description"
-      content="천 글자 전체 보기, 8자 보기, 한자 맞추기 게임을 담은 천자문 앱"
+      content="천 글자 전체 보기, 8자 보기, 그림 암묵지 학습, 한자 맞추기를 담은 천자문 앱"
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="manifest.webmanifest?v=20" />
-    <link rel="stylesheet" href="styles.css?v=20" />
-    <link rel="stylesheet" href="theme-folio.css?v=20" />
-    <script type="module" src="app.js?v=20"></script>
+    <link rel="manifest" href="manifest.webmanifest?v=21" />
+    <link rel="stylesheet" href="styles.css?v=21" />
+    <link rel="stylesheet" href="theme-folio.css?v=21" />
+    <script type="module" src="app.js?v=21"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -31,6 +31,9 @@
         </button>
         <button type="button" data-mode="passage" aria-pressed="false">
           <span aria-hidden="true">八</span><strong>8자 보기</strong>
+        </button>
+        <button type="button" data-mode="memory" aria-pressed="false">
+          <span aria-hidden="true">景</span><strong>암묵지</strong>
         </button>
         <button type="button" data-mode="grid" aria-pressed="false">
           <span aria-hidden="true">答</span><strong>한자 맞추기</strong>
@@ -102,8 +105,8 @@
                   </div>
                 </div>
                 <div class="memory-scene">
-                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자 그림을 8자 보기에서 열기">
-                    <span class="sr-only">그림 자세히 보기</span>
+                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자를 암묵지에서 그림으로 기억하기">
+                    <span class="sr-only">암묵지에서 그림으로 기억하기</span>
                   </button>
                 </div>
               </div>
@@ -172,12 +175,43 @@
         </div>
 
         <article class="passage-card" id="passage-card">
-          <div class="phrase-study" id="first-phrase">
-            <div class="phrase-characters" data-phrase-grid="0" aria-label="첫 번째 4자구"></div>
-          </div>
-          <div class="phrase-divider" aria-hidden="true"></div>
-          <div class="phrase-study" id="second-phrase">
-            <div class="phrase-characters" data-phrase-grid="1" aria-label="두 번째 4자구"></div>
+          <div class="passage-main">
+            <div class="passage-sequence" aria-label="현재 8자 원문">
+              <div class="phrase-study" id="first-phrase">
+                <div class="phrase-characters" data-phrase-grid="0" aria-label="첫 번째 4자구"></div>
+              </div>
+              <div class="phrase-divider" aria-hidden="true"></div>
+              <div class="phrase-study" id="second-phrase">
+                <div class="phrase-characters" data-phrase-grid="1" aria-label="두 번째 4자구"></div>
+              </div>
+            </div>
+
+            <div class="passage-meaning">
+              <span>8자 문맥 풀이</span>
+              <p id="couplet-meaning"></p>
+            </div>
+
+            <section class="passage-flow" aria-labelledby="passage-flow-title">
+              <header>
+                <span id="passage-flow-title">두 글자 흐름</span>
+                <small>암묵지의 네 단서</small>
+              </header>
+              <ol id="passage-pairs" aria-label="8자를 두 글자씩 나눈 읽기 흐름"></ol>
+            </section>
+
+            <div class="passage-actions">
+              <button class="primary-action" id="play-couplet" type="button" data-tts>
+                <svg class="play-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z" /></svg>
+                <svg class="stop-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 7h10v10H7z" /></svg>
+                <span>8자 듣기</span>
+              </button>
+              <button class="toggle-chip" id="continuous-listen" type="button" aria-pressed="false" data-tts>
+                연속 듣기
+              </button>
+              <button class="quiet-button passage-memory-link" id="open-passage-memory" type="button">
+                암묵지로 회상
+              </button>
+            </div>
           </div>
 
           <aside class="character-inspector" aria-label="선택한 글자 정보">
@@ -209,47 +243,72 @@
               </section>
             </div>
           </aside>
-
-          <div class="passage-meaning">
-            <span>8자 문맥 풀이</span>
-            <p id="couplet-meaning"></p>
-          </div>
-
-          <div class="passage-actions">
-            <button class="primary-action" id="play-couplet" type="button" data-tts>
-              <svg class="play-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z" /></svg>
-              <svg class="stop-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 7h10v10H7z" /></svg>
-              <span>8자 듣기</span>
-            </button>
-            <button class="toggle-chip" id="continuous-listen" type="button" aria-pressed="false" data-tts>
-              연속 듣기
-            </button>
-          </div>
         </article>
+      </section>
 
-        <div class="passage-lower">
-          <section class="memory-study" aria-labelledby="memory-study-title">
-            <header class="memory-study__heading">
-              <div>
-                <p class="eyebrow">눈으로 먼저 떠올리기</p>
-                <h2 id="memory-study-title">그림으로 기억하기</h2>
-              </div>
-              <button class="quiet-button" id="reset-memory-clues" type="button">단서 다시 가리기</button>
-            </header>
-            <div class="memory-study__body">
-              <div class="memory-study__visual" id="passage-memory-visual" role="group" aria-label="그림 속 네 개의 기억 단서">
-                <div class="memory-study__image" id="passage-memory-image" aria-hidden="true"></div>
-                <div class="memory-study__clues" id="passage-memory-clues"></div>
-              </div>
-              <div class="memory-study__notes">
-                <p id="passage-memory-scene"></p>
-                <div class="memory-study__reveal" id="passage-memory-reveal" aria-live="polite">
-                  그림 속 단서를 눌러 두 글자씩 떠올려 보세요.
-                </div>
-              </div>
+      <section class="screen memory-screen" id="screen-memory" data-screen="memory" aria-labelledby="memory-title" hidden>
+        <div class="memory-mode-heading">
+          <button class="arrow-button" id="previous-memory" type="button" aria-label="이전 암묵지 장면">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <div>
+            <p class="eyebrow">장면으로 익히는 천자문</p>
+            <h1 id="memory-title">암묵지</h1>
+            <p class="memory-mode-heading__meta">
+              <span id="memory-position">1 / 125</span>
+              <strong id="memory-heading-reading">천지현황 우주홍황</strong>
+            </p>
+          </div>
+          <button class="arrow-button" id="next-memory" type="button" aria-label="다음 암묵지 장면">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+        </div>
+
+        <article class="tacit-stage">
+          <section class="tacit-visual-panel" aria-labelledby="tacit-visual-title">
+            <h2 class="sr-only" id="tacit-visual-title">그림 속 네 개의 기억 단서</h2>
+            <div class="tacit-visual" id="memory-visual" role="group" aria-describedby="memory-scene-copy">
+              <div class="tacit-visual__image" id="memory-image" aria-hidden="true"></div>
+              <div class="tacit-visual__clues" id="memory-clues"></div>
+              <p class="tacit-visual__caption" id="memory-scene-copy"></p>
             </div>
           </section>
-        </div>
+
+          <aside class="tacit-recall" aria-labelledby="tacit-recall-title">
+            <header class="tacit-recall__heading">
+              <div>
+                <p class="eyebrow">그림 → 단서 → 원문</p>
+                <h2 id="tacit-recall-title">장면을 말로 꺼내기</h2>
+              </div>
+              <p class="tacit-progress" aria-live="polite">
+                <strong id="memory-progress">0 / 4</strong>
+                <span>단서</span>
+              </p>
+            </header>
+
+            <p class="tacit-instruction" id="memory-instruction">그림 속 번호를 눌러 두 글자씩 떠올려 보세요.</p>
+            <ol class="tacit-pairs" id="memory-pairs" aria-label="회상한 두 글자 단서"></ol>
+
+            <section class="tacit-answer" id="memory-answer" aria-labelledby="memory-answer-title" hidden>
+              <span id="memory-answer-title">8자 원문</span>
+              <strong id="memory-answer-hanja" lang="zh-Hant"></strong>
+              <p id="memory-answer-reading"></p>
+              <p id="memory-answer-meaning"></p>
+            </section>
+            <div class="tacit-answer-lock" id="memory-answer-lock" aria-hidden="true">
+              <strong>네 단서를 모으면 8자 원문이 열립니다.</strong>
+              <span>머릿속으로 먼저 말한 뒤 확인해 보세요.</span>
+            </div>
+
+            <div class="tacit-actions">
+              <button class="quiet-button" id="reset-memory-clues" type="button">그림만 다시 보기</button>
+              <button class="primary-action" id="reveal-memory-answer" type="button">정답 확인</button>
+              <button class="quiet-button" id="play-memory-couplet" type="button" data-tts>8자 듣기</button>
+            </div>
+
+            <p class="sr-only" id="memory-announcement" aria-live="polite" aria-atomic="true"></p>
+          </aside>
+        </article>
       </section>
 
       <section class="screen" id="screen-grid" data-screen="grid" aria-labelledby="grid-title" hidden>

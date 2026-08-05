@@ -10,22 +10,22 @@ import {
   createMatchingSession,
   getMatchingProgress,
   selectMatchingChoice,
-} from "./js/matching-engine.js?v=20";
+} from "./js/matching-engine.js?v=21";
 import {
   createChallengeUrl,
   createRandomDailyPick,
   getLesson,
   getRandomDailyPick,
   parseChallengeDay,
-} from "./js/course-engine.js?v=20";
+} from "./js/course-engine.js?v=21";
 import { recordSkillAttempt } from "./js/progress-engine.js";
 import { createOverviewCell, createPassageCharacter } from "./js/render.js";
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=20";
+} from "./js/storage.js?v=21";
 import { createStore } from "./js/state.js";
-import { TTSManager } from "./js/tts-manager.js?v=20";
+import { TTSManager } from "./js/tts-manager.js?v=21";
 import { formatDuration } from "./js/utils.js";
 
 const RANGE_SIZE = 100;
@@ -111,6 +111,7 @@ const elements = {
   passageCard: document.querySelector("#passage-card"),
   phraseGrids: Array.from(document.querySelectorAll("[data-phrase-grid]")),
   coupletMeaning: document.querySelector("#couplet-meaning"),
+  passagePairs: document.querySelector("#passage-pairs"),
   playCouplet: document.querySelector("#play-couplet"),
   continuousListen: document.querySelector("#continuous-listen"),
   toggleReading: document.querySelector("#toggle-reading"),
@@ -122,11 +123,26 @@ const elements = {
   selectedStrokes: document.querySelector("#selected-strokes"),
   relatedWordsSection: document.querySelector("#related-words-section"),
   selectedRelatedWords: document.querySelector("#selected-related-words"),
-  passageMemoryImage: document.querySelector("#passage-memory-image"),
-  passageMemoryClues: document.querySelector("#passage-memory-clues"),
-  passageMemoryScene: document.querySelector("#passage-memory-scene"),
-  passageMemoryReveal: document.querySelector("#passage-memory-reveal"),
+  openPassageMemory: document.querySelector("#open-passage-memory"),
+  previousMemory: document.querySelector("#previous-memory"),
+  nextMemory: document.querySelector("#next-memory"),
+  memoryPosition: document.querySelector("#memory-position"),
+  memoryHeadingReading: document.querySelector("#memory-heading-reading"),
+  memoryImage: document.querySelector("#memory-image"),
+  memoryClues: document.querySelector("#memory-clues"),
+  memorySceneCopy: document.querySelector("#memory-scene-copy"),
+  memoryProgress: document.querySelector("#memory-progress"),
+  memoryInstruction: document.querySelector("#memory-instruction"),
+  memoryPairs: document.querySelector("#memory-pairs"),
+  memoryAnswer: document.querySelector("#memory-answer"),
+  memoryAnswerLock: document.querySelector("#memory-answer-lock"),
+  memoryAnswerHanja: document.querySelector("#memory-answer-hanja"),
+  memoryAnswerReading: document.querySelector("#memory-answer-reading"),
+  memoryAnswerMeaning: document.querySelector("#memory-answer-meaning"),
+  memoryAnnouncement: document.querySelector("#memory-announcement"),
   resetMemoryClues: document.querySelector("#reset-memory-clues"),
+  revealMemoryAnswer: document.querySelector("#reveal-memory-answer"),
+  playMemoryCouplet: document.querySelector("#play-memory-couplet"),
   gridSetup: document.querySelector("#grid-setup"),
   gridSession: document.querySelector("#grid-session"),
   sessionResult: document.querySelector("#session-result"),
@@ -278,8 +294,17 @@ function bindEvents() {
   });
   elements.playCouplet.addEventListener("click", playCurrentCouplet);
   elements.continuousListen.addEventListener("click", toggleContinuousListening);
-  elements.passageMemoryClues.addEventListener("click", toggleMemoryClue);
+  elements.openPassageMemory.addEventListener("click", openCurrentMemoryStudy);
+  elements.previousMemory.addEventListener("click", function () {
+    moveMemoryCouplet(-1);
+  });
+  elements.nextMemory.addEventListener("click", function () {
+    moveMemoryCouplet(1);
+  });
+  elements.memoryClues.addEventListener("click", toggleMemoryClue);
   elements.resetMemoryClues.addEventListener("click", resetMemoryClues);
+  elements.revealMemoryAnswer.addEventListener("click", revealAllMemoryClues);
+  elements.playMemoryCouplet.addEventListener("click", playMemoryCouplet);
   elements.toggleReading.addEventListener("click", function () {
     commit(function (state) {
       state.settings.hideReading = !state.settings.hideReading;
@@ -347,6 +372,7 @@ function renderApp() {
   if (sharedChallengeDay !== null || appState.ui.mode === "today") renderTodayScreen();
   if (appState.ui.mode === "overview") renderOverview();
   if (appState.ui.mode === "passage") renderPassage();
+  if (appState.ui.mode === "memory") renderMemoryMode();
   if (appState.ui.mode === "grid") renderGridScreen();
 }
 
@@ -376,7 +402,7 @@ function goHome(event) {
 }
 
 function setMode(mode) {
-  if (!["today", "overview", "passage", "grid"].includes(mode)) return;
+  if (!["today", "overview", "passage", "memory", "grid"].includes(mode)) return;
   if (sharedChallengeDay !== null) leaveChallengeView();
   if (mode !== appState.ui.mode) stopAllSpeech();
   commit(function (state) {
@@ -452,13 +478,25 @@ function openTodayPassage() {
 function openTodayMemoryStudy() {
   const dayIndex = Number(elements.todayMemoryArt.dataset.dayIndex);
   if (!Number.isInteger(dayIndex)) return;
-  openPassage(dayIndex * 8, false);
-  window.setTimeout(function () {
-    document.querySelector(".memory-study")?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "start",
-    });
-  }, 0);
+  openMemory(dayIndex * 8);
+}
+
+function openCurrentMemoryStudy() {
+  openMemory(appState.ui.selectedIndex);
+}
+
+function openMemory(index) {
+  stopAllSpeech();
+  memoryClueRevealed = new Set();
+  renderedMemoryDay = -1;
+  commit(function (state) {
+    state.ui.selectedIndex = index;
+    state.ui.rangeStart = Math.floor(index / 100) * 100;
+    state.ui.mode = "memory";
+    state.ui.revealAnswer = false;
+  });
+  renderApp();
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function renderTodayCharacters(lesson) {
@@ -821,6 +859,22 @@ function renderPassage() {
     grid.replaceChildren(fragment);
   });
 
+  const pairFragment = document.createDocumentFragment();
+  for (let pairIndex = 0; pairIndex < 4; pairIndex += 1) {
+    const pair = couplet.items.slice(pairIndex * 2, pairIndex * 2 + 2);
+    const item = document.createElement("li");
+    const index = document.createElement("span");
+    const characters = document.createElement("strong");
+    const readings = document.createElement("small");
+    index.textContent = String(pairIndex + 1);
+    characters.lang = "zh-Hant";
+    characters.textContent = pair.map(function (entry) { return entry.character; }).join("");
+    readings.textContent = pair.map(function (entry) { return entry.contextHun; }).join(" · ");
+    item.append(index, characters, readings);
+    pairFragment.append(item);
+  }
+  elements.passagePairs.replaceChildren(pairFragment);
+
   elements.selectedCharacter.textContent = selected.character;
   elements.selectedGloss.textContent = selected.gloss;
   elements.selectedReading.textContent = selected.reading;
@@ -849,7 +903,6 @@ function renderPassage() {
   });
   elements.selectedRelatedWords.replaceChildren(relatedWordsFragment);
   elements.relatedWordsSection.hidden = details.relatedWords.length === 0;
-  renderPassageMemory(couplet);
   renderPassageVisibility();
   renderSpeechState();
 }
@@ -865,19 +918,29 @@ function applyMemoryAtlas(element, dayIndex) {
   element.style.backgroundPosition = `${(column / 3) * 100}% ${row * 100}%`;
 }
 
-function renderPassageMemory(couplet) {
+function renderMemoryMode() {
+  const couplet = getCouplet(CHARACTERS[appState.ui.selectedIndex].coupletIndex);
   const lesson = getLesson(couplet.index);
   if (renderedMemoryDay !== lesson.dayIndex) {
     renderedMemoryDay = lesson.dayIndex;
     memoryClueRevealed = new Set();
   }
-  applyMemoryAtlas(elements.passageMemoryImage, lesson.dayIndex);
-  elements.passageMemoryScene.textContent = lesson.memoryScene;
 
-  const clues = document.createDocumentFragment();
+  elements.memoryPosition.textContent = `${lesson.dayNumber} / 125`;
+  elements.memoryHeadingReading.textContent = couplet.data.reading;
+  elements.previousMemory.disabled = couplet.index === 0;
+  elements.nextMemory.disabled = couplet.index === 124;
+  applyMemoryAtlas(elements.memoryImage, lesson.dayIndex);
+  elements.memorySceneCopy.textContent = lesson.memoryScene;
+
+  const clueFragment = document.createDocumentFragment();
+  const pairFragment = document.createDocumentFragment();
   for (let pairIndex = 0; pairIndex < 4; pairIndex += 1) {
     const pair = lesson.items.slice(pairIndex * 2, pairIndex * 2 + 2);
     const revealed = memoryClueRevealed.has(pairIndex);
+    const charactersText = pair.map(function (item) { return item.character; }).join("");
+    const readingsText = pair.map(function (item) { return item.contextHun; }).join(" · ");
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "memory-clue";
@@ -886,44 +949,49 @@ function renderPassageMemory(couplet) {
     button.setAttribute("aria-pressed", String(revealed));
     button.setAttribute(
       "aria-label",
-      revealed
-        ? `${pair.map(function (item) { return item.contextHun; }).join(", ")}, 다시 가리기`
-        : `${pairIndex + 1}번째 그림 단서 보기`,
+      revealed ? `${readingsText}, 다시 가리기` : `${pairIndex + 1}번째 그림 단서 보기`,
     );
     if (revealed) {
       const characters = document.createElement("strong");
       characters.lang = "zh-Hant";
-      characters.textContent = pair.map(function (item) { return item.character; }).join("");
-      const readings = document.createElement("span");
-      readings.textContent = pair.map(function (item) { return item.contextHun; }).join(" · ");
-      button.append(characters, readings);
+      characters.textContent = charactersText;
+      button.append(characters);
     } else {
       button.textContent = String(pairIndex + 1);
     }
-    clues.append(button);
-  }
-  elements.passageMemoryClues.replaceChildren(clues);
-  renderMemoryReveal(lesson);
-}
+    clueFragment.append(button);
 
-function renderMemoryReveal(lesson) {
-  if (memoryClueRevealed.size === 0) {
-    elements.passageMemoryReveal.textContent = "그림 속 단서를 눌러 두 글자씩 떠올려 보세요.";
-    return;
+    const item = document.createElement("li");
+    item.className = `tacit-pair${revealed ? " is-revealed" : ""}`;
+    const index = document.createElement("span");
+    index.className = "tacit-pair__index";
+    index.textContent = String(pairIndex + 1);
+    const pairCharacters = document.createElement("strong");
+    pairCharacters.lang = "zh-Hant";
+    pairCharacters.textContent = revealed ? charactersText : "••";
+    const pairReading = document.createElement("small");
+    pairReading.textContent = revealed ? readingsText : "두 글자";
+    item.append(index, pairCharacters, pairReading);
+    pairFragment.append(item);
   }
-  const fragment = document.createDocumentFragment();
-  Array.from(memoryClueRevealed).sort().forEach(function (pairIndex) {
-    const pair = lesson.items.slice(pairIndex * 2, pairIndex * 2 + 2);
-    const line = document.createElement("p");
-    const characters = document.createElement("strong");
-    characters.lang = "zh-Hant";
-    characters.textContent = pair.map(function (item) { return item.character; }).join("");
-    const copy = document.createElement("span");
-    copy.textContent = pair.map(function (item) { return item.contextHun; }).join(" · ");
-    line.append(characters, copy);
-    fragment.append(line);
-  });
-  elements.passageMemoryReveal.replaceChildren(fragment);
+  elements.memoryClues.replaceChildren(clueFragment);
+  elements.memoryPairs.replaceChildren(pairFragment);
+
+  const complete = memoryClueRevealed.size === 4;
+  elements.memoryProgress.textContent = `${memoryClueRevealed.size} / 4`;
+  elements.memoryInstruction.textContent = complete
+    ? "네 장면 단서가 하나의 8자로 이어졌습니다."
+    : memoryClueRevealed.size === 0
+      ? "그림 속 번호를 눌러 두 글자씩 떠올려 보세요."
+      : `남은 ${4 - memoryClueRevealed.size}개 단서를 그림에서 찾아보세요.`;
+  elements.memoryAnswer.hidden = !complete;
+  elements.memoryAnswerLock.hidden = complete;
+  elements.memoryAnswerHanja.textContent = couplet.data.hanja;
+  elements.memoryAnswerReading.textContent = couplet.data.reading;
+  elements.memoryAnswerMeaning.textContent = couplet.data.meaning;
+  elements.revealMemoryAnswer.disabled = complete;
+  elements.revealMemoryAnswer.textContent = complete ? "8자 완성" : "정답 확인";
+  renderSpeechState();
 }
 
 function toggleMemoryClue(event) {
@@ -933,18 +1001,51 @@ function toggleMemoryClue(event) {
   if (!Number.isInteger(pairIndex) || pairIndex < 0 || pairIndex > 3) return;
   if (memoryClueRevealed.has(pairIndex)) memoryClueRevealed.delete(pairIndex);
   else memoryClueRevealed.add(pairIndex);
-  const couplet = getCouplet(CHARACTERS[appState.ui.selectedIndex].coupletIndex);
-  const target = couplet.items[pairIndex * 2];
-  commit(function (state) {
-    state.ui.selectedIndex = target.index;
-  });
-  renderPassage();
+  renderMemoryMode();
+  elements.memoryAnnouncement.textContent = memoryClueRevealed.has(pairIndex)
+    ? `${pairIndex + 1}번째 두 글자 단서를 확인했습니다.`
+    : `${pairIndex + 1}번째 두 글자 단서를 다시 가렸습니다.`;
+  elements.memoryClues.querySelector(`[data-memory-clue="${pairIndex}"]`)?.focus();
 }
 
 function resetMemoryClues() {
   memoryClueRevealed = new Set();
-  renderPassage();
-  elements.passageMemoryClues.querySelector("button")?.focus();
+  renderMemoryMode();
+  elements.memoryAnnouncement.textContent = "모든 단서를 가리고 그림만 남겼습니다.";
+  elements.memoryClues.querySelector("button")?.focus();
+}
+
+function revealAllMemoryClues() {
+  memoryClueRevealed = new Set([0, 1, 2, 3]);
+  renderMemoryMode();
+  elements.memoryAnnouncement.textContent = "네 단서와 8자 원문을 모두 확인했습니다.";
+}
+
+function moveMemoryCouplet(delta) {
+  stopAllSpeech();
+  const current = CHARACTERS[appState.ui.selectedIndex].coupletIndex;
+  const next = Math.min(124, Math.max(0, current + delta));
+  memoryClueRevealed = new Set();
+  renderedMemoryDay = -1;
+  commit(function (state) {
+    state.ui.selectedIndex = next * 8;
+    state.ui.rangeStart = Math.floor(state.ui.selectedIndex / 100) * 100;
+    state.ui.revealAnswer = false;
+  });
+  renderMemoryMode();
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function playMemoryCouplet() {
+  if (speechState.speaking && speechState.kind === "memory-couplet") {
+    stopAllSpeech();
+    return;
+  }
+  const couplet = getCouplet(CHARACTERS[appState.ui.selectedIndex].coupletIndex);
+  tts.speak(couplet.data.reading.replace(" ", ", "), {
+    kind: "memory-couplet",
+    onError: handleTtsError,
+  });
 }
 
 function renderPassageVisibility() {
@@ -1429,12 +1530,16 @@ function updateTtsAvailability() {
 }
 
 function renderSpeechState() {
+  const passageSpeaking = speechState.speaking && speechState.kind === "couplet";
+  const memorySpeaking = speechState.speaking && speechState.kind === "memory-couplet";
   elements.playCouplet.classList.toggle(
     "is-speaking",
-    speechState.speaking && speechState.kind === "couplet",
+    passageSpeaking,
   );
   elements.playCouplet.querySelector("span").textContent =
-    speechState.speaking && speechState.kind === "couplet" ? "재생 정지" : "8자 듣기";
+    passageSpeaking ? "재생 정지" : "8자 듣기";
+  elements.playMemoryCouplet.classList.toggle("is-speaking", memorySpeaking);
+  elements.playMemoryCouplet.textContent = memorySpeaking ? "재생 정지" : "8자 듣기";
   elements.continuousListen.setAttribute("aria-pressed", String(passageContinuous));
 }
 

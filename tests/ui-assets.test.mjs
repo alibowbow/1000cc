@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("ImageGen folio atlas와 균형 잡힌 v20 레이아웃이 오프라인 셸에 함께 연결된다", async function () {
+test("ImageGen folio atlas와 독립 암묵지 v21 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/ui-asset-atlas-v1.webp",
     "assets/hanji-ivory-tile.webp",
@@ -36,11 +36,12 @@ test("ImageGen folio atlas와 균형 잡힌 v20 레이아웃이 오프라인 셸
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /app\.js\?v=20/);
-  assert.match(html, /styles\.css\?v=20/);
-  assert.equal((html.match(/data-mode=/g) || []).length, 3);
+  assert.match(html, /app\.js\?v=21/);
+  assert.match(html, /styles\.css\?v=21/);
+  assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
   assert.match(html, />8자 보기</);
+  assert.match(html, />암묵지</);
   assert.match(html, />한자 맞추기</);
   assert.match(html, /aria-label="설정 열기"/);
   const settingsButtonMarkup = html.match(/<button[^>]+id="settings-button"[\s\S]*?<\/button>/)?.[0];
@@ -68,14 +69,22 @@ test("ImageGen folio atlas와 균형 잡힌 v20 레이아웃이 오프라인 셸
     html.indexOf('class="today-actions"') < html.indexOf('class="memory-scene"'),
     "오늘의 행동 버튼은 8자 학습 묶음 안에 있어야 합니다.",
   );
-  assert.match(html, /id="passage-memory-image"/);
-  assert.match(html, /id="passage-memory-clues"/);
+  assert.match(html, /data-screen="memory"/);
+  assert.match(html, /id="memory-image"/);
+  assert.match(html, /id="memory-clues"/);
+  assert.match(html, /id="memory-progress"/);
+  assert.match(html, /id="memory-pairs"/);
+  assert.match(html, /id="memory-answer"/);
+  assert.match(html, /id="passage-pairs"/);
+  assert.match(html, />두 글자 흐름</);
+  assert.match(html, />정답 확인</);
   assert.match(html, /class="matching-launch"/);
   assert.match(html, /class="matching-choices"/);
   assert.match(html, /class="shared-match-board"/);
+  assert.doesNotMatch(html, /class="memory-study"/);
   assert.ok(
-    html.indexOf('class="character-inspector"') < html.indexOf('class="memory-study"'),
-    "선택 글자 정보는 기억 그림보다 먼저 배치되어야 합니다.",
+    html.indexOf('class="character-inspector"') < html.indexOf('data-screen="memory"'),
+    "8자 선택 글자 정보와 암묵지 화면은 서로 분리되어야 합니다.",
   );
   assert.doesNotMatch(html, /daily-path/);
   assert.doesNotMatch(html, /today-tools/);
@@ -85,10 +94,14 @@ test("ImageGen folio atlas와 균형 잡힌 v20 레이아웃이 오프라인 셸
   assert.match(app, /createRandomDailyPick/);
   assert.match(app, /createRandomDailyPick\(\{\}/);
   assert.doesNotMatch(app, /elements\.revealAnswer/);
-  assert.match(app, /course-engine\.js\?v=20/);
-  assert.match(app, /matching-engine\.js\?v=20/);
-  assert.match(app, /storage\.js\?v=20/);
-  assert.match(app, /tts-manager\.js\?v=20/);
+  assert.match(app, /course-engine\.js\?v=21/);
+  assert.match(app, /matching-engine\.js\?v=21/);
+  assert.match(app, /storage\.js\?v=21/);
+  assert.match(app, /tts-manager\.js\?v=21/);
+  assert.match(app, /function renderMemoryMode\(\)/);
+  assert.match(app, /elements\.passagePairs\.replaceChildren/);
+  assert.match(app, /memoryClueRevealed\.size === 4/);
+  assert.match(app, /state\.ui\.mode = "memory"/);
   assert.doesNotMatch(app, /todayMeaning/);
   assert.match(app, /document\.body\.dataset\.screen = sharedChallengeDay !== null \? "challenge" : visibleMode/);
   assert.match(app, /selectedGloss\.removeAttribute\("aria-hidden"\)/);
@@ -108,6 +121,11 @@ test("ImageGen folio atlas와 균형 잡힌 v20 레이아웃이 오프라인 셸
   assert.match(theme, /ui-eight\.webp/);
   assert.match(theme, /ui-quiz\.webp/);
   assert.match(theme, /\.memory-clue/);
+  assert.match(theme, /v21 · 암묵지 독립 모드/);
+  assert.match(theme, /\.tacit-stage/);
+  assert.match(theme, /\.tacit-visual/);
+  assert.match(theme, /\.tacit-pairs/);
+  assert.match(theme, /#screen-passage #passage-pairs/);
   assert.match(theme, /\.memory-scene__art[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
   assert.match(theme, /Compact 8-character view/);
   assert.doesNotMatch(theme, /\.related-words\[open\]/);
@@ -122,18 +140,17 @@ test("ImageGen folio atlas와 균형 잡힌 v20 레이아웃이 오프라인 셸
   assert.match(theme, /\.overview-cell__meaning\s*\{[\s\S]*font-size:\s*clamp\(0\.82rem, 1\.45vw, 0\.94rem\)/);
   assert.match(theme, /\.today-hero__range > strong\s*\{[\s\S]*font-size:\s*clamp\(1\.08rem, 1\.75vw, 1\.38rem\)/);
   assert.match(theme, /#screen-passage \.passage-actions #play-couplet[\s\S]*min-height:\s*40px/);
-  assert.match(
-    theme,
-    /grid-template-areas:\s*"first divider second"\s*"inspector inspector inspector"\s*"meaning meaning meaning"\s*"actions actions actions"/,
-  );
+  assert.match(theme, /grid-template-areas:\s*"main inspector"/);
+  assert.match(theme, /\.passage-sequence\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 18px minmax\(0, 1fr\)/);
   assert.match(theme, /#screen-passage \.character-inspector\s*\{\s*top:\s*auto/);
   assert.match(theme, /\.today-actions \.primary-action\s*\{[\s\S]*min-width:\s*118px[\s\S]*min-height:\s*40px/);
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
-  assert.match(serviceWorker, /1000cc-static-v20-20260805/);
-  assert.match(serviceWorker, /matching-engine\.js\?v=20/);
+  assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(serviceWorker, /1000cc-static-v21-20260805/);
+  assert.match(serviceWorker, /matching-engine\.js\?v=21/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=20/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=21/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /assets\/ui-asset-atlas-v1\.webp/);
   assert.match(serviceWorker, /assets\/hanji-ivory-tile\.webp/);
