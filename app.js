@@ -10,22 +10,22 @@ import {
   createMatchingSession,
   getMatchingProgress,
   selectMatchingChoice,
-} from "./js/matching-engine.js?v=21";
+} from "./js/matching-engine.js?v=22";
 import {
   createChallengeUrl,
   createRandomDailyPick,
   getLesson,
   getRandomDailyPick,
   parseChallengeDay,
-} from "./js/course-engine.js?v=21";
+} from "./js/course-engine.js?v=22";
 import { recordSkillAttempt } from "./js/progress-engine.js";
 import { createOverviewCell, createPassageCharacter } from "./js/render.js";
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=21";
+} from "./js/storage.js?v=22";
 import { createStore } from "./js/state.js";
-import { TTSManager } from "./js/tts-manager.js?v=21";
+import { TTSManager } from "./js/tts-manager.js?v=22";
 import { formatDuration } from "./js/utils.js";
 
 const RANGE_SIZE = 100;

@@ -77,7 +77,7 @@ test("전체 보기 뜻 가리기 설정은 저장되고 기존 v2에는 안전�
   assert.equal(normalizeV2(oldV2).settings.hideOverviewMeaning, false);
 });
 
-test("암묵지 모드는 새로고침 뒤에도 현재 8자 위치와 함께 보존된다", function () {
+test("그림 기억 모드는 새로고침 뒤에도 현재 8자 위치와 함께 보존된다", function () {
   const state = createDefaultState();
   state.ui.mode = "memory";
   state.ui.selectedIndex = 312;

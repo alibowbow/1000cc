@@ -6,14 +6,14 @@
     <meta name="theme-color" content="#f4f0e7" />
     <meta
       name="description"
-      content="천 글자 전체 보기, 8자 보기, 그림 암묵지 학습, 한자 맞추기를 담은 천자문 앱"
+      content="천 글자 전체 보기, 8자 보기, 그림으로 기억하기, 한자 맞추기를 담은 천자문 앱"
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="manifest.webmanifest?v=21" />
-    <link rel="stylesheet" href="styles.css?v=21" />
-    <link rel="stylesheet" href="theme-folio.css?v=21" />
-    <script type="module" src="app.js?v=21"></script>
+    <link rel="manifest" href="manifest.webmanifest?v=22" />
+    <link rel="stylesheet" href="styles.css?v=22" />
+    <link rel="stylesheet" href="theme-folio.css?v=22" />
+    <script type="module" src="app.js?v=22"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -33,7 +33,7 @@
           <span aria-hidden="true">八</span><strong>8자 보기</strong>
         </button>
         <button type="button" data-mode="memory" aria-pressed="false">
-          <span aria-hidden="true">景</span><strong>암묵지</strong>
+          <span aria-hidden="true">景</span><strong>그림 기억</strong>
         </button>
         <button type="button" data-mode="grid" aria-pressed="false">
           <span aria-hidden="true">答</span><strong>한자 맞추기</strong>
@@ -105,8 +105,8 @@
                   </div>
                 </div>
                 <div class="memory-scene">
-                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자를 암묵지에서 그림으로 기억하기">
-                    <span class="sr-only">암묵지에서 그림으로 기억하기</span>
+                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자를 그림으로 기억하기">
+                    <span class="sr-only">그림으로 기억하기</span>
                   </button>
                 </div>
               </div>
@@ -194,7 +194,7 @@
             <section class="passage-flow" aria-labelledby="passage-flow-title">
               <header>
                 <span id="passage-flow-title">두 글자 흐름</span>
-                <small>암묵지의 네 단서</small>
+                <small>그림 기억의 네 단서</small>
               </header>
               <ol id="passage-pairs" aria-label="8자를 두 글자씩 나눈 읽기 흐름"></ol>
             </section>
@@ -209,7 +209,7 @@
                 연속 듣기
               </button>
               <button class="quiet-button passage-memory-link" id="open-passage-memory" type="button">
-                암묵지로 회상
+                그림으로 회상
               </button>
             </div>
           </div>
@@ -248,18 +248,18 @@
 
       <section class="screen memory-screen" id="screen-memory" data-screen="memory" aria-labelledby="memory-title" hidden>
         <div class="memory-mode-heading">
-          <button class="arrow-button" id="previous-memory" type="button" aria-label="이전 암묵지 장면">
+          <button class="arrow-button" id="previous-memory" type="button" aria-label="이전 그림 장면">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg>
           </button>
           <div>
             <p class="eyebrow">장면으로 익히는 천자문</p>
-            <h1 id="memory-title">암묵지</h1>
+            <h1 id="memory-title">그림으로 기억하기</h1>
             <p class="memory-mode-heading__meta">
               <span id="memory-position">1 / 125</span>
               <strong id="memory-heading-reading">천지현황 우주홍황</strong>
             </p>
           </div>
-          <button class="arrow-button" id="next-memory" type="button" aria-label="다음 암묵지 장면">
+          <button class="arrow-button" id="next-memory" type="button" aria-label="다음 그림 장면">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
           </button>
         </div>
@@ -278,7 +278,7 @@
             <header class="tacit-recall__heading">
               <div>
                 <p class="eyebrow">그림 → 단서 → 원문</p>
-                <h2 id="tacit-recall-title">장면을 말로 꺼내기</h2>
+                <h2 id="tacit-recall-title">네 단서로 8자 완성</h2>
               </div>
               <p class="tacit-progress" aria-live="polite">
                 <strong id="memory-progress">0 / 4</strong>
@@ -301,7 +301,7 @@
             </div>
 
             <div class="tacit-actions">
-              <button class="quiet-button" id="reset-memory-clues" type="button">그림만 다시 보기</button>
+              <button class="quiet-button" id="reset-memory-clues" type="button">다시 가리기</button>
               <button class="primary-action" id="reveal-memory-answer" type="button">정답 확인</button>
               <button class="quiet-button" id="play-memory-couplet" type="button" data-tts>8자 듣기</button>
             </div>

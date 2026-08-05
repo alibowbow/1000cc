@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("ImageGen folio atlas와 독립 암묵지 v21 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("ImageGen folio atlas와 독립 그림 기억 v22 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/ui-asset-atlas-v1.webp",
     "assets/hanji-ivory-tile.webp",
@@ -36,12 +36,14 @@ test("ImageGen folio atlas와 독립 암묵지 v21 학습 모드가 오프라인
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /app\.js\?v=21/);
-  assert.match(html, /styles\.css\?v=21/);
+  assert.match(html, /app\.js\?v=22/);
+  assert.match(html, /styles\.css\?v=22/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
   assert.match(html, />8자 보기</);
-  assert.match(html, />암묵지</);
+  assert.match(html, />그림 기억</);
+  assert.match(html, /id="memory-title">그림으로 기억하기</);
+  assert.doesNotMatch(html, /암묵지/);
   assert.match(html, />한자 맞추기</);
   assert.match(html, /aria-label="설정 열기"/);
   const settingsButtonMarkup = html.match(/<button[^>]+id="settings-button"[\s\S]*?<\/button>/)?.[0];
@@ -84,7 +86,7 @@ test("ImageGen folio atlas와 독립 암묵지 v21 학습 모드가 오프라인
   assert.doesNotMatch(html, /class="memory-study"/);
   assert.ok(
     html.indexOf('class="character-inspector"') < html.indexOf('data-screen="memory"'),
-    "8자 선택 글자 정보와 암묵지 화면은 서로 분리되어야 합니다.",
+    "8자 선택 글자 정보와 그림 기억 화면은 서로 분리되어야 합니다.",
   );
   assert.doesNotMatch(html, /daily-path/);
   assert.doesNotMatch(html, /today-tools/);
@@ -94,10 +96,10 @@ test("ImageGen folio atlas와 독립 암묵지 v21 학습 모드가 오프라인
   assert.match(app, /createRandomDailyPick/);
   assert.match(app, /createRandomDailyPick\(\{\}/);
   assert.doesNotMatch(app, /elements\.revealAnswer/);
-  assert.match(app, /course-engine\.js\?v=21/);
-  assert.match(app, /matching-engine\.js\?v=21/);
-  assert.match(app, /storage\.js\?v=21/);
-  assert.match(app, /tts-manager\.js\?v=21/);
+  assert.match(app, /course-engine\.js\?v=22/);
+  assert.match(app, /matching-engine\.js\?v=22/);
+  assert.match(app, /storage\.js\?v=22/);
+  assert.match(app, /tts-manager\.js\?v=22/);
   assert.match(app, /function renderMemoryMode\(\)/);
   assert.match(app, /elements\.passagePairs\.replaceChildren/);
   assert.match(app, /memoryClueRevealed\.size === 4/);
@@ -121,10 +123,14 @@ test("ImageGen folio atlas와 독립 암묵지 v21 학습 모드가 오프라인
   assert.match(theme, /ui-eight\.webp/);
   assert.match(theme, /ui-quiz\.webp/);
   assert.match(theme, /\.memory-clue/);
-  assert.match(theme, /v21 · 암묵지 독립 모드/);
+  assert.match(theme, /v22 · 그림 기억 독립 모드/);
   assert.match(theme, /\.tacit-stage/);
   assert.match(theme, /\.tacit-visual/);
   assert.match(theme, /\.tacit-pairs/);
+  assert.match(theme, /body\[data-screen="memory"\][\s\S]*height:\s*100dvh;[\s\S]*overflow:\s*hidden/);
+  assert.match(theme, /body\[data-screen="memory"\] \.app-shell[\s\S]*flex:\s*1 1 0;[\s\S]*overflow:\s*hidden/);
+  assert.match(theme, /#screen-memory:not\(\[hidden\]\)[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
+  assert.match(theme, /\.tacit-recall\s*\{[\s\S]*position:\s*absolute;[\s\S]*height:\s*clamp\(214px, 28dvh, 236px\)/);
   assert.match(theme, /#screen-passage #passage-pairs/);
   assert.match(theme, /\.memory-scene__art[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
   assert.match(theme, /Compact 8-character view/);
@@ -147,10 +153,10 @@ test("ImageGen folio atlas와 독립 암묵지 v21 학습 모드가 오프라인
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v21-20260805/);
-  assert.match(serviceWorker, /matching-engine\.js\?v=21/);
+  assert.match(serviceWorker, /1000cc-static-v22-20260805/);
+  assert.match(serviceWorker, /matching-engine\.js\?v=22/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=21/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=22/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /assets\/ui-asset-atlas-v1\.webp/);
   assert.match(serviceWorker, /assets\/hanji-ivory-tile\.webp/);
