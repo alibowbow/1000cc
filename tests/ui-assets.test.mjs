@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("순지 필사판과 반응형 조선 서첩 v27 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/joseon-folio-spread.webp",
     "assets/joseon-folio-single.webp",
@@ -45,9 +45,9 @@ test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라
 
   assert.match(html, /theme-folio\.css/);
   assert.match(html, /theme-folio\.css\?v=26/);
-  assert.match(html, /passage-folio-v25\.css\?v=25/);
-  assert.match(html, /compact-sunji-v26\.css\?v=26/);
-  assert.match(html, /app\.js\?v=24/);
+  assert.match(html, /passage-folio-v25\.css\?v=26/);
+  assert.match(html, /compact-sunji-v26\.css\?v=27/);
+  assert.match(html, /app\.js\?v=25/);
   assert.match(html, /styles\.css\?v=24/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
@@ -89,8 +89,8 @@ test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라
   assert.match(html, /id="memory-progress"/);
   assert.match(html, /id="memory-pairs"/);
   assert.match(html, /id="memory-answer"/);
-  assert.match(html, /id="passage-pairs"/);
-  assert.match(html, />두 글자 흐름</);
+  assert.doesNotMatch(html, /id="passage-pairs"/);
+  assert.doesNotMatch(html, />두 글자 흐름</);
   assert.match(html, />정답 확인</);
   assert.match(html, /class="matching-launch"/);
   assert.match(html, /class="matching-choices"/);
@@ -108,6 +108,7 @@ test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라
   assert.match(app, /createRandomDailyPick/);
   assert.match(app, /createRandomDailyPick\(\{\}/);
   assert.doesNotMatch(app, /elements\.revealAnswer/);
+  assert.doesNotMatch(app, /passagePairs/);
   assert.match(app, /course-engine\.js\?v=24/);
   assert.match(app, /matching-engine\.js\?v=24/);
   assert.match(app, /storage\.js\?v=24/);
@@ -118,7 +119,7 @@ test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라
   assert.match(app, /todayDashboard\.dataset\.courseQuarter/);
   assert.match(storage, /matching-engine\.js\?v=24/);
   assert.match(app, /function renderMemoryMode\(\)/);
-  assert.match(app, /elements\.passagePairs\.replaceChildren/);
+  assert.doesNotMatch(app, /elements\.passagePairs\.replaceChildren/);
   assert.match(app, /memoryClueRevealed\.size === 4/);
   assert.match(app, /state\.ui\.mode = "memory"/);
   assert.doesNotMatch(app, /todayMeaning/);
@@ -161,7 +162,8 @@ test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라
   assert.match(theme, /body\[data-screen="memory"\] \.app-shell[\s\S]*flex:\s*1 1 0;[\s\S]*overflow:\s*hidden/);
   assert.match(theme, /#screen-memory:not\(\[hidden\]\)[\s\S]*grid-template-rows:\s*auto minmax\(0, 1fr\)/);
   assert.match(theme, /\.tacit-recall\s*\{[\s\S]*position:\s*absolute;[\s\S]*height:\s*clamp\(214px, 28dvh, 236px\)/);
-  assert.match(passageTheme, /#screen-passage #passage-pairs/);
+  assert.doesNotMatch(passageTheme, /#screen-passage #passage-pairs/);
+  assert.doesNotMatch(theme, /#screen-passage #passage-pairs/);
   assert.match(theme, /\.memory-scene__art[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
   assert.match(theme, /Compact 8-character view/);
   assert.doesNotMatch(theme, /\.related-words\[open\]/);
@@ -179,7 +181,11 @@ test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라
   assert.match(compactTheme, /--sunji-fiber-image:\s*url\("\.\/assets\/sunji-fiber-tile\.webp"\)/);
   assert.match(compactTheme, /--folio-single-image:\s*url\("\.\/assets\/joseon-folio-single\.webp"\)/);
   assert.match(compactTheme, /--study-atmosphere-image:\s*url\("\.\/assets\/study-canvas-atmosphere\.webp"\)/);
-  assert.match(compactTheme, /#screen-overview \.overview-grid\s*\{[\s\S]*repeat\(14, minmax\(0, 1fr\)\)/);
+  assert.match(compactTheme, /#screen-overview \.overview-grid\s*\{[\s\S]*repeat\(10, minmax\(0, 1fr\)\)/);
+  assert.match(
+    compactTheme,
+    /#screen-overview[\s\S]*\.overview-grid\.is-meaning-hidden[\s\S]*\.overview-cell:not\(\.is-revealed\)[\s\S]*\.overview-cell__meaning\s*\{[\s\S]*color:\s*transparent/,
+  );
   assert.match(compactTheme, /@media \(max-width: 660px\) and \(orientation: portrait\)/);
   assert.match(compactTheme, /aspect-ratio:\s*9 \/ 16/);
   assert.match(compactTheme, /aspect-ratio:\s*3 \/ 2/);
@@ -187,19 +193,27 @@ test("순지 필사판과 반응형 조선 서첩 v26 학습 모드가 오프라
   assert.match(passageTheme, /grid-template-areas:[\s\S]*"folio-header folio-header"[\s\S]*"sequence sequence"[\s\S]*"main inspector"/);
   assert.match(passageTheme, /#screen-passage \.passage-sequence\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 20px minmax\(0, 1fr\)/);
   assert.match(passageTheme, /#screen-passage \.character-inspector\s*\{[\s\S]*top:\s*auto/);
+  const passageInspectorRule = passageTheme.match(
+    /#screen-passage \.character-inspector\s*\{([^}]*)\}/,
+  )?.[1];
+  assert.ok(passageInspectorRule);
+  assert.match(passageInspectorRule, /background:\s*none/);
+  assert.doesNotMatch(passageInspectorRule, /ui-bamboo\.webp/);
+  assert.doesNotMatch(theme, /#screen-passage \.passage-card::after,\s*#screen-grid \.matching-launch::after/);
   assert.match(theme, /\.today-actions \.primary-action\s*\{[\s\S]*min-width:\s*118px[\s\S]*min-height:\s*40px/);
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v26-20260805/);
+  assert.match(serviceWorker, /1000cc-static-v27-20260806/);
   assert.match(serviceWorker, /assets\/cheonjamun-title\.woff/);
   assert.match(serviceWorker, /assets\/cheonjamun-hanja\.woff/);
   assert.match(serviceWorker, /matching-engine\.js\?v=24/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
   assert.match(serviceWorker, /tts-manager\.js\?v=24/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
-  assert.match(serviceWorker, /passage-folio-v25\.css\?v=25/);
-  assert.match(serviceWorker, /compact-sunji-v26\.css\?v=26/);
+  assert.match(serviceWorker, /passage-folio-v25\.css\?v=26/);
+  assert.match(serviceWorker, /compact-sunji-v26\.css\?v=27/);
+  assert.match(serviceWorker, /app\.js\?v=25/);
   assert.match(serviceWorker, /assets\/joseon-folio-spread\.webp/);
   assert.match(serviceWorker, /assets\/joseon-folio-single\.webp/);
   assert.match(serviceWorker, /assets\/sunji-fiber-tile\.webp/);

@@ -200,7 +200,7 @@ body[data-screen="grid"] .site-footer {
   isolation: isolate;
   padding: 7px;
   display: grid;
-  grid-template-columns: repeat(14, minmax(0, 1fr));
+  grid-template-columns: repeat(10, minmax(0, 1fr));
   overflow: hidden;
   border: 4px solid #435047;
   border-radius: 6px 4px 7px 4px;
@@ -228,8 +228,8 @@ body[data-screen="grid"] .site-footer {
 }
 
 #screen-overview .overview-cell {
-  min-height: 74px;
-  padding: 6px 2px 5px;
+  min-height: 90px;
+  padding: 8px 3px 7px;
   border-color: rgba(126, 96, 61, 0.24);
   border-radius: 0;
   background-color: rgba(255, 251, 240, 0.18);
@@ -261,7 +261,7 @@ body[data-screen="grid"] .site-footer {
 }
 
 #screen-overview .overview-cell__hanja {
-  font-size: clamp(1.95rem, 2.9vw, 2.65rem);
+  font-size: clamp(2.55rem, 3.35vw, 3.2rem);
   font-weight: 500;
   line-height: 0.95;
 }
@@ -269,8 +269,15 @@ body[data-screen="grid"] .site-footer {
 #screen-overview .overview-cell__meaning {
   min-height: 0.9rem;
   color: #5b5145;
-  font-size: clamp(0.65rem, 0.92vw, 0.76rem);
+  font-size: clamp(0.74rem, 1.05vw, 0.88rem);
   line-height: 1.15;
+}
+
+#screen-overview
+  .overview-grid.is-meaning-hidden
+  .overview-cell:not(.is-revealed)
+  .overview-cell__meaning {
+  color: transparent;
 }
 
 /* The matching screen uses the same warm material system. */
@@ -424,20 +431,6 @@ body[data-screen="grid"] .site-footer {
   line-height: 1.45;
 }
 
-#screen-passage .passage-flow {
-  margin-top: 10px;
-  padding-top: 9px;
-}
-
-#screen-passage #passage-pairs {
-  gap: 5px;
-}
-
-#screen-passage #passage-pairs li {
-  min-height: 56px;
-  padding: 6px 8px;
-}
-
 #screen-passage .passage-actions {
   margin-top: 10px;
   gap: 6px;
@@ -454,7 +447,6 @@ body[data-screen="grid"] .site-footer {
   padding: 12px 5px 0 20px;
   grid-template-columns: minmax(92px, 0.38fr) minmax(0, 1fr);
   gap: 12px;
-  background-size: 106px auto;
 }
 
 #screen-passage .character-inspector__glyph {
@@ -529,14 +521,14 @@ body[data-screen="grid"] .site-footer {
   }
 
   #screen-overview .overview-grid {
-    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
   #screen-overview .character-search {
     grid-column: auto;
   }
 
-  #screen-overview .overview-cell { min-height: 68px; }
+  #screen-overview .overview-cell { min-height: 86px; }
 
   #screen-passage .passage-card {
     padding: 12px 14px 15px;
@@ -594,9 +586,7 @@ body[data-screen="grid"] .site-footer {
     padding: 7px 8px 8px 11px;
   }
 
-  #screen-passage .passage-meaning > span,
-  #screen-passage .passage-flow header,
-  #screen-passage .passage-flow small {
+  #screen-passage .passage-meaning > span {
     font-size: 0.59rem;
   }
 
@@ -604,19 +594,6 @@ body[data-screen="grid"] .site-footer {
     margin-top: 2px;
     font-size: 0.72rem;
   }
-
-  #screen-passage .passage-flow {
-    margin-top: 6px;
-    padding-top: 5px;
-  }
-
-  #screen-passage #passage-pairs li {
-    min-height: 43px;
-    padding: 3px 5px;
-  }
-
-  #screen-passage #passage-pairs li strong { font-size: 0.88rem; }
-  #screen-passage #passage-pairs li span { font-size: 0.58rem; }
 
   #screen-passage .passage-actions { margin-top: 6px; }
 
@@ -653,8 +630,10 @@ body[data-screen="grid"] .site-footer {
 
 @media (max-width: 1200px) and (min-width: 901px) {
   #screen-overview .overview-grid {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: repeat(10, minmax(0, 1fr));
   }
+
+  #screen-overview .overview-cell { min-height: 86px; }
 }
 
 /* Portrait phones are intentionally one long, undivided single sheet. */
@@ -784,26 +763,6 @@ body[data-screen="grid"] .site-footer {
     line-height: 1.35;
   }
 
-  #screen-passage .passage-flow {
-    margin-top: 5px;
-    padding-top: 4px;
-  }
-
-  #screen-passage .passage-flow header { font-size: 0.58rem; }
-
-  #screen-passage #passage-pairs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 3px;
-  }
-
-  #screen-passage #passage-pairs li {
-    min-height: 38px;
-    padding: 2px 5px;
-  }
-
-  #screen-passage #passage-pairs li strong { font-size: 0.82rem; }
-  #screen-passage #passage-pairs li span { font-size: 0.55rem; }
-
   #screen-passage .passage-actions {
     margin-top: 5px;
     display: grid;
@@ -824,7 +783,6 @@ body[data-screen="grid"] .site-footer {
     padding: 6px 3px 0;
     grid-template-columns: 70px minmax(0, 1fr);
     gap: 7px;
-    background-size: 80px auto;
   }
 
   #screen-passage .character-inspector__glyph { min-height: 72px; }
@@ -955,23 +913,23 @@ body[data-screen="grid"] .site-footer {
 
   #screen-overview .overview-grid {
     padding: 4px;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     border-width: 3px;
   }
 
   #screen-overview .overview-grid::before { inset: 4px; }
 
   #screen-overview .overview-cell {
-    min-height: 64px;
-    padding: 5px 1px 4px;
+    min-height: 80px;
+    padding: 6px 2px 5px;
   }
 
   #screen-overview .overview-cell__hanja {
-    font-size: clamp(1.9rem, 10.5vw, 2.45rem);
+    font-size: clamp(2.25rem, 12vw, 2.7rem);
   }
 
   #screen-overview .overview-cell__meaning {
-    font-size: clamp(0.58rem, 2.65vw, 0.68rem);
+    font-size: clamp(0.66rem, 3vw, 0.78rem);
   }
 
   #screen-grid .matching-launch {
@@ -981,8 +939,10 @@ body[data-screen="grid"] .site-footer {
 
 @media (max-width: 359px) {
   #screen-overview .overview-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  #screen-overview .overview-cell { min-height: 84px; }
 }
 
 @media (max-width: 319px) {

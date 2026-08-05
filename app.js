@@ -111,7 +111,6 @@ const elements = {
   passageCard: document.querySelector("#passage-card"),
   phraseGrids: Array.from(document.querySelectorAll("[data-phrase-grid]")),
   coupletMeaning: document.querySelector("#couplet-meaning"),
-  passagePairs: document.querySelector("#passage-pairs"),
   playCouplet: document.querySelector("#play-couplet"),
   continuousListen: document.querySelector("#continuous-listen"),
   toggleReading: document.querySelector("#toggle-reading"),
@@ -874,22 +873,6 @@ function renderPassage() {
     });
     grid.replaceChildren(fragment);
   });
-
-  const pairFragment = document.createDocumentFragment();
-  for (let pairIndex = 0; pairIndex < 4; pairIndex += 1) {
-    const pair = couplet.items.slice(pairIndex * 2, pairIndex * 2 + 2);
-    const item = document.createElement("li");
-    const index = document.createElement("span");
-    const characters = document.createElement("strong");
-    const readings = document.createElement("small");
-    index.textContent = String(pairIndex + 1);
-    characters.lang = "zh-Hant";
-    characters.textContent = pair.map(function (entry) { return entry.character; }).join("");
-    readings.textContent = pair.map(function (entry) { return entry.contextHun; }).join(" · ");
-    item.append(index, characters, readings);
-    pairFragment.append(item);
-  }
-  elements.passagePairs.replaceChildren(pairFragment);
 
   elements.selectedCharacter.textContent = selected.character;
   elements.selectedGloss.textContent = selected.gloss;
