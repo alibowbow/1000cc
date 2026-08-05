@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("125개 기억 그림과 회상 화면은 UI와 오프라인 셸에 함께 연결된다", async function () {
+test("세 메뉴와 125개 기억 그림은 UI와 v12 오프라인 셸에 함께 연결된다", async function () {
   const [html, app, theme, serviceWorker, seasonalAtlas, ...memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
@@ -17,21 +17,31 @@ test("125개 기억 그림과 회상 화면은 UI와 오프라인 셸에 함께 
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /app\.js\?v=10/);
-  assert.match(html, /styles\.css\?v=10/);
+  assert.match(html, /app\.js\?v=12/);
+  assert.match(html, /styles\.css\?v=12/);
+  assert.equal((html.match(/data-mode=/g) || []).length, 3);
+  assert.match(html, />1자 보기</);
+  assert.match(html, />8자 보기</);
+  assert.match(html, />순서 게임</);
   assert.match(html, /memory-scene__art/);
   assert.match(html, /id="passage-memory-image"/);
   assert.match(html, /id="passage-memory-clues"/);
   assert.doesNotMatch(html, /daily-path/);
   assert.doesNotMatch(html, /today-tools/);
+  assert.doesNotMatch(html, /course-rail/);
+  assert.doesNotMatch(html, /data-screen="review"/);
   assert.match(app, /memory-atlas-/);
   assert.match(app, /createRandomDailyPick/);
-  assert.match(app, /course-engine\.js\?v=10/);
-  assert.match(app, /storage\.js\?v=10/);
+  assert.match(app, /createRandomDailyPick\(\{\}/);
+  assert.match(app, /course-engine\.js\?v=12/);
+  assert.match(app, /storage\.js\?v=12/);
+  assert.match(app, /tts-manager\.js\?v=12/);
   assert.match(theme, /learning-seasons-atlas\.webp/);
   assert.match(theme, /\.memory-clue/);
+  assert.match(theme, /\.memory-scene__art[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
   assert.match(serviceWorker, /theme-folio\.css/);
-  assert.match(serviceWorker, /1000cc-static-v10-20260805/);
+  assert.match(serviceWorker, /1000cc-static-v12-20260805/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=12/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /assets\/memory-atlas-16\.webp/);
   assert.ok(seasonalAtlas.size > 50_000);

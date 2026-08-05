@@ -12,22 +12,18 @@ export function createOverviewCell(item, options) {
   if (options.meaningToggle) button.setAttribute("aria-expanded", String(options.revealed));
   if (options.selected) button.classList.add("is-selected");
   if (options.revealed) button.classList.add("is-revealed");
-  if (options.contextOnly) button.classList.add("is-context");
-  if (options.recentWrong) button.classList.add("is-recent-wrong");
-  if (options.due) button.classList.add("is-due");
   button.setAttribute(
     "aria-label",
     options.meaningToggle
       ? options.revealed
         ? `${item.number}번째, ${item.contextHun}, 다시 누르면 뜻 가림`
         : `${item.number}번째 글자 ${item.character}, 뜻 가림, 눌러서 확인`
-      : `${item.number}번째, ${item.contextHun}, 숙련도 ${options.masteryLevel}단계`,
+      : `${item.number}번째, ${item.contextHun}`,
   );
   button.innerHTML =
     `<span class="overview-cell__number">${item.number}</span>` +
     `<span class="overview-cell__hanja" lang="zh-Hant">${item.character}</span>` +
-    `<span class="overview-cell__meaning"${options.concealMeaning ? ' aria-hidden="true"' : ""}>${item.contextHun}</span>` +
-    `<i class="mastery-mark" data-level="${options.masteryLevel}" aria-hidden="true"></i>`;
+    `<span class="overview-cell__meaning"${options.concealMeaning ? ' aria-hidden="true"' : ""}>${item.contextHun}</span>`;
   return button;
 }
 

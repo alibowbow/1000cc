@@ -1,4 +1,4 @@
-import { restoreGridSession } from "./grid-engine.js?v=10";
+import { restoreGridSession } from "./grid-engine.js?v=12";
 import { createProgressRecord } from "./progress-engine.js";
 import { isPlainObject, toIsoString, uniqueValidIndexes } from "./utils.js";
 
@@ -6,7 +6,7 @@ export const STORAGE_KEY_V1 = "cheonjamun-study-v1";
 export const STORAGE_KEY_V2 = "cheonjamun-study-v2";
 export const EXPORT_SCHEMA = "1000cc-study-record";
 
-const MODES = ["today", "overview", "passage", "grid", "review"];
+const MODES = ["today", "overview", "passage", "grid"];
 const DIFFICULTIES = ["character", "reading", "listening", "none"];
 const SKILLS = ["reading", "meaning", "reverse", "order", "listening"];
 
@@ -97,7 +97,7 @@ export function normalizeV2(value) {
   const review = isPlainObject(value.review) ? value.review : {};
   const course = isPlainObject(value.course) ? value.course : null;
 
-  defaults.ui.mode = course && MODES.includes(ui.mode) ? ui.mode : "today";
+  defaults.ui.mode = MODES.includes(ui.mode) ? ui.mode : "today";
   defaults.ui.selectedIndex = validIndex(ui.selectedIndex, 0);
   defaults.ui.rangeStart = normalizeRange(ui.rangeStart);
   defaults.ui.overviewGroupSize = Number(ui.overviewGroupSize) === 8 ? 8 : 4;
@@ -133,7 +133,7 @@ export function normalizeV2(value) {
     : "due";
   defaults.review.rangeStart = normalizeRange(review.rangeStart);
   defaults.course.completedDays = normalizeCompletedDays(course?.completedDays);
-  defaults.course.activeLesson = normalizeActiveLesson(course?.activeLesson);
+  defaults.course.activeLesson = null;
   defaults.course.challengeBest = normalizeBestScores(course?.challengeBest, 125);
   defaults.course.dailyPick = normalizeDailyPick(course?.dailyPick);
   return defaults;

@@ -6,38 +6,36 @@
     <meta name="theme-color" content="#f4f0e7" />
     <meta
       name="description"
-      content="매일 무작위 8자를 그림·회상·한자 순서 게임으로 익히는 천자문 학습 앱"
+      content="천 글자 전체 보기, 8자 보기, 순서 게임을 담은 천자문 앱"
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="manifest.webmanifest?v=10" />
-    <link rel="stylesheet" href="styles.css?v=10" />
-    <link rel="stylesheet" href="theme-folio.css?v=10" />
-    <script type="module" src="app.js?v=10"></script>
+    <link rel="manifest" href="manifest.webmanifest?v=12" />
+    <link rel="stylesheet" href="styles.css?v=12" />
+    <link rel="stylesheet" href="theme-folio.css?v=12" />
+    <script type="module" src="app.js?v=12"></script>
   </head>
   <body>
-    <a class="skip-link" href="#main-content">학습 화면으로 바로가기</a>
+    <a class="skip-link" href="#main-content">본문으로 바로가기</a>
 
     <header class="topbar">
-      <a class="brand" id="brand-home" href="./" aria-label="오늘의 학습으로 돌아가기">
+      <a class="brand" id="brand-home" href="./" aria-label="오늘의 8자로 돌아가기">
         <span class="brand__ko">천자문</span>
         <span class="brand__hanja" lang="zh-Hant">千字文</span>
         <span class="brand__seal" aria-hidden="true">千</span>
       </a>
 
-      <div class="progress-summary" aria-label="125일 과정 진도">
-        <div class="progress-summary__row">
-          <span>125일 과정</span>
-          <strong><span id="completed-days-count">0</span> / 125일</strong>
-        </div>
-        <progress id="course-progress" max="125" value="0">0 / 125</progress>
-        <small><span id="mastered-count">0</span>자 숙련</small>
-      </div>
-
-      <button class="icon-button tools-button" id="tools-button" type="button" aria-haspopup="dialog">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5v-16ZM20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5v-16Z" /></svg>
-        <span>학습 메뉴</span>
-      </button>
+      <nav class="primary-nav" aria-label="주요 보기">
+        <button type="button" data-mode="overview" aria-pressed="false">
+          <span aria-hidden="true">字</span><strong>1자 보기</strong>
+        </button>
+        <button type="button" data-mode="passage" aria-pressed="false">
+          <span aria-hidden="true">八</span><strong>8자 보기</strong>
+        </button>
+        <button type="button" data-mode="grid" aria-pressed="false">
+          <span aria-hidden="true">遊</span><strong>순서 게임</strong>
+        </button>
+      </nav>
       <button class="icon-button" id="settings-button" type="button" aria-haspopup="dialog" aria-label="설정 열기">
         <svg aria-hidden="true" viewBox="0 0 24 24">
           <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
@@ -51,7 +49,8 @@
       <section class="screen today-screen" id="screen-today" data-screen="today" aria-labelledby="today-title">
         <section class="shared-challenge" id="shared-challenge" aria-labelledby="shared-challenge-title" hidden>
           <p class="eyebrow">회원가입 없는 공유 도전</p>
-          <h1 id="shared-challenge-title"><span id="shared-challenge-day">1</span>일차 · 오늘의 8자 도전</h1>
+          <h1 id="shared-challenge-title">오늘의 8자 도전</h1>
+          <p class="shared-challenge__position">125개 연 중 <span id="shared-challenge-day">1</span>번째</p>
           <p id="shared-challenge-meaning"></p>
           <div class="challenge-phrase" id="shared-challenge-phrase" lang="zh-Hant"></div>
           <button class="primary-action" id="start-shared-challenge" type="button">도전 시작</button>
@@ -71,28 +70,16 @@
               <button class="quiet-button" id="share-shared-challenge" type="button">도전 링크 공유</button>
             </div>
           </div>
-          <a class="text-link" id="leave-shared-challenge" href="./">내 125일 과정 시작하기</a>
+          <a class="text-link" id="leave-shared-challenge" href="./">천자문으로 돌아가기</a>
           <p class="sr-only" id="shared-challenge-announcement" aria-live="assertive"></p>
         </section>
 
         <div class="today-dashboard" id="today-dashboard">
-          <aside class="course-rail" aria-label="125일 과정 요약">
-            <p class="course-rail__eyebrow">학습 일지</p>
-            <div class="course-ring" id="course-ring" style="--course-ratio: 0deg">
-              <div><strong id="course-ring-count">0</strong><span>/125 연</span></div>
-            </div>
-            <dl class="course-facts">
-              <div><dt>완료</dt><dd><span id="course-completed-days">0</span>일</dd></div>
-              <div><dt>연속 학습</dt><dd><span id="course-streak">0</span>일</dd></div>
-              <div><dt>숙련 글자</dt><dd><span id="course-mastered-count">0</span>자</dd></div>
-            </dl>
-          </aside>
-
           <div class="today-main">
-            <header class="today-hero">
+            <article class="today-hero">
               <div class="today-hero__heading">
                 <div>
-                  <p class="eyebrow">매일 새로 고른 한 연</p>
+                  <p class="eyebrow">125개 연에서 무작위 선택</p>
                   <h1 id="today-title">오늘의 8자</h1>
                 </div>
                 <div class="today-hero__actions">
@@ -100,102 +87,32 @@
                     <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
                     다른 8자
                   </button>
-                  <button class="share-button" id="share-today-challenge" type="button" aria-label="오늘의 8자 도전 공유">
-                    <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 12v7h11V8h-4M12 3v11M8 7l4-4 4 4" /></svg>
-                    도전 공유
-                  </button>
                 </div>
               </div>
-              <p class="today-hero__range" id="today-range-copy">첫째 마당 · 1–8자</p>
-              <div class="today-characters" id="today-characters" aria-label="오늘의 여덟 글자"></div>
-              <div class="today-context">
-                <div class="today-meaning">
-                  <span>전체의 뜻</span>
-                  <p id="today-meaning"></p>
+              <div class="today-stage">
+                <div class="today-study">
+                  <p class="today-hero__range" id="today-range-copy">1–8자</p>
+                  <div class="today-characters" id="today-characters" aria-label="오늘의 여덟 글자"></div>
+                  <div class="today-meaning">
+                    <span>전체 뜻</span>
+                    <p id="today-meaning"></p>
+                  </div>
                 </div>
                 <div class="memory-scene">
                   <div class="memory-scene__copy">
-                    <strong>그림으로 기억하기</strong>
+                    <strong>기억 그림</strong>
                     <p id="today-memory-scene"></p>
                   </div>
-                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자를 그림으로 기억하기"></button>
+                  <button class="memory-scene__art" id="open-today-memory" type="button" aria-label="오늘의 8자 기억 그림을 8자 보기에서 열기">
+                    <span class="sr-only">기억 그림 자세히 보기</span>
+                  </button>
                 </div>
               </div>
-              <button class="daily-start" id="start-daily-learning" type="button">
-                <span id="daily-start-label">5분 학습 시작</span>
-                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" /></svg>
-              </button>
-            </header>
-
-            <section class="daily-workflow" id="daily-workflow" aria-label="오늘의 5분 학습" hidden>
-              <article class="daily-step" id="daily-step-lesson" data-daily-step="lesson">
-                <header><span>01</span><div><p>새로 익히기</p><h2>오늘의 8자</h2></div></header>
-                <div class="daily-lesson-grid" id="daily-lesson-grid"></div>
-                <div class="daily-lesson-context">
-                  <p id="daily-lesson-meaning"></p>
-                  <p id="daily-lesson-scene"></p>
-                </div>
-                <div class="step-actions">
-                  <button class="quiet-button" id="daily-play-couplet" type="button" data-tts>8자 연 듣기</button>
-                  <button class="primary-action" id="daily-lesson-continue" type="button">읽기·뜻 떠올리기</button>
-                </div>
-              </article>
-
-              <article class="daily-step" id="daily-step-recall" data-daily-step="recall">
-                <header><span>02</span><div><p>스스로 꺼내기</p><h2>읽기·뜻 회상</h2></div><strong id="daily-recall-progress">0 / 24</strong></header>
-                <div class="recall-tabs" id="daily-recall-tabs" role="tablist" aria-label="회상 방향">
-                  <button type="button" data-recall-mode="reading" aria-pressed="true">독음</button>
-                  <button type="button" data-recall-mode="meaning" aria-pressed="false">뜻</button>
-                  <button type="button" data-recall-mode="reverse" aria-pressed="false">역방향</button>
-                </div>
-                <div class="daily-flashcard daily-flashcard--recall">
-                  <span id="daily-recall-label">독음을 떠올리세요</span>
-                  <strong id="daily-recall-prompt" lang="zh-Hant">天</strong>
-                  <div class="daily-flashcard__answer" id="daily-recall-answer" hidden></div>
-                  <button class="quiet-button" id="daily-recall-reveal" type="button">정답 보기</button>
-                  <div class="recall-rating" id="daily-recall-rating" hidden>
-                    <button type="button" id="daily-recall-wrong">헷갈렸어요</button>
-                    <button type="button" id="daily-recall-correct">기억났어요</button>
-                  </div>
-                </div>
-                <button class="primary-action step-continue" id="daily-recall-continue" type="button" hidden>8자 순서 게임 시작</button>
-              </article>
-
-              <article class="daily-step" id="daily-step-grid" data-daily-step="grid">
-                <header><span>03</span><div><p>순서로 연결하기</p><h2>8자 순서 게임</h2></div><strong id="daily-grid-progress">0 / 8</strong></header>
-                <div class="daily-grid-status">
-                  <span>다음 독음 <strong id="daily-grid-target">천</strong></span>
-                  <span>정답률 <strong id="daily-grid-accuracy">—</strong></span>
-                  <span>오답 <strong id="daily-grid-wrong">0</strong></span>
-                </div>
-                <div class="daily-board" id="daily-board" aria-label="오늘의 8자 순서 게임판"></div>
-                <button class="primary-action step-continue" id="daily-grid-continue" type="button" hidden>현대 어휘 보기</button>
-                <p class="sr-only" id="daily-grid-announcement" aria-live="assertive"></p>
-              </article>
-
-              <article class="daily-step" id="daily-step-vocabulary" data-daily-step="vocabulary">
-                <header><span>04</span><div><p>지금의 말로 연결하기</p><h2>현대 어휘</h2></div></header>
-                <ul class="daily-vocabulary" id="daily-vocabulary"></ul>
-                <div class="confusable-notes" id="daily-confusable-notes"></div>
-                <button class="primary-action step-continue" id="daily-vocabulary-complete" type="button">오늘 학습 완료</button>
-              </article>
-
-              <article class="daily-step daily-complete" id="daily-step-complete" data-daily-step="complete">
-                <span class="completion-seal" aria-hidden="true">完</span>
-                <p class="eyebrow">오늘의 기록</p>
-                <h2><span id="daily-complete-day">1</span>일차를 마쳤습니다.</h2>
-                <div class="daily-complete-stats">
-                  <div><span>소요 시간</span><strong id="daily-complete-time">0초</strong></div>
-                  <div><span>정답률</span><strong id="daily-complete-accuracy">100%</strong></div>
-                  <div><span>과정 진도</span><strong id="daily-complete-course">1 / 125</strong></div>
-                </div>
-                <div class="result-actions">
-                  <button class="primary-action" id="daily-next-lesson" type="button">다른 8자 뽑기</button>
-                  <button class="quiet-button" id="daily-share-result" type="button">8자 도전 공유</button>
-                </div>
-              </article>
-            </section>
-
+              <div class="today-actions">
+                <button class="primary-action" id="open-today-passage" type="button">8자로 보기</button>
+                <button class="quiet-button" id="share-today-challenge" type="button">도전 공유</button>
+              </div>
+            </article>
           </div>
         </div>
       </section>
@@ -203,15 +120,15 @@
       <section class="screen" id="screen-overview" data-screen="overview" aria-labelledby="overview-title" hidden>
         <div class="screen-heading">
           <div>
-            <p class="eyebrow" id="overview-range-label">첫째 마당 · 1–100</p>
-            <h1 id="overview-title">천 글자를 눌러 익히기</h1>
+            <p class="eyebrow" id="overview-range-label">1–1,000 · 한 글자씩</p>
+            <h1 id="overview-title">한 글자씩 보기</h1>
           </div>
-          <button class="quiet-button" id="go-current-position" type="button">현재 학습 위치</button>
+          <p class="screen-summary">글자를 누르면 훈음을 듣고 뜻을 확인합니다.</p>
         </div>
 
         <div class="overview-tools">
           <form class="character-search" id="overview-search-form" role="search">
-            <label for="overview-search">한자·독음·훈음·한자어·풀이 검색</label>
+            <label for="overview-search">한자·독음·뜻·한자어 검색</label>
             <div class="search-field">
               <input id="overview-search" type="search" autocomplete="off" placeholder="예: 天, 천, 하늘 천" />
               <button type="submit">찾기</button>
@@ -219,29 +136,13 @@
           </form>
 
           <label class="select-control">
-            <span>100자 범위</span>
-            <select id="overview-range" aria-label="표시할 100자 범위"></select>
+            <span>빠른 이동</span>
+            <select id="overview-range" aria-label="100자 단위로 빠르게 이동"></select>
           </label>
-          <label class="select-control">
-            <span>숙련 상태</span>
-            <select id="overview-status-filter">
-              <option value="all">전체</option>
-              <option value="unseen">미학습</option>
-              <option value="learning">학습 중</option>
-              <option value="mastered">숙련</option>
-            </select>
-          </label>
-
-          <div class="segmented-control" aria-label="구절 묶음">
-            <button type="button" data-group-size="4" aria-pressed="true">4자구</button>
-            <button type="button" data-group-size="8" aria-pressed="false">8자 연</button>
-          </div>
         </div>
 
         <div class="highlight-tools" aria-label="강조 표시">
           <button class="toggle-chip" id="overview-toggle-meaning" type="button" aria-pressed="false">뜻 가리기</button>
-          <button class="toggle-chip" id="highlight-wrong" type="button" aria-pressed="false">최근 오답 강조</button>
-          <button class="toggle-chip" id="highlight-due" type="button" aria-pressed="false">복습 예정 강조</button>
           <button class="text-button" id="clear-search" type="button" hidden>검색 지우기</button>
           <span id="overview-result-count" aria-live="polite"></span>
         </div>
@@ -250,10 +151,9 @@
         <p class="sr-only" id="overview-announcement" aria-live="polite" aria-atomic="true"></p>
         <div class="empty-state" id="overview-empty" hidden>
           <strong>조건에 맞는 글자가 없습니다.</strong>
-          <p>검색어나 숙련 상태 필터를 바꿔 보세요.</p>
-          <button class="quiet-button" id="overview-reset-filters" type="button">필터 초기화</button>
+          <p>검색어를 바꿔 보세요.</p>
+          <button class="quiet-button" id="overview-reset-filters" type="button">검색 지우기</button>
         </div>
-        <nav class="range-nav" id="overview-range-nav" aria-label="100자 단위 이동"></nav>
       </section>
 
       <section class="screen" id="screen-passage" data-screen="passage" aria-labelledby="passage-title" hidden>
@@ -262,8 +162,8 @@
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" /></svg>
           </button>
           <div>
-            <p class="eyebrow">원문과 현대 뜻</p>
-            <h1 id="passage-title">여덟 글자를 한 흐름으로 익히기</h1>
+            <p class="eyebrow">원문 · 훈음 · 현대 뜻</p>
+            <h1 id="passage-title">8자 보기</h1>
             <span class="sr-only" id="couplet-position">1 / 125</span>
           </div>
           <button class="arrow-button" id="next-couplet" type="button" aria-label="다음 8자 연">
@@ -299,10 +199,6 @@
             </button>
             <button class="toggle-chip" id="continuous-listen" type="button" aria-pressed="false" data-tts>
               연속 듣기
-            </button>
-            <button class="learn-button" id="mark-couplet" type="button">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" /></svg>
-              <span>8자 학습 기록</span>
             </button>
           </div>
         </article>
@@ -365,8 +261,8 @@
         <div class="grid-setup" id="grid-setup">
           <div class="screen-heading">
             <div>
-              <p class="eyebrow">대표 게임 · 다음 글자 찾기</p>
-              <h1 id="grid-title">한자 순서 게임</h1>
+              <p class="eyebrow">부가 기능 · 다음 글자 찾기</p>
+              <h1 id="grid-title">순서 게임</h1>
             </div>
             <p class="screen-summary">정답 칸만 다음 글자로 바뀌어 흐름이 끊기지 않습니다.</p>
           </div>
@@ -375,7 +271,7 @@
             <div>
               <p class="eyebrow">개인 최고 기록</p>
               <h2 id="grid-challenge-title">40자 연속 챌린지</h2>
-            <p>현재 학습 위치부터 힌트 없이 40자를 잇습니다.</p>
+            <p>마지막 게임 위치부터 힌트 없이 40자를 잇습니다.</p>
             </div>
             <div class="grid-challenge-best">
               <span>최고 기록</span>
@@ -386,13 +282,13 @@
 
           <form class="session-form" id="session-form">
             <label class="select-control">
-              <span>학습 범위</span>
+              <span>게임 범위</span>
               <select id="session-scope">
                 <option value="continue">마지막 위치에서 이어서</option>
                 <option value="current">현재 100자 범위</option>
-                <option value="40">40자 학습</option>
-                <option value="100">100자 학습</option>
-                <option value="200">200자 학습</option>
+                <option value="40">40자</option>
+                <option value="100">100자</option>
+                <option value="200">200자</option>
                 <option value="1000">전체 1,000자</option>
                 <option value="custom">시작 위치 직접 선택</option>
               </select>
@@ -417,7 +313,7 @@
                 <option value="25">5 × 5 · 25칸</option>
               </select>
             </label>
-            <button class="primary-action session-start" type="submit">학습 시작</button>
+            <button class="primary-action session-start" type="submit">게임 시작</button>
           </form>
 
           <button class="resume-session" id="resume-session" type="button" hidden>
@@ -463,64 +359,22 @@
 
         <div class="session-result" id="session-result" hidden>
           <p class="eyebrow">세션 완료</p>
-          <h2>오늘의 흐름을 저장했습니다.</h2>
+          <h2>게임 결과</h2>
           <div class="result-stats">
-            <div><span>학습 글자</span><strong id="result-learned">0</strong></div>
+            <div><span>맞힌 글자</span><strong id="result-learned">0</strong></div>
             <div><span>정답률</span><strong id="result-accuracy">0%</strong></div>
             <div><span>오답</span><strong id="result-wrong">0</strong></div>
             <div><span>소요 시간</span><strong id="result-time">0초</strong></div>
           </div>
           <div class="result-characters" id="result-characters"></div>
           <div class="result-actions">
-            <button class="quiet-button" id="review-result" type="button">틀린 글자 다시 풀기</button>
-            <button class="quiet-button" id="close-result" type="button">학습 종료</button>
+            <button class="quiet-button" id="retry-wrong" type="button">틀린 글자 다시 게임</button>
+            <button class="quiet-button" id="close-result" type="button">결과 닫기</button>
           </div>
         </div>
         <p class="sr-only" id="grid-announcement" aria-live="assertive" aria-atomic="true"></p>
       </section>
 
-      <section class="screen" id="screen-review" data-screen="review" aria-labelledby="review-title" hidden>
-        <div class="screen-heading">
-          <div>
-            <p class="eyebrow">숙련도 0–5 · 예측 가능한 간격 복습</p>
-            <h1 id="review-title">다시 볼 글자</h1>
-          </div>
-          <span class="review-selection-count"><strong id="review-selected-count">0</strong>자 선택</span>
-        </div>
-
-        <div class="review-summary" aria-label="복습 요약">
-          <button type="button" data-review-source="due" aria-pressed="true">
-            <span>오늘 복습</span><strong id="due-count">0</strong>
-          </button>
-          <button type="button" data-review-source="recent" aria-pressed="false">
-            <span>최근 오답</span><strong id="recent-wrong-count">0</strong>
-          </button>
-          <button type="button" data-review-source="frequent" aria-pressed="false">
-            <span>자주 틀림</span><strong id="frequent-wrong-count">0</strong>
-          </button>
-          <button type="button" data-review-source="range" aria-pressed="false">
-            <span>100자 범위</span><strong>선택</strong>
-          </button>
-        </div>
-
-        <div class="review-tools">
-          <label class="select-control">
-            <span>복습 범위</span>
-            <select id="review-range"></select>
-          </label>
-          <button class="quiet-button" id="review-select-all" type="button">모두 선택</button>
-          <button class="text-button" id="review-clear-selection" type="button">선택 해제</button>
-        </div>
-
-        <div class="review-list" id="review-list"></div>
-        <div class="empty-state" id="review-empty" hidden>
-          <strong>지금 복습할 글자가 없습니다.</strong>
-          <p>한자 순서 게임에서 학습하거나 다른 복습 묶음을 선택해 보세요.</p>
-        </div>
-        <button class="primary-action review-start" id="start-review-grid" type="button" disabled>
-          선택한 글자로 순서 게임 시작
-        </button>
-      </section>
     </main>
 
     <footer class="site-footer">
@@ -531,30 +385,12 @@
       </div>
     </footer>
 
-    <dialog class="tools-dialog" id="tools-dialog" aria-labelledby="tools-title">
-      <form method="dialog">
-        <div class="dialog-heading">
-          <div><p class="eyebrow">원하는 방식으로 익히기</p><h2 id="tools-title">학습 메뉴</h2></div>
-          <button class="dialog-close" value="close" aria-label="학습 도구 닫기">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></svg>
-          </button>
-        </div>
-        <nav class="tools-dialog__nav" aria-label="학습 화면 선택">
-          <button type="button" data-mode="today"><span aria-hidden="true">今</span><strong>오늘의 학습</strong><small>5분 과정 이어가기</small></button>
-          <button type="button" data-mode="overview"><span aria-hidden="true">全</span><strong>전체 보기</strong><small>검색하고 펼쳐 보기</small></button>
-          <button type="button" data-mode="passage"><span aria-hidden="true">句</span><strong>구절 학습</strong><small>원하는 8자 깊게 보기</small></button>
-          <button type="button" data-mode="grid"><span aria-hidden="true">遊</span><strong>한자 순서 게임</strong><small>다음 글자를 찾아 기록 도전</small></button>
-        </nav>
-        <button class="tools-dialog__review" type="button" data-mode="review">약한 글자만 복습하기</button>
-      </form>
-    </dialog>
-
     <dialog class="settings-dialog" id="settings-dialog" aria-labelledby="settings-title">
       <form method="dialog">
         <div class="dialog-heading">
           <div>
-            <p class="eyebrow">학습 환경</p>
-            <h2 id="settings-title">설정과 학습 기록</h2>
+            <p class="eyebrow">읽기와 게임</p>
+            <h2 id="settings-title">설정</h2>
           </div>
           <button class="dialog-close" value="close" aria-label="설정 닫기">
             <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></svg>
@@ -579,7 +415,7 @@
         </div>
 
         <label class="setting-row">
-          <span><strong>글자를 누르면 훈음 재생</strong><small>전체 보기와 구절 학습에서 ‘하늘 천’처럼 읽습니다.</small></span>
+          <span><strong>글자를 누르면 훈음 재생</strong><small>천자 보기와 8자 보기에서 ‘하늘 천’처럼 읽습니다.</small></span>
           <input id="setting-tap-to-speak" type="checkbox" />
         </label>
         <label class="setting-row">
@@ -591,18 +427,7 @@
           <input id="setting-vibrate" type="checkbox" />
         </label>
 
-        <p class="offline-note">앱과 학습 기록은 오프라인에서도 동작합니다. 음성은 기기에 설치된 한국어 음성 환경에 따라 오프라인 재생이 제한될 수 있습니다.</p>
-
-        <div class="record-actions">
-          <button id="export-progress" type="button">JSON 내보내기</button>
-          <button id="import-progress" type="button">JSON 불러오기</button>
-          <input class="sr-only" id="import-progress-file" type="file" accept="application/json,.json" />
-        </div>
-
-        <div class="dialog-danger">
-          <div><strong>학습 기록 전체 초기화</strong><small>v1과 v2 진도, 세션, 숙련도를 모두 지웁니다.</small></div>
-          <button id="reset-progress" type="button">초기화</button>
-        </div>
+        <p class="offline-note">앱과 게임 진행은 오프라인에서도 동작합니다. 음성은 기기에 설치된 한국어 음성 환경에 따라 오프라인 재생이 제한될 수 있습니다.</p>
       </form>
     </dialog>
 

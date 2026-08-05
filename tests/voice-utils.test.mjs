@@ -26,7 +26,7 @@ test("저장된 한국어 음성이 있으면 유지하고 사라지면 우선�
   assert.equal(selectPreferredVoice(voices, "missing").voiceURI, "google");
 });
 
-test("새 재생의 session token은 취소된 이전 utterance의 늦은 onend를 무시한다", function () {
+function createSpeechHarness(options = {}) {
   class FakeUtterance {
     constructor(text) {
       this.text = text;
@@ -42,14 +42,47 @@ test("새 재생의 session token은 취소된 이전 utterance의 늦은 onend�
   const synthesis = {
     spoken: [],
     cancelCount: 0,
-    getVoices() { return voices; },
+    resumeCount: 0,
+    speaking: Boolean(options.speaking),
+    pending: Boolean(options.pending),
+    paused: Boolean(options.paused),
+    getVoices() { return typeof options.getVoices === "function" ? options.getVoices() : voices; },
     addEventListener() {},
     removeEventListener() {},
     cancel() { this.cancelCount += 1; },
-    speak(utterance) { this.spoken.push(utterance); },
+    resume() { this.resumeCount += 1; this.paused = false; },
+    speak(utterance) { this.spoken.push(utterance); this.speaking = true; },
   };
-  const manager = new TTSManager({ synthesis, Utterance: FakeUtterance });
+  const manager = new TTSManager({
+    synthesis,
+    Utterance: FakeUtterance,
+    schedule(callback) { callback(); return 1; },
+    clearSchedule() {},
+  });
   manager.start();
+  return { manager, synthesis };
+}
+
+test("대기 중인 엔진은 취소하지 않고, 일시 정지 상태만 해제한 뒤 바로 재생한다", function () {
+  const { manager, synthesis } = createSpeechHarness({ paused: true });
+  manager.speak("하늘 천");
+  assert.equal(synthesis.cancelCount, 0);
+  assert.equal(synthesis.resumeCount, 1);
+  assert.equal(synthesis.spoken[0].text, "하늘 천");
+});
+
+test("페이지 로드 뒤 늦게 준비된 한국어 음성을 재생 직전에 다시 불러온다", function () {
+  let ready = false;
+  const { manager, synthesis } = createSpeechHarness({
+    getVoices() { return ready ? voices : []; },
+  });
+  ready = true;
+  manager.speak("검을 현");
+  assert.equal(synthesis.spoken[0].voice.voiceURI, "google");
+});
+
+test("새 재생의 session token은 취소된 이전 utterance의 늦은 onend를 무시한다", function () {
+  const { manager, synthesis } = createSpeechHarness();
   let oldEnded = 0;
   let newEnded = 0;
   manager.speak("첫 음성", { onEnd() { oldEnded += 1; } });
@@ -60,5 +93,31 @@ test("새 재생의 session token은 취소된 이전 utterance의 늦은 onend�
   assert.equal(oldEnded, 0);
   newUtterance.emit("end");
   assert.equal(newEnded, 1);
-  assert.ok(synthesis.cancelCount >= 2);
+  assert.equal(synthesis.cancelCount, 1);
+});
+
+test("선택한 음성이 실패하면 다른 한국어 음성으로 한 번 자동 재시도한다", function () {
+  const { manager, synthesis } = createSpeechHarness();
+  let failed = 0;
+  let fallbackVoice = "";
+  manager.onVoiceFallback = function (voice) {
+    fallbackVoice = voice ? voice.voiceURI : "";
+  };
+  manager.speak("하늘 천", { onError() { failed += 1; } });
+  const first = synthesis.spoken[0];
+  assert.equal(first.voice.voiceURI, "google");
+  first.emit("error", { error: "network" });
+  assert.equal(synthesis.spoken.length, 2);
+  assert.equal(synthesis.spoken[1].voice.voiceURI, "samsung");
+  assert.equal(fallbackVoice, "samsung");
+  assert.equal(failed, 0);
+});
+
+test("utterance는 종료될 때까지 강한 참조로 유지한다", function () {
+  const { manager, synthesis } = createSpeechHarness();
+  manager.speak("땅 지");
+  const utterance = synthesis.spoken[0];
+  assert.equal(manager.activeUtterances.has(utterance), true);
+  utterance.emit("end");
+  assert.equal(manager.activeUtterances.has(utterance), false);
 });
