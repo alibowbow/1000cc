@@ -26,7 +26,7 @@ import {
   shuffleOverviewIndexes,
 } from "./js/overview-layout.js?v=28";
 import { recordSkillAttempt } from "./js/progress-engine.js";
-import { createOverviewCell, createPassageCharacter } from "./js/render.js?v=28";
+import { createOverviewCell, createPassageCharacter } from "./js/render.js?v=29";
 import {
   loadStateFromStorage,
   saveStateToStorage,
@@ -277,7 +277,7 @@ function bindEvents() {
   elements.overviewRange.addEventListener("change", function () {
     setOverviewRange(Number(elements.overviewRange.value));
   });
-  elements.overviewShuffle.addEventListener("click", shuffleOverviewGrid);
+  elements.overviewShuffle.addEventListener("click", toggleOverviewShuffle);
   elements.overviewToggleMeaning.addEventListener("click", function () {
     const willHide = !appState.settings.hideOverviewMeaning;
     overviewRevealedIndexes = new Set();
@@ -734,6 +734,7 @@ function renderOverview() {
     fragment.append(
       createOverviewCell(item, {
         selected: index === appState.ui.selectedIndex,
+        concealNumber: isShuffled,
         concealMeaning:
           appState.settings.hideOverviewMeaning && !overviewRevealedIndexes.has(index),
         meaningToggle: appState.settings.hideOverviewMeaning,
@@ -763,9 +764,12 @@ function renderOverview() {
     String(appState.settings.hideOverviewMeaning),
   );
   elements.overviewShuffle.classList.toggle("is-shuffled", isShuffled);
+  elements.overviewShuffle.setAttribute("aria-pressed", String(isShuffled));
+  elements.overviewShuffle.querySelector("span").textContent =
+    isShuffled ? "원래 배열" : "랜덤 배열";
   elements.overviewShuffle.setAttribute(
     "aria-label",
-    isShuffled ? "현재 글자를 다시 무작위로 배열" : "현재 글자를 무작위로 배열",
+    isShuffled ? "원래 순서로 돌아가기" : "현재 글자를 무작위로 배열",
   );
 }
 
@@ -778,7 +782,7 @@ function resetOverviewShuffle() {
   overviewShuffledIndexes = [];
 }
 
-function shuffleOverviewGrid() {
+function toggleOverviewShuffle() {
   const query = appState.ui.search.trim();
   const rangeStart = normalizeOverviewRangeStart(
     appState.ui.rangeStart,
@@ -788,15 +792,28 @@ function shuffleOverviewGrid() {
   const indexes = query
     ? findCharacterIndexes(query)
     : createOverviewIndexes(rangeStart, overviewPageSize, TOTAL_CHARACTERS);
+  const shuffleKey = getOverviewShuffleKey(query, rangeStart);
+  const isShuffled =
+    overviewShuffleKey === shuffleKey &&
+    overviewShuffledIndexes.length === indexes.length;
+
+  if (isShuffled) {
+    resetOverviewShuffle();
+    renderOverview();
+    elements.overviewAnnouncement.textContent =
+      `현재 ${indexes.length}자를 원래 순서로 되돌렸습니다. 순번도 다시 표시됩니다.`;
+    return;
+  }
+
   if (indexes.length < 2) {
     elements.overviewAnnouncement.textContent = "섞을 글자가 두 개 이상 필요합니다.";
     return;
   }
-  overviewShuffleKey = getOverviewShuffleKey(query, rangeStart);
+  overviewShuffleKey = shuffleKey;
   overviewShuffledIndexes = shuffleOverviewIndexes(indexes, secureRandomUnit);
   renderOverview();
   elements.overviewAnnouncement.textContent =
-    `현재 ${indexes.length}자를 무작위로 배열했습니다. 다시 누르면 새 배열이 됩니다.`;
+    `현재 ${indexes.length}자를 무작위로 배열했습니다. 순번은 숨겼으며 원래 배열 버튼으로 되돌릴 수 있습니다.`;
 }
 
 function normalizeOverviewStateForViewport(anchorIndex) {

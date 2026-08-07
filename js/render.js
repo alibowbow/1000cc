@@ -1,5 +1,6 @@
 export function createOverviewCell(item, options) {
   const button = document.createElement("button");
+  const numberPrefix = options.concealNumber ? "" : `${item.number}번째, `;
   button.type = "button";
   button.className = "overview-cell";
   button.dataset.index = String(item.index);
@@ -16,12 +17,14 @@ export function createOverviewCell(item, options) {
     "aria-label",
     options.meaningToggle
       ? options.revealed
-        ? `${item.number}번째, ${item.contextHun}, 다시 누르면 뜻 가림`
-        : `${item.number}번째 글자 ${item.character}, 뜻 가림, 눌러서 확인`
-      : `${item.number}번째, ${item.contextHun}`,
+        ? `${numberPrefix}${item.contextHun}, 다시 누르면 뜻 가림`
+        : `${numberPrefix}글자 ${item.character}, 뜻 가림, 눌러서 확인`
+      : `${numberPrefix}${item.contextHun}`,
   );
   button.innerHTML =
-    `<span class="overview-cell__number">${item.number}</span>` +
+    (options.concealNumber
+      ? ""
+      : `<span class="overview-cell__number">${item.number}</span>`) +
     `<span class="overview-cell__hanja" lang="zh-Hant">${item.character}</span>` +
     `<span class="overview-cell__meaning"${options.concealMeaning ? ' aria-hidden="true"' : ""}>` +
       `<span class="overview-cell__gloss">${item.gloss}</span> ` +

@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("순지 필사판과 반응형 조선 서첩 v30 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("순지 필사판과 반응형 조선 서첩 v31 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/joseon-folio-spread.webp",
     "assets/joseon-folio-single.webp",
@@ -25,9 +25,10 @@ test("순지 필사판과 반응형 조선 서첩 v30 학습 모드가 오프라
     "assets/ui-bamboo.webp",
     "assets/ui-mountains.webp",
   ];
-  const [html, app, styles, theme, passageTheme, compactTheme, serviceWorker, storage, seasonalAtlas, titleFont, titleHanjaFont, atlasAssets, memoryAtlases] = await Promise.all([
+  const [html, app, render, styles, theme, passageTheme, compactTheme, serviceWorker, storage, seasonalAtlas, titleFont, titleHanjaFont, atlasAssets, memoryAtlases] = await Promise.all([
     readFile(new URL("index.html", root), "utf8"),
     readFile(new URL("app.js", root), "utf8"),
+    readFile(new URL("js/render.js", root), "utf8"),
     readFile(new URL("styles.css", root), "utf8"),
     readFile(new URL("theme-folio.css", root), "utf8"),
     readFile(new URL("passage-folio-v25.css", root), "utf8"),
@@ -47,7 +48,7 @@ test("순지 필사판과 반응형 조선 서첩 v30 학습 모드가 오프라
   assert.match(html, /theme-folio\.css\?v=26/);
   assert.match(html, /passage-folio-v25\.css\?v=26/);
   assert.match(html, /compact-sunji-v26\.css\?v=30/);
-  assert.match(html, /app\.js\?v=29/);
+  assert.match(html, /app\.js\?v=30/);
   assert.match(html, /styles\.css\?v=24/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
@@ -130,6 +131,11 @@ test("순지 필사판과 반응형 조선 서첩 v30 학습 모드가 오프라
   assert.match(app, /createOverviewIndexes/);
   assert.match(app, /shuffleOverviewIndexes/);
   assert.match(app, /shuffleOverviewIndexes\(indexes, secureRandomUnit\)/);
+  assert.match(app, /function toggleOverviewShuffle\(\)/);
+  assert.match(app, /isShuffled \? "원래 배열" : "랜덤 배열"/);
+  assert.match(app, /concealNumber: isShuffled/);
+  assert.match(render, /options\.concealNumber/);
+  assert.match(render, /const numberPrefix = options\.concealNumber/);
   assert.match(app, /state\.ui\.mode = "memory"/);
   assert.doesNotMatch(app, /todayMeaning/);
   assert.match(app, /document\.body\.dataset\.screen = sharedChallengeDay !== null \? "challenge" : visibleMode/);
@@ -229,7 +235,7 @@ test("순지 필사판과 반응형 조선 서첩 v30 학습 모드가 오프라
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v30-20260807/);
+  assert.match(serviceWorker, /1000cc-static-v31-20260807/);
   assert.match(serviceWorker, /assets\/cheonjamun-title\.woff/);
   assert.match(serviceWorker, /assets\/cheonjamun-hanja\.woff/);
   assert.match(serviceWorker, /matching-engine\.js\?v=24/);
@@ -238,9 +244,9 @@ test("순지 필사판과 반응형 조선 서첩 v30 학습 모드가 오프라
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /passage-folio-v25\.css\?v=26/);
   assert.match(serviceWorker, /compact-sunji-v26\.css\?v=30/);
-  assert.match(serviceWorker, /app\.js\?v=29/);
+  assert.match(serviceWorker, /app\.js\?v=30/);
   assert.match(serviceWorker, /overview-layout\.js\?v=28/);
-  assert.match(serviceWorker, /render\.js\?v=28/);
+  assert.match(serviceWorker, /render\.js\?v=29/);
   assert.match(serviceWorker, /assets\/joseon-folio-spread\.webp/);
   assert.match(serviceWorker, /assets\/joseon-folio-single\.webp/);
   assert.match(serviceWorker, /assets\/sunji-fiber-tile\.webp/);
