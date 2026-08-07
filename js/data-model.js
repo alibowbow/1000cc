@@ -1,7 +1,7 @@
 import { COUPLETS, TOTAL_CHARACTERS } from "../data.js";
 import { CHARACTER_HUN } from "../character-meta.js";
 import { CHARACTER_FORMS, CHARACTER_WORDS } from "../character-content.js";
-import { MODERN_VOCABULARY_BY_DAY } from "./lesson-content.js";
+import { CHARACTER_WORD_SUPPLEMENTS } from "./character-word-supplements.js";
 import { normalizeSearch } from "./utils.js";
 
 const CONTEXT_HUN_OVERRIDES = new Map([
@@ -12,23 +12,62 @@ const CONTEXT_HUN_OVERRIDES = new Map([
 
 const UNHELPFUL_WORD_DEFINITION =
   /이름|성씨|지명|고을|중국의|나라의|왕조|사람을 이르는 말|옛말|방언|북한어|산 이름/;
-const CURATED_MODERN_WORDS = new Set(MODERN_VOCABULARY_BY_DAY.flat());
+
+function getConciseDefinition(value, maxLength = 110) {
+  const definition = String(value || "").trim();
+  if (definition.length <= maxLength) return definition;
+
+  const sentences = definition.match(/[^.!?]+[.!?]+/g) || [];
+  let summary = "";
+  for (const sentence of sentences) {
+    const next = `${summary}${summary ? " " : ""}${sentence.trim()}`;
+    if (next.length > maxLength) break;
+    summary = next;
+  }
+  if (summary) return summary;
+
+  const shortened = Array.from(definition).slice(0, maxLength - 1).join("").trimEnd();
+  return `${shortened}…`;
+}
 
 function getVerifiedRelatedWords(character, reading) {
-  return (CHARACTER_WORDS[character] || []).filter(function (word) {
+  const selected = [];
+  const seen = new Set();
+
+  function addWord(word, requireContextReading) {
     const origin = Array.from(word.origin || "");
     const syllables = Array.from(word.word || "");
-    if (
-      !CURATED_MODERN_WORDS.has(word.word) ||
-      origin.length !== syllables.length ||
-      UNHELPFUL_WORD_DEFINITION.test(word.definition)
-    ) {
-      return false;
-    }
-    return origin.some(function (originCharacter, position) {
-      return originCharacter === character && syllables[position] === reading;
+    if (!word.definition?.trim() || origin.length !== syllables.length) return;
+
+    const positions = origin
+      .map(function (originCharacter, position) {
+        return originCharacter === character ? position : -1;
+      })
+      .filter(function (position) { return position >= 0; });
+    const contextPosition = positions.find(function (position) {
+      return syllables[position] === reading;
     });
+    if (positions.length === 0 || (requireContextReading && contextPosition === undefined)) return;
+
+    const position = contextPosition === undefined ? positions[0] : contextPosition;
+    const key = `${word.word}\u0000${word.origin}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    selected.push(Object.freeze({
+      word: word.word,
+      origin: word.origin,
+      definition: getConciseDefinition(word.definition),
+      characterReading: syllables[position],
+    }));
+  }
+
+  (CHARACTER_WORD_SUPPLEMENTS[character] || []).forEach(function (word) {
+    addWord(word, false);
   });
+  (CHARACTER_WORDS[character] || []).forEach(function (word) {
+    if (!UNHELPFUL_WORD_DEFINITION.test(word.definition)) addWord(word, true);
+  });
+  return selected.slice(0, 2);
 }
 
 export function getHunOptions(hun) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "1000cc-static-v32-20260807";
+const CACHE_NAME = "1000cc-static-v33-20260807";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,7 +6,7 @@ const APP_SHELL = [
   "./theme-folio.css?v=26",
   "./passage-folio-v25.css?v=26",
   "./compact-sunji-v26.css?v=30",
-  "./app.js?v=31",
+  "./app.js?v=32",
   "./data.js",
   "./character-meta.js",
   "./character-content.js",
@@ -51,6 +51,7 @@ const APP_SHELL = [
   "./assets/memory-atlas-15.webp",
   "./assets/memory-atlas-16.webp",
   "./js/data-model.js",
+  "./js/character-word-supplements.js",
   "./js/course-engine.js?v=24",
   "./js/matching-engine.js?v=24",
   "./js/lesson-content.js",

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { CHARACTER_FORMS, CHARACTER_WORDS } from "../character-content.js";
 import { CHARACTER_HUN } from "../character-meta.js";
-import { MODERN_VOCABULARY_BY_DAY } from "../js/lesson-content.js";
+import { CHARACTER_WORD_SUPPLEMENTS } from "../js/character-word-supplements.js";
 import {
   CHARACTERS,
   COUPLETS,
@@ -112,6 +112,23 @@ test("관련 한자어는 실제 표제어·한자·사전 정의를 빈 값 없
   });
 });
 
+test("희귀자·이체자와 고유명사 위주 글자의 보충 용례는 빠짐없이 연결된다", function () {
+  assert.equal(Object.keys(CHARACTER_WORD_SUPPLEMENTS).length, 95);
+  Object.entries(CHARACTER_WORD_SUPPLEMENTS).forEach(function ([character, words]) {
+    assert.ok(CHARACTERS.some(function (item) { return item.character === character; }));
+    assert.ok(words.length >= 1 && words.length <= 2);
+    words.forEach(function (word) {
+      const origin = Array.from(word.origin);
+      const syllables = Array.from(word.word);
+      assert.match(word.word, /^[가-힣]{2,5}$/);
+      assert.match(word.origin, /^\p{Script=Han}{2,5}$/u);
+      assert.equal(origin.length, syllables.length);
+      assert.ok(origin.includes(character));
+      assert.ok(word.definition.trim());
+    });
+  });
+});
+
 test("선택 글자 학습 정보는 훈음·짜임·실제 한자어를 제공한다", function () {
   const first = getCharacterStudyDetails(0);
   assert.equal(first.item.contextHun, "하늘 천");
@@ -130,18 +147,19 @@ test("전체 보기 검색은 관련 한자어와 사전 뜻까지 찾는다", f
   assert.ok(findCharacterIndexes("천국").includes(0));
   assert.ok(findCharacterIndexes("평화롭고 모두가 행복").includes(0));
   assert.ok(findCharacterIndexes("天國").includes(0));
+  assert.ok(findCharacterIndexes("초책").includes(991));
 });
 
-test("화면에 노출되는 현대 한자어는 해당 글자의 문맥 독음과 정확히 맞는다", function () {
-  const curated = new Set(MODERN_VOCABULARY_BY_DAY.flat());
+test("1,000자 모두 화면에 실제 관련 용례를 한 개 이상 제공한다", function () {
   CHARACTERS.forEach(function (item) {
+    assert.ok(item.relatedWords.length >= 1 && item.relatedWords.length <= 2);
     item.relatedWords.forEach(function (word) {
-      assert.ok(curated.has(word.word));
       const origins = Array.from(word.origin);
       const readings = Array.from(word.word);
       assert.equal(origins.length, readings.length);
+      assert.ok(word.definition.length <= 110);
       assert.ok(origins.some(function (character, position) {
-        return character === item.character && readings[position] === item.reading;
+        return character === item.character && readings[position] === word.characterReading;
       }));
     });
   });
@@ -150,7 +168,19 @@ test("화면에 노출되는 현대 한자어는 해당 글자의 문맥 독음�
     return item.character === "宿";
   });
   assert.equal(su.reading, "수");
-  assert.ok(su.relatedWords.every(function (word) {
-    return !["숙제", "기숙사"].includes(word.word);
-  }));
+  assert.equal(su.relatedWords[0].word, "성수");
+  assert.equal(su.relatedWords[0].origin, "星宿");
+
+  assert.equal(CHARACTERS.find(function (item) { return item.character === "柰"; }).relatedWords[0].word, "내자");
+  assert.equal(CHARACTERS.find(function (item) { return item.character === "顛"; }).relatedWords[0].word, "전도");
+  assert.equal(CHARACTERS.find(function (item) { return item.character === "誚"; }).relatedWords[0].word, "초책");
+
+  const alternateReadings = CHARACTERS.flatMap(function (item) {
+    return item.relatedWords.filter(function (word) {
+      return word.characterReading !== item.reading;
+    }).map(function (word) {
+      return `${item.character}:${item.reading}->${word.characterReading}`;
+    });
+  });
+  assert.deepEqual(alternateReadings, ["隸:례->예", "騾:라->나", "遼:료->요"]);
 });

@@ -997,7 +997,9 @@ function renderPassage() {
 
     const definition = document.createElement("span");
     definition.className = "related-word__definition";
-    definition.textContent = word.definition;
+    definition.textContent = word.characterReading !== selected.reading
+      ? `이 말에서는 ‘${word.characterReading}’로 읽음. ${word.definition}`
+      : word.definition;
     entry.append(term, definition);
     relatedWordsFragment.append(entry);
   });
