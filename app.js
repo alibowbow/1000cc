@@ -452,7 +452,7 @@ function renderTodayScreen() {
   setSceneQuarter(dayIndex);
   elements.todayRangePosition.textContent = `${dayIndex * 8 + 1}–${dayIndex * 8 + 8}자`;
   elements.todayRangeReading.textContent = lesson.couplet.data.reading;
-  elements.todayMemoryScene.textContent = lesson.memoryScene;
+  elements.todayMemoryScene.textContent = lesson.couplet.data.meaning;
   applyMemoryAtlas(elements.todayMemoryArt, dayIndex);
   elements.todayMemoryArt.dataset.dayIndex = String(dayIndex);
 

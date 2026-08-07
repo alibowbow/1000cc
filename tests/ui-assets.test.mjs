@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("순지 필사판과 반응형 조선 서첩 v29 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("순지 필사판과 반응형 조선 서첩 v30 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/joseon-folio-spread.webp",
     "assets/joseon-folio-single.webp",
@@ -46,8 +46,8 @@ test("순지 필사판과 반응형 조선 서첩 v29 학습 모드가 오프라
   assert.match(html, /theme-folio\.css/);
   assert.match(html, /theme-folio\.css\?v=26/);
   assert.match(html, /passage-folio-v25\.css\?v=26/);
-  assert.match(html, /compact-sunji-v26\.css\?v=29/);
-  assert.match(html, /app\.js\?v=28/);
+  assert.match(html, /compact-sunji-v26\.css\?v=30/);
+  assert.match(html, /app\.js\?v=29/);
   assert.match(html, /styles\.css\?v=24/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
@@ -69,6 +69,8 @@ test("순지 필사판과 반응형 조선 서첩 v29 학습 모드가 오프라
   assert.match(html, />\s*랜덤 8자\s*</);
   assert.doesNotMatch(html, />\s*다른 8자\s*</);
   assert.match(html, /id="today-range-reading"/);
+  assert.match(html, /id="open-today-passage"[^>]*>상세 보기<\/button>/);
+  assert.doesNotMatch(html, />8자로 보기<\/button>/);
   assert.doesNotMatch(html, />\s*전체 뜻\s*</);
   assert.doesNotMatch(html, />\s*기억 그림\s*</);
   assert.doesNotMatch(html, /id="today-meaning"/);
@@ -118,6 +120,8 @@ test("순지 필사판과 반응형 조선 서첩 v29 학습 모드가 오프라
   assert.match(app, /createOverviewIndexes\(rangeStart, overviewPageSize, TOTAL_CHARACTERS\)/);
   assert.match(app, /createOverviewRangeStarts\(overviewPageSize, TOTAL_CHARACTERS\)/);
   assert.match(app, /todayDashboard\.dataset\.courseQuarter/);
+  assert.match(app, /elements\.todayMemoryScene\.textContent = lesson\.couplet\.data\.meaning/);
+  assert.doesNotMatch(app, /elements\.todayMemoryScene\.textContent = lesson\.memoryScene/);
   assert.match(storage, /matching-engine\.js\?v=24/);
   assert.match(app, /function renderMemoryMode\(\)/);
   assert.doesNotMatch(app, /elements\.passagePairs\.replaceChildren/);
@@ -225,7 +229,7 @@ test("순지 필사판과 반응형 조선 서첩 v29 학습 모드가 오프라
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v29-20260806/);
+  assert.match(serviceWorker, /1000cc-static-v30-20260807/);
   assert.match(serviceWorker, /assets\/cheonjamun-title\.woff/);
   assert.match(serviceWorker, /assets\/cheonjamun-hanja\.woff/);
   assert.match(serviceWorker, /matching-engine\.js\?v=24/);
@@ -233,8 +237,8 @@ test("순지 필사판과 반응형 조선 서첩 v29 학습 모드가 오프라
   assert.match(serviceWorker, /tts-manager\.js\?v=24/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /passage-folio-v25\.css\?v=26/);
-  assert.match(serviceWorker, /compact-sunji-v26\.css\?v=29/);
-  assert.match(serviceWorker, /app\.js\?v=28/);
+  assert.match(serviceWorker, /compact-sunji-v26\.css\?v=30/);
+  assert.match(serviceWorker, /app\.js\?v=29/);
   assert.match(serviceWorker, /overview-layout\.js\?v=28/);
   assert.match(serviceWorker, /render\.js\?v=28/);
   assert.match(serviceWorker, /assets\/joseon-folio-spread\.webp/);
