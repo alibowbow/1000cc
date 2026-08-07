@@ -1,4 +1,4 @@
-const CACHE_NAME = "1000cc-static-v31-20260807";
+const CACHE_NAME = "1000cc-static-v32-20260807";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,7 +6,7 @@ const APP_SHELL = [
   "./theme-folio.css?v=26",
   "./passage-folio-v25.css?v=26",
   "./compact-sunji-v26.css?v=30",
-  "./app.js?v=30",
+  "./app.js?v=31",
   "./data.js",
   "./character-meta.js",
   "./character-content.js",
@@ -58,7 +58,7 @@ const APP_SHELL = [
   "./js/overview-layout.js?v=28",
   "./js/render.js?v=29",
   "./js/state.js",
-  "./js/storage.js?v=24",
+  "./js/storage.js?v=25",
   "./js/tts-manager.js?v=24",
   "./js/utils.js",
   "./js/voice-utils.js",

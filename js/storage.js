@@ -140,7 +140,8 @@ export function loadStateFromStorage(storage, now = Date.now()) {
   try {
     const rawV2 = storage.getItem(STORAGE_KEY_V2);
     if (rawV2) {
-      return { state: normalizeV2(JSON.parse(rawV2)), source: "v2", migrated: false };
+      const state = prepareHomepageEntry(normalizeV2(JSON.parse(rawV2)));
+      return { state, source: "v2", migrated: false };
     }
   } catch (error) {
     // v2가 손상된 경우 v1 복구를 시도한다.
@@ -149,7 +150,9 @@ export function loadStateFromStorage(storage, now = Date.now()) {
   try {
     const rawV1 = storage.getItem(STORAGE_KEY_V1);
     if (rawV1) {
-      const state = normalizeV2(migrateV1(JSON.parse(rawV1), now));
+      const state = prepareHomepageEntry(
+        normalizeV2(migrateV1(JSON.parse(rawV1), now)),
+      );
       storage.setItem(STORAGE_KEY_V2, JSON.stringify(state));
       return { state, source: "v1", migrated: true };
     }
@@ -157,6 +160,13 @@ export function loadStateFromStorage(storage, now = Date.now()) {
     // 잘못된 JSON은 기본값으로 안전하게 복구한다.
   }
   return { state: createDefaultState(), source: "default", migrated: false };
+}
+
+function prepareHomepageEntry(state) {
+  // 학습 위치와 설정은 유지하되, 일반 방문은 항상 홈에서 시작한다.
+  state.ui.mode = "today";
+  state.ui.revealAnswer = false;
+  return state;
 }
 
 export function saveStateToStorage(storage, state) {

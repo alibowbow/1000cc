@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("순지 필사판과 반응형 조선 서첩 v31 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("순지 필사판과 반응형 조선 서첩 v32 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/joseon-folio-spread.webp",
     "assets/joseon-folio-single.webp",
@@ -48,7 +48,7 @@ test("순지 필사판과 반응형 조선 서첩 v31 학습 모드가 오프라
   assert.match(html, /theme-folio\.css\?v=26/);
   assert.match(html, /passage-folio-v25\.css\?v=26/);
   assert.match(html, /compact-sunji-v26\.css\?v=30/);
-  assert.match(html, /app\.js\?v=30/);
+  assert.match(html, /app\.js\?v=31/);
   assert.match(html, /styles\.css\?v=24/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
@@ -115,7 +115,7 @@ test("순지 필사판과 반응형 조선 서첩 v31 학습 모드가 오프라
   assert.doesNotMatch(app, /passagePairs/);
   assert.match(app, /course-engine\.js\?v=24/);
   assert.match(app, /matching-engine\.js\?v=24/);
-  assert.match(app, /storage\.js\?v=24/);
+  assert.match(app, /storage\.js\?v=25/);
   assert.match(app, /tts-manager\.js\?v=24/);
   assert.match(app, /document\.body\.dataset\.sceneQuarter/);
   assert.match(app, /createOverviewIndexes\(rangeStart, overviewPageSize, TOTAL_CHARACTERS\)/);
@@ -235,7 +235,7 @@ test("순지 필사판과 반응형 조선 서첩 v31 학습 모드가 오프라
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v31-20260807/);
+  assert.match(serviceWorker, /1000cc-static-v32-20260807/);
   assert.match(serviceWorker, /assets\/cheonjamun-title\.woff/);
   assert.match(serviceWorker, /assets\/cheonjamun-hanja\.woff/);
   assert.match(serviceWorker, /matching-engine\.js\?v=24/);
@@ -244,7 +244,7 @@ test("순지 필사판과 반응형 조선 서첩 v31 학습 모드가 오프라
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /passage-folio-v25\.css\?v=26/);
   assert.match(serviceWorker, /compact-sunji-v26\.css\?v=30/);
-  assert.match(serviceWorker, /app\.js\?v=30/);
+  assert.match(serviceWorker, /app\.js\?v=31/);
   assert.match(serviceWorker, /overview-layout\.js\?v=28/);
   assert.match(serviceWorker, /render\.js\?v=29/);
   assert.match(serviceWorker, /assets\/joseon-folio-spread\.webp/);

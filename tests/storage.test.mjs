@@ -83,13 +83,18 @@ test("모바일 40자 필사판의 시작 위치를 새로고침 뒤에도 보�
   assert.equal(normalizeV2(state).ui.rangeStart, 960);
 });
 
-test("그림 기억 모드는 새로고침 뒤에도 현재 8자 위치와 함께 보존된다", function () {
+test("저장된 화면과 관계없이 새 방문은 오늘의 8자에서 시작한다", function () {
+  const storage = memoryStorage();
   const state = createDefaultState();
   state.ui.mode = "memory";
   state.ui.selectedIndex = 312;
-  const restored = normalizeV2(state);
-  assert.equal(restored.ui.mode, "memory");
-  assert.equal(restored.ui.selectedIndex, 312);
+  state.ui.revealAnswer = true;
+  saveStateToStorage(storage, state);
+
+  const loaded = loadStateFromStorage(storage);
+  assert.equal(loaded.state.ui.mode, "today");
+  assert.equal(loaded.state.ui.selectedIndex, 312);
+  assert.equal(loaded.state.ui.revealAnswer, false);
 });
 
 test("진행 중인 한자 맞추기 후보와 문제 위치를 저장하고 복원한다", function () {

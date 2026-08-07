@@ -30,7 +30,7 @@ import { createOverviewCell, createPassageCharacter } from "./js/render.js?v=29"
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=24";
+} from "./js/storage.js?v=25";
 import { createStore } from "./js/state.js";
 import { TTSManager } from "./js/tts-manager.js?v=24";
 import { formatDuration } from "./js/utils.js";
