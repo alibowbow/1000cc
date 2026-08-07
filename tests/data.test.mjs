@@ -158,6 +158,11 @@ test("1,000자 모두 화면에 실제 관련 용례를 한 개 이상 제공한
       const readings = Array.from(word.word);
       assert.equal(origins.length, readings.length);
       assert.ok(word.definition.length <= 110);
+      assert.match(word.characterReading, /^[가-힣]$/);
+      const displayDefinition = word.characterReading !== item.reading
+        ? `이 말에서는 ‘${word.characterReading}’로 읽음. ${word.definition}`
+        : word.definition;
+      assert.doesNotMatch(displayDefinition, /undefined|null/i);
       assert.ok(origins.some(function (character, position) {
         return character === item.character && readings[position] === word.characterReading;
       }));

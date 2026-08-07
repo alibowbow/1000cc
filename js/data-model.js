@@ -1,7 +1,7 @@
 import { COUPLETS, TOTAL_CHARACTERS } from "../data.js";
 import { CHARACTER_HUN } from "../character-meta.js";
 import { CHARACTER_FORMS, CHARACTER_WORDS } from "../character-content.js";
-import { CHARACTER_WORD_SUPPLEMENTS } from "./character-word-supplements.js";
+import { CHARACTER_WORD_SUPPLEMENTS } from "./character-word-supplements.js?v=34";
 import { normalizeSearch } from "./utils.js";
 
 const CONTEXT_HUN_OVERRIDES = new Map([

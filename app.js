@@ -5,7 +5,7 @@ import {
   findCharacterIndexes,
   getCharacterStudyDetails,
   getCouplet,
-} from "./js/data-model.js";
+} from "./js/data-model.js?v=34";
 import {
   createMatchingSession,
   getMatchingProgress,
@@ -32,7 +32,7 @@ import {
   saveStateToStorage,
 } from "./js/storage.js?v=25";
 import { createStore } from "./js/state.js";
-import { TTSManager } from "./js/tts-manager.js?v=24";
+import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=25";
 import { formatDuration } from "./js/utils.js";
 
 const OVERVIEW_COMPACT_QUERY =
@@ -997,8 +997,11 @@ function renderPassage() {
 
     const definition = document.createElement("span");
     definition.className = "related-word__definition";
-    definition.textContent = word.characterReading !== selected.reading
-      ? `이 말에서는 ‘${word.characterReading}’로 읽음. ${word.definition}`
+    const characterReading = typeof word.characterReading === "string"
+      ? word.characterReading.trim()
+      : "";
+    definition.textContent = characterReading && characterReading !== selected.reading
+      ? `이 말에서는 ‘${characterReading}’로 읽음. ${word.definition}`
       : word.definition;
     entry.append(term, definition);
     relatedWordsFragment.append(entry);
@@ -1147,7 +1150,7 @@ function playMemoryCouplet() {
     return;
   }
   const couplet = getCouplet(CHARACTERS[appState.ui.selectedIndex].coupletIndex);
-  tts.speak(couplet.data.reading.replace(" ", ", "), {
+  tts.speakSequence(createCoupletSpeechItems(couplet.data), {
     kind: "memory-couplet",
     onError: handleTtsError,
   });
@@ -1231,7 +1234,7 @@ function playCurrentCouplet() {
   }
   passageContinuous = false;
   const couplet = getCouplet(CHARACTERS[appState.ui.selectedIndex].coupletIndex);
-  tts.speak(couplet.data.reading.replace(" ", ", "), {
+  tts.speakSequence(createCoupletSpeechItems(couplet.data), {
     kind: "couplet",
     onError: handleTtsError,
   });
@@ -1243,16 +1246,18 @@ function toggleContinuousListening() {
     return;
   }
   const startCouplet = CHARACTERS[appState.ui.selectedIndex].coupletIndex;
+  const continuousSpeechItems = COUPLETS.slice(startCouplet).flatMap(function (couplet) {
+    return createCoupletSpeechItems(couplet);
+  });
   passageContinuous = true;
   elements.continuousListen.setAttribute("aria-pressed", "true");
   tts.speakSequence(
-    COUPLETS.slice(startCouplet).map(function (couplet) {
-      return couplet.reading.replace(" ", ", ");
-    }),
+    continuousSpeechItems,
     {
       kind: "continuous",
-      onItem: function (offset) {
-        const coupletIndex = startCouplet + offset;
+      onItem: function (position) {
+        if (position % 2 !== 0) return;
+        const coupletIndex = startCouplet + (position / 2);
         commit(function (state) {
           state.ui.selectedIndex = coupletIndex * 8;
           state.ui.rangeStart = normalizeOverviewRangeStart(

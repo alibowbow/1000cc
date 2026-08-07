@@ -48,7 +48,7 @@ test("순지 필사판과 반응형 조선 서첩 v33 학습 모드가 오프라
   assert.match(html, /theme-folio\.css\?v=26/);
   assert.match(html, /passage-folio-v25\.css\?v=26/);
   assert.match(html, /compact-sunji-v26\.css\?v=30/);
-  assert.match(html, /app\.js\?v=32/);
+  assert.match(html, /app\.js\?v=33/);
   assert.match(html, /styles\.css\?v=24/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
@@ -114,11 +114,16 @@ test("순지 필사판과 반응형 조선 서첩 v33 학습 모드가 오프라
   assert.doesNotMatch(app, /elements\.revealAnswer/);
   assert.doesNotMatch(app, /passagePairs/);
   assert.match(app, /course-engine\.js\?v=24/);
-  assert.match(app, /word\.characterReading !== selected\.reading/);
-  assert.match(app, /이 말에서는 ‘\$\{word\.characterReading\}’로 읽음/);
+  assert.match(app, /data-model\.js\?v=34/);
+  assert.match(app, /typeof word\.characterReading === "string"/);
+  assert.match(app, /characterReading && characterReading !== selected\.reading/);
+  assert.match(app, /이 말에서는 ‘\$\{characterReading\}’로 읽음/);
   assert.match(app, /matching-engine\.js\?v=24/);
   assert.match(app, /storage\.js\?v=25/);
-  assert.match(app, /tts-manager\.js\?v=24/);
+  assert.match(app, /tts-manager\.js\?v=25/);
+  assert.match(app, /speakSequence\(createCoupletSpeechItems\(couplet\.data\)/);
+  assert.match(app, /continuousSpeechItems/);
+  assert.match(app, /if \(position % 2 !== 0\) return/);
   assert.match(app, /document\.body\.dataset\.sceneQuarter/);
   assert.match(app, /createOverviewIndexes\(rangeStart, overviewPageSize, TOTAL_CHARACTERS\)/);
   assert.match(app, /createOverviewRangeStarts\(overviewPageSize, TOTAL_CHARACTERS\)/);
@@ -237,17 +242,23 @@ test("순지 필사판과 반응형 조선 서첩 v33 학습 모드가 오프라
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v33-20260807/);
+  assert.match(serviceWorker, /1000cc-static-v34-20260807/);
   assert.match(serviceWorker, /assets\/cheonjamun-title\.woff/);
   assert.match(serviceWorker, /assets\/cheonjamun-hanja\.woff/);
   assert.match(serviceWorker, /matching-engine\.js\?v=24/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=24/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=25/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /passage-folio-v25\.css\?v=26/);
   assert.match(serviceWorker, /compact-sunji-v26\.css\?v=30/);
-  assert.match(serviceWorker, /app\.js\?v=32/);
-  assert.match(serviceWorker, /character-word-supplements\.js/);
+  assert.match(serviceWorker, /app\.js\?v=33/);
+  assert.match(serviceWorker, /data-model\.js\?v=34/);
+  assert.match(serviceWorker, /character-word-supplements\.js\?v=34/);
+  assert.match(serviceWorker, /request\.destination === "script"/);
+  const scriptNetworkFirst = serviceWorker.match(
+    /if \(request\.destination === "script"\) \{[\s\S]*?event\.respondWith\([\s\S]*?fetch\(request\)[\s\S]*?\.catch\(function \(\) \{[\s\S]*?caches\.match\(request\)[\s\S]*?return;/,
+  );
+  assert.ok(scriptNetworkFirst, "자바스크립트 모듈은 네트워크 우선·캐시 대체 전략이어야 합니다.");
   assert.match(serviceWorker, /overview-layout\.js\?v=28/);
   assert.match(serviceWorker, /render\.js\?v=29/);
   assert.match(serviceWorker, /assets\/joseon-folio-spread\.webp/);

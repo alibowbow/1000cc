@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { TTSManager } from "../js/tts-manager.js";
+import { createCoupletSpeechItems, TTSManager } from "../js/tts-manager.js";
 import {
   isKoreanVoice,
   rankKoreanVoices,
@@ -24,6 +24,16 @@ test("ko-KR 계열만 모으고 Google 한국어 음성을 우선한다", functi
 test("저장된 한국어 음성이 있으면 유지하고 사라지면 우선순위 음성으로 대체한다", function () {
   assert.equal(selectPreferredVoice(voices, "samsung").voiceURI, "samsung");
   assert.equal(selectPreferredVoice(voices, "missing").voiceURI, "google");
+});
+
+test("8자 듣기는 독음 뒤에 문맥 풀이를 이어서 구성한다", function () {
+  assert.deepEqual(
+    createCoupletSpeechItems({
+      reading: "천지현황 우주홍황",
+      meaning: "하늘은 검고 땅은 누르며, 우주는 넓고도 거칠다.",
+    }),
+    ["천지현황, 우주홍황", "하늘은 검고 땅은 누르며, 우주는 넓고도 거칠다."],
+  );
 });
 
 function createSpeechHarness(options = {}) {
@@ -79,6 +89,26 @@ test("페이지 로드 뒤 늦게 준비된 한국어 음성을 재생 직전에
   ready = true;
   manager.speak("검을 현");
   assert.equal(synthesis.spoken[0].voice.voiceURI, "google");
+});
+
+test("8자 독음이 끝나면 문맥 풀이를 두 번째 음성으로 재생한다", function () {
+  const { manager, synthesis } = createSpeechHarness();
+  let ended = 0;
+  manager.speakSequence(
+    createCoupletSpeechItems({
+      reading: "천지현황 우주홍황",
+      meaning: "하늘은 검고 땅은 누르며, 우주는 넓고도 거칠다.",
+    }),
+    { onEnd() { ended += 1; } },
+  );
+
+  assert.equal(synthesis.spoken.length, 1);
+  assert.equal(synthesis.spoken[0].text, "천지현황, 우주홍황");
+  synthesis.spoken[0].emit("end");
+  assert.equal(synthesis.spoken.length, 2);
+  assert.equal(synthesis.spoken[1].text, "하늘은 검고 땅은 누르며, 우주는 넓고도 거칠다.");
+  synthesis.spoken[1].emit("end");
+  assert.equal(ended, 1);
 });
 
 test("새 재생의 session token은 취소된 이전 utterance의 늦은 onend를 무시한다", function () {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "1000cc-static-v33-20260807";
+const CACHE_NAME = "1000cc-static-v34-20260807";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,7 +6,7 @@ const APP_SHELL = [
   "./theme-folio.css?v=26",
   "./passage-folio-v25.css?v=26",
   "./compact-sunji-v26.css?v=30",
-  "./app.js?v=32",
+  "./app.js?v=33",
   "./data.js",
   "./character-meta.js",
   "./character-content.js",
@@ -50,8 +50,8 @@ const APP_SHELL = [
   "./assets/memory-atlas-14.webp",
   "./assets/memory-atlas-15.webp",
   "./assets/memory-atlas-16.webp",
-  "./js/data-model.js",
-  "./js/character-word-supplements.js",
+  "./js/data-model.js?v=34",
+  "./js/character-word-supplements.js?v=34",
   "./js/course-engine.js?v=24",
   "./js/matching-engine.js?v=24",
   "./js/lesson-content.js",
@@ -60,7 +60,7 @@ const APP_SHELL = [
   "./js/render.js?v=29",
   "./js/state.js",
   "./js/storage.js?v=25",
-  "./js/tts-manager.js?v=24",
+  "./js/tts-manager.js?v=25",
   "./js/utils.js",
   "./js/voice-utils.js",
 ];
@@ -117,6 +117,27 @@ self.addEventListener("fetch", function (event) {
         })
         .catch(function () {
           return caches.match("./index.html");
+        }),
+    );
+    return;
+  }
+
+  // 서로 다른 배포의 모듈이 섞이면 화면 코드와 데이터 모양이 어긋날 수 있다.
+  // 스크립트는 온라인에서 최신 응답을 우선하고, 오프라인일 때만 캐시로 대체한다.
+  if (request.destination === "script") {
+    event.respondWith(
+      fetch(request)
+        .then(function (response) {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(function (cache) {
+              cache.put(request, copy);
+            });
+          }
+          return response;
+        })
+        .catch(function () {
+          return caches.match(request);
         }),
     );
     return;

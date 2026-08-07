@@ -1,5 +1,11 @@
 import { rankKoreanVoices, selectPreferredVoice } from "./voice-utils.js";
 
+export function createCoupletSpeechItems(couplet = {}) {
+  const reading = String(couplet.reading || "").trim().replace(/\s+/g, ", ");
+  const meaning = String(couplet.meaning || "").trim();
+  return [reading, meaning].filter(Boolean);
+}
+
 export class TTSManager {
   constructor(options = {}) {
     this.synthesis = options.synthesis || globalThis.speechSynthesis || null;
