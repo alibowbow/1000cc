@@ -32,7 +32,7 @@ import {
   saveStateToStorage,
 } from "./js/storage.js?v=25";
 import { createStore } from "./js/state.js";
-import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=25";
+import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=26";
 import { formatDuration } from "./js/utils.js";
 
 const OVERVIEW_COMPACT_QUERY =

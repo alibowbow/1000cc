@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createCoupletSpeechItems, TTSManager } from "../js/tts-manager.js";
+import {
+  COUPLET_MEANING_PAUSE_MS,
+  COUPLET_READING_PAUSE_MS,
+  createCoupletSpeechItems,
+  TTSManager,
+} from "../js/tts-manager.js";
 import {
   isKoreanVoice,
   rankKoreanVoices,
@@ -32,7 +37,13 @@ test("8자 듣기는 독음 뒤에 문맥 풀이를 이어서 구성한다", fun
       reading: "천지현황 우주홍황",
       meaning: "하늘은 검고 땅은 누르며, 우주는 넓고도 거칠다.",
     }),
-    ["천지현황, 우주홍황", "하늘은 검고 땅은 누르며, 우주는 넓고도 거칠다."],
+    [
+      { text: "천지현황, 우주홍황", pauseAfterMs: COUPLET_READING_PAUSE_MS },
+      {
+        text: "하늘은 검고 땅은 누르며, 우주는 넓고도 거칠다.",
+        pauseAfterMs: COUPLET_MEANING_PAUSE_MS,
+      },
+    ],
   );
 });
 
@@ -63,14 +74,31 @@ function createSpeechHarness(options = {}) {
     resume() { this.resumeCount += 1; this.paused = false; },
     speak(utterance) { this.spoken.push(utterance); this.speaking = true; },
   };
+  const scheduledDelays = [];
+  const scheduledCallbacks = [];
+  const clearedSchedules = [];
   const manager = new TTSManager({
     synthesis,
     Utterance: FakeUtterance,
-    schedule(callback) { callback(); return 1; },
-    clearSchedule() {},
+    schedule(callback, delayMs) {
+      scheduledDelays.push(delayMs);
+      if (options.manualSchedule) {
+        scheduledCallbacks.push(callback);
+        return scheduledCallbacks.length;
+      }
+      callback();
+      return scheduledDelays.length;
+    },
+    clearSchedule(timer) { clearedSchedules.push(timer); },
   });
   manager.start();
-  return { manager, synthesis };
+  return {
+    manager,
+    synthesis,
+    scheduledDelays,
+    scheduledCallbacks,
+    clearedSchedules,
+  };
 }
 
 test("대기 중인 엔진은 취소하지 않고, 일시 정지 상태만 해제한 뒤 바로 재생한다", function () {
@@ -91,8 +119,8 @@ test("페이지 로드 뒤 늦게 준비된 한국어 음성을 재생 직전에
   assert.equal(synthesis.spoken[0].voice.voiceURI, "google");
 });
 
-test("8자 독음이 끝나면 문맥 풀이를 두 번째 음성으로 재생한다", function () {
-  const { manager, synthesis } = createSpeechHarness();
+test("8자 독음 뒤 충분히 쉰 다음 문맥 풀이를 재생한다", function () {
+  const { manager, synthesis, scheduledDelays } = createSpeechHarness();
   let ended = 0;
   manager.speakSequence(
     createCoupletSpeechItems({
@@ -105,10 +133,47 @@ test("8자 독음이 끝나면 문맥 풀이를 두 번째 음성으로 재생�
   assert.equal(synthesis.spoken.length, 1);
   assert.equal(synthesis.spoken[0].text, "천지현황, 우주홍황");
   synthesis.spoken[0].emit("end");
+  assert.equal(scheduledDelays.at(-1), COUPLET_READING_PAUSE_MS);
   assert.equal(synthesis.spoken.length, 2);
   assert.equal(synthesis.spoken[1].text, "하늘은 검고 땅은 누르며, 우주는 넓고도 거칠다.");
   synthesis.spoken[1].emit("end");
   assert.equal(ended, 1);
+});
+
+test("연속 듣기는 풀이가 끝난 뒤에도 쉰 다음 다음 8자로 넘어간다", function () {
+  const { manager, synthesis, scheduledDelays } = createSpeechHarness();
+  const items = [
+    ...createCoupletSpeechItems({ reading: "천지현황 우주홍황", meaning: "첫 풀이." }),
+    ...createCoupletSpeechItems({ reading: "일월영측 진숙열장", meaning: "둘째 풀이." }),
+  ];
+  manager.speakSequence(items);
+
+  synthesis.spoken[0].emit("end");
+  synthesis.spoken[1].emit("end");
+  assert.deepEqual(scheduledDelays.slice(-2), [
+    COUPLET_READING_PAUSE_MS,
+    COUPLET_MEANING_PAUSE_MS,
+  ]);
+  assert.equal(synthesis.spoken[2].text, "일월영측, 진숙열장");
+});
+
+test("쉼 대기 중 재생 정지를 누르면 다음 음성이 시작되지 않는다", function () {
+  const {
+    manager,
+    synthesis,
+    scheduledCallbacks,
+    clearedSchedules,
+  } = createSpeechHarness({ manualSchedule: true });
+  manager.speakSequence(
+    createCoupletSpeechItems({ reading: "천지현황 우주홍황", meaning: "첫 풀이." }),
+  );
+
+  synthesis.spoken[0].emit("end");
+  assert.equal(scheduledCallbacks.length, 1);
+  manager.cancel();
+  assert.deepEqual(clearedSchedules, [1]);
+  scheduledCallbacks[0]();
+  assert.equal(synthesis.spoken.length, 1);
 });
 
 test("새 재생의 session token은 취소된 이전 utterance의 늦은 onend를 무시한다", function () {

@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 
-test("순지 필사판과 반응형 조선 서첩 v33 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
+test("순지 필사판과 반응형 조선 서첩 v34 학습 모드가 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/joseon-folio-spread.webp",
     "assets/joseon-folio-single.webp",
@@ -48,7 +48,7 @@ test("순지 필사판과 반응형 조선 서첩 v33 학습 모드가 오프라
   assert.match(html, /theme-folio\.css\?v=26/);
   assert.match(html, /passage-folio-v25\.css\?v=26/);
   assert.match(html, /compact-sunji-v26\.css\?v=30/);
-  assert.match(html, /app\.js\?v=33/);
+  assert.match(html, /app\.js\?v=34/);
   assert.match(html, /styles\.css\?v=24/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
@@ -120,7 +120,7 @@ test("순지 필사판과 반응형 조선 서첩 v33 학습 모드가 오프라
   assert.match(app, /이 말에서는 ‘\$\{characterReading\}’로 읽음/);
   assert.match(app, /matching-engine\.js\?v=24/);
   assert.match(app, /storage\.js\?v=25/);
-  assert.match(app, /tts-manager\.js\?v=25/);
+  assert.match(app, /tts-manager\.js\?v=26/);
   assert.match(app, /speakSequence\(createCoupletSpeechItems\(couplet\.data\)/);
   assert.match(app, /continuousSpeechItems/);
   assert.match(app, /if \(position % 2 !== 0\) return/);
@@ -242,16 +242,16 @@ test("순지 필사판과 반응형 조선 서첩 v33 학습 모드가 오프라
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v34-20260807/);
+  assert.match(serviceWorker, /1000cc-static-v35-20260807/);
   assert.match(serviceWorker, /assets\/cheonjamun-title\.woff/);
   assert.match(serviceWorker, /assets\/cheonjamun-hanja\.woff/);
   assert.match(serviceWorker, /matching-engine\.js\?v=24/);
   assert.doesNotMatch(serviceWorker, /grid-engine/);
-  assert.match(serviceWorker, /tts-manager\.js\?v=25/);
+  assert.match(serviceWorker, /tts-manager\.js\?v=26/);
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /passage-folio-v25\.css\?v=26/);
   assert.match(serviceWorker, /compact-sunji-v26\.css\?v=30/);
-  assert.match(serviceWorker, /app\.js\?v=33/);
+  assert.match(serviceWorker, /app\.js\?v=34/);
   assert.match(serviceWorker, /data-model\.js\?v=34/);
   assert.match(serviceWorker, /character-word-supplements\.js\?v=34/);
   assert.match(serviceWorker, /request\.destination === "script"/);

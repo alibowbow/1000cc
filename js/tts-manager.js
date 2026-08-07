@@ -1,9 +1,26 @@
 import { rankKoreanVoices, selectPreferredVoice } from "./voice-utils.js";
 
+export const COUPLET_READING_PAUSE_MS = 1200;
+export const COUPLET_MEANING_PAUSE_MS = 800;
+
 export function createCoupletSpeechItems(couplet = {}) {
   const reading = String(couplet.reading || "").trim().replace(/\s+/g, ", ");
   const meaning = String(couplet.meaning || "").trim();
-  return [reading, meaning].filter(Boolean);
+  return [
+    { text: reading, pauseAfterMs: COUPLET_READING_PAUSE_MS },
+    { text: meaning, pauseAfterMs: COUPLET_MEANING_PAUSE_MS },
+  ].filter(function (item) {
+    return Boolean(item.text);
+  });
+}
+
+function normalizeSpeechItem(item) {
+  const source = item && typeof item === "object" ? item : { text: item };
+  const pauseAfterMs = Number(source.pauseAfterMs);
+  return {
+    text: String(source.text || "").trim(),
+    pauseAfterMs: Number.isFinite(pauseAfterMs) ? Math.max(0, pauseAfterMs) : 0,
+  };
 }
 
 export class TTSManager {
@@ -94,12 +111,16 @@ export class TTSManager {
       onEnd: options.onEnd,
       onError: options.onError,
       retryCount: 0,
-    }, shouldDefer);
+    }, shouldDefer ? this.cancelDelay : 0);
     return true;
   }
 
   speakSequence(items, options = {}) {
-    const queue = (Array.isArray(items) ? items : []).map(String).filter(Boolean);
+    const queue = (Array.isArray(items) ? items : [])
+      .map(normalizeSpeechItem)
+      .filter(function (item) {
+        return Boolean(item.text);
+      });
     if (!this.supported || queue.length === 0) return false;
     const token = ++this.sessionToken;
     let position = 0;
@@ -109,27 +130,29 @@ export class TTSManager {
     this.resumeEngine();
     this.emitState(true, options.kind || "sequence");
 
-    const speakNext = (defer = false) => {
+    const speakNext = (delayMs = 0) => {
       if (token !== this.sessionToken) return;
       if (position >= queue.length) {
         this.emitState(false);
         if (typeof options.onEnd === "function") options.onEnd();
         return;
       }
-      if (typeof options.onItem === "function") options.onItem(position);
-      this.queueSpeech(queue[position], token, {
+      const item = queue[position];
+      if (typeof options.onItem === "function") options.onItem(position, item);
+      this.queueSpeech(item.text, token, {
         kind: options.kind || "sequence",
         onEnd: function () {
           position += 1;
-          speakNext();
+          const nextDelayMs = position < queue.length ? item.pauseAfterMs : 0;
+          speakNext(nextDelayMs);
         },
         onError: options.onError,
         keepSpeakingState: true,
         retryCount: 0,
-      }, defer);
+      }, delayMs);
     };
 
-    speakNext(shouldDefer);
+    speakNext(shouldDefer ? this.cancelDelay : 0);
     return true;
   }
 
@@ -154,18 +177,19 @@ export class TTSManager {
     }
   }
 
-  queueSpeech(text, token, options, defer = false) {
+  queueSpeech(text, token, options, delayMs = 0) {
     let fired = false;
     const run = () => {
       fired = true;
       this.pendingSpeakTimer = null;
       if (token === this.sessionToken) this.speakWithToken(text, token, options);
     };
-    if (!defer) {
+    const normalizedDelay = Math.max(0, Number(delayMs) || 0);
+    if (normalizedDelay === 0) {
       run();
       return;
     }
-    const timer = this.schedule(run, this.cancelDelay);
+    const timer = this.schedule(run, normalizedDelay);
     if (!fired) this.pendingSpeakTimer = timer;
   }
 
@@ -211,7 +235,7 @@ export class TTSManager {
             retryCount: 1,
             excludedVoiceURI: voice ? voice.voiceURI : "",
             forceDefaultVoice: !fallback,
-          }, true);
+          }, this.cancelDelay);
           return;
         }
       }
