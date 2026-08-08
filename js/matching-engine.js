@@ -34,7 +34,7 @@ export function createMatchingSession(options = {}) {
 
 export function selectMatchingChoice(session, selectedIndex, options = {}) {
   const current = restoreMatchingSession(session);
-  if (current.complete || selectedIndex !== current.targetIndex) {
+  if (current.complete) {
     return {
       session: current,
       correct: false,
@@ -42,6 +42,7 @@ export function selectMatchingChoice(session, selectedIndex, options = {}) {
     };
   }
 
+  const correct = selectedIndex === current.targetIndex;
   const questionPosition = current.questionPosition + 1;
   const complete = questionPosition >= current.questionIndexes.length;
   const targetIndex = complete ? null : current.questionIndexes[questionPosition];
@@ -61,7 +62,7 @@ export function selectMatchingChoice(session, selectedIndex, options = {}) {
           ),
       complete,
     },
-    correct: true,
+    correct,
     completed: complete,
   };
 }

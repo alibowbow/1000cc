@@ -1385,6 +1385,14 @@ body {
   line-height: 1;
 }
 
+.match-choice small {
+  font-size: 1rem;
+  margin-top: 4px;
+  display: block;
+  text-align: center;
+  font-weight: normal;
+}
+
 .match-choice:hover,
 .match-choice:focus-visible {
   z-index: 1;

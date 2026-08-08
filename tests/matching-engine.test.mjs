@@ -26,7 +26,7 @@ test("첫 문제는 현재 8자 중 네 후보에 정답을 포함한다", funct
   assert.ok(session.choiceIndexes.every((index) => session.questionIndexes.includes(index)));
 });
 
-test("오답은 같은 문제와 후보를 유지한다", function () {
+test("오답도 다음 훈음 문제와 새 네 후보를 만든다", function () {
   const session = createMatchingSession({
     indexes: [0, 1, 2, 3, 4, 5, 6, 7],
     random: seededRandom(),
@@ -34,8 +34,10 @@ test("오답은 같은 문제와 후보를 유지한다", function () {
   const wrong = session.choiceIndexes.find((index) => index !== session.targetIndex);
   const result = selectMatchingChoice(session, wrong, { random: seededRandom(10) });
   assert.equal(result.correct, false);
-  assert.equal(result.session.targetIndex, 0);
-  assert.deepEqual(result.session.choiceIndexes, session.choiceIndexes);
+  assert.equal(result.session.questionPosition, 1);
+  assert.equal(result.session.targetIndex, 1);
+  assert.equal(result.session.choiceIndexes.length, 4);
+  assert.ok(result.session.choiceIndexes.includes(1));
 });
 
 test("정답을 맞히면 다음 훈음 문제와 새 네 후보를 만든다", function () {
