@@ -48,7 +48,7 @@ test("풀이는 각주·출처 잔여물 없이 완결된 문장이다", functio
   });
 });
 
-test("125개 8자 연은 한 줄 풀이와 구별되는 관련 해설을 제공한다", function () {
+test("125개 8자 연은 한 줄 풀이와 구별되는 해설을 제공한다", function () {
   assert.equal(COUPLET_EXPLANATIONS.length, 125);
   assert.equal(new Set(COUPLET_EXPLANATIONS).size, 125);
   COUPLET_EXPLANATIONS.forEach(function (explanation, index) {

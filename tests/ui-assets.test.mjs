@@ -63,7 +63,7 @@ test("순지 필사판과 반응형 조선 서첩 v35 학습 모드가 오프라
   assert.match(html, /id="couplet-position" aria-live="polite"/);
   assert.match(html, /id="couplet-meaning-title">8자 문맥 풀이/);
   assert.match(html, /id="passage-commentary" role="note" aria-labelledby="passage-commentary-title"/);
-  assert.match(html, /id="passage-commentary-title">관련 해설/);
+  assert.match(html, /id="passage-commentary-title">해설/);
   assert.match(html, /id="couplet-explanation"/);
   assert.ok(html.indexOf('id="couplet-meaning"') < html.indexOf('id="couplet-explanation"'));
   assert.ok(html.indexOf('id="couplet-explanation"') < html.indexOf('class="passage-actions"'));
