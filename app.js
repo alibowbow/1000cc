@@ -5,7 +5,7 @@ import {
   findCharacterIndexes,
   getCharacterStudyDetails,
   getCouplet,
-} from "./js/data-model.js?v=34";
+} from "./js/data-model.js?v=35";
 import {
   createMatchingSession,
   getMatchingProgress,
@@ -17,7 +17,7 @@ import {
   getLesson,
   getRandomDailyPick,
   parseChallengeDay,
-} from "./js/course-engine.js?v=24";
+} from "./js/course-engine.js?v=25";
 import {
   createOverviewIndexes,
   createOverviewRangeStarts,
@@ -113,6 +113,8 @@ const elements = {
   passageCard: document.querySelector("#passage-card"),
   phraseGrids: Array.from(document.querySelectorAll("[data-phrase-grid]")),
   coupletMeaning: document.querySelector("#couplet-meaning"),
+  passageCommentary: document.querySelector("#passage-commentary"),
+  coupletExplanation: document.querySelector("#couplet-explanation"),
   playCouplet: document.querySelector("#play-couplet"),
   continuousListen: document.querySelector("#continuous-listen"),
   toggleReading: document.querySelector("#toggle-reading"),
@@ -960,6 +962,7 @@ function renderPassage() {
   elements.previousCouplet.disabled = couplet.index === 0;
   elements.nextCouplet.disabled = couplet.index === 124;
   elements.coupletMeaning.textContent = couplet.data.meaning;
+  elements.coupletExplanation.textContent = couplet.explanation;
 
   [couplet.firstPhrase, couplet.secondPhrase].forEach(function (phrase, phraseOffset) {
     const grid = elements.phraseGrids[phraseOffset];
@@ -1164,6 +1167,7 @@ function renderPassageVisibility() {
   elements.toggleReading.setAttribute("aria-pressed", String(appState.settings.hideReading));
   elements.toggleMeaning.setAttribute("aria-pressed", String(appState.settings.hideMeaning));
   elements.coupletMeaning.setAttribute("aria-hidden", String(concealMeaning));
+  elements.passageCommentary.setAttribute("aria-hidden", String(concealMeaning));
   elements.selectedGloss.removeAttribute("aria-hidden");
   elements.selectedReading.removeAttribute("aria-hidden");
   elements.selectedRelatedWords

@@ -6,6 +6,7 @@ import { CHARACTER_WORD_SUPPLEMENTS } from "../js/character-word-supplements.js"
 import {
   CHARACTERS,
   COUPLETS,
+  COUPLET_EXPLANATIONS,
   TOTAL_CHARACTERS,
   getCouplet,
   getCharacterStudyDetails,
@@ -45,6 +46,25 @@ test("풀이는 각주·출처 잔여물 없이 완결된 문장이다", functio
     assert.doesNotMatch(couplet.meaning, /\[\d+\]|출처|위키|\s{2,}/);
     assert.match(couplet.meaning, /[.!?]$/);
   });
+});
+
+test("125개 8자 연은 한 줄 풀이와 구별되는 관련 해설을 제공한다", function () {
+  assert.equal(COUPLET_EXPLANATIONS.length, 125);
+  assert.equal(new Set(COUPLET_EXPLANATIONS).size, 125);
+  COUPLET_EXPLANATIONS.forEach(function (explanation, index) {
+    assert.ok(explanation.length >= 60 && explanation.length <= 220);
+    assert.ok((explanation.match(/[.!?]/g) || []).length >= 2);
+    assert.match(explanation, /[.!?]$/);
+    assert.doesNotMatch(explanation, /TODO|임시|미상|undefined|null|\[\d+\]|출처|위키/i);
+    assert.notEqual(explanation, COUPLETS[index].meaning);
+    assert.equal(getCouplet(index).explanation, explanation);
+  });
+});
+
+test("오독하기 쉬운 궁궐·지형·고사 풀이를 역주 맥락에 맞게 보존한다", function () {
+  assert.match(COUPLETS[55].meaning, /부속 건물/);
+  assert.match(COUPLETS[79].meaning, /늪인 거야/);
+  assert.match(COUPLETS[120].meaning, /섶은 다해도 불이 이어지듯/);
 });
 
 test("각 8자 연은 앞뒤 4자구와 독음으로 정확히 분리된다", function () {

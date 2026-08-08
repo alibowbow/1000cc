@@ -377,7 +377,7 @@ body[data-screen="grid"] .site-footer {
 
 #screen-passage .passage-card {
   width: 100%;
-  min-height: 0;
+  min-height: max-content;
   aspect-ratio: 3 / 2;
   padding: clamp(16px, 2vw, 26px) clamp(18px, 2.7vw, 34px) clamp(18px, 2.4vw, 30px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -400,6 +400,37 @@ body[data-screen="grid"] .site-footer {
   box-shadow:
     0 2px 0 rgba(28, 31, 27, 0.56),
     0 16px 36px rgba(44, 34, 21, 0.19);
+}
+
+/* The one-line answer stays prominent; the note beneath it supplies context. */
+#screen-passage .passage-commentary {
+  min-width: 0;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(126, 95, 58, 0.2);
+}
+
+#screen-passage .passage-commentary > strong {
+  display: block;
+  color: #76594a;
+  font-family: "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+#screen-passage .passage-meaning .passage-commentary p {
+  margin-top: 4px;
+  color: #5b5042;
+  font-size: clamp(0.84rem, 1vw, 0.94rem);
+  font-weight: 450;
+  line-height: 1.58;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+#screen-passage.is-meaning-hidden:not(.is-answer-revealed) .passage-commentary {
+  display: none;
 }
 
 #screen-passage .passage-card::before {
@@ -725,7 +756,9 @@ body[data-screen="grid"] .site-footer {
   }
 
   #screen-passage .passage-card {
-    aspect-ratio: 9 / 16;
+    /* Keep the folio proportion as a minimum, then grow for longer notes. */
+    aspect-ratio: auto;
+    min-height: min(calc(177.78vw - 28px), 736px);
     padding: 10px 12px 12px;
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -830,6 +863,18 @@ body[data-screen="grid"] .site-footer {
     margin-top: 1px;
     font-size: 0.88rem;
     line-height: 1.35;
+  }
+
+  #screen-passage .passage-commentary {
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+
+  #screen-passage .passage-meaning .passage-commentary p {
+    margin-top: 3px;
+    font-size: 0.82rem;
+    font-weight: 450;
+    line-height: 1.48;
   }
 
   #screen-passage .passage-actions {

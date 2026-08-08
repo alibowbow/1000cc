@@ -1,5 +1,5 @@
-import { CHARACTERS, getCouplet } from "./data-model.js";
-import { MEMORY_SCENES, MODERN_VOCABULARY_BY_DAY } from "./lesson-content.js";
+import { CHARACTERS, getCouplet } from "./data-model.js?v=35";
+import { MEMORY_SCENES, MODERN_VOCABULARY_BY_DAY } from "./lesson-content.js?v=35";
 import { SKILL_KEYS, createProgressRecord, getWeakestSkill } from "./progress-engine.js";
 
 export const COURSE_DAYS = 125;

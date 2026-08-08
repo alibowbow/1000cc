@@ -14,8 +14,8 @@
     <link rel="stylesheet" href="styles.css?v=24" />
     <link rel="stylesheet" href="theme-folio.css?v=26" />
     <link rel="stylesheet" href="passage-folio-v25.css?v=26" />
-    <link rel="stylesheet" href="compact-sunji-v26.css?v=30" />
-    <script type="module" src="app.js?v=34"></script>
+    <link rel="stylesheet" href="compact-sunji-v26.css?v=31" />
+    <script type="module" src="app.js?v=35"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -194,10 +194,14 @@
           </div>
 
           <div class="passage-main">
-            <div class="passage-meaning">
-              <span>8자 문맥 풀이</span>
+            <section class="passage-meaning" aria-labelledby="couplet-meaning-title">
+              <span id="couplet-meaning-title">8자 문맥 풀이</span>
               <p id="couplet-meaning"></p>
-            </div>
+              <div class="passage-commentary" id="passage-commentary" role="note" aria-labelledby="passage-commentary-title">
+                <strong id="passage-commentary-title">관련 해설</strong>
+                <p id="couplet-explanation"></p>
+              </div>
+            </section>
 
             <div class="passage-actions">
               <button class="primary-action" id="play-couplet" type="button" data-tts>

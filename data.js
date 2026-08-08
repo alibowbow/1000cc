@@ -285,7 +285,7 @@ export const COUPLETS = Object.freeze([
   {
     "hanja": "丙舍傍啟甲帳對楹",
     "reading": "병사방계 갑장대영",
-    "meaning": "곁에는 궁중의 병사가 열리고, 화려한 갑장은 기둥을 마주해 펼쳐졌다."
+    "meaning": "궁전 양옆에는 부속 건물이 펼쳐지고, 화려한 갑장은 기둥 사이에 마주해 있다."
   },
   {
     "hanja": "肆筵設席鼓瑟吹笙",
@@ -405,7 +405,7 @@ export const COUPLETS = Object.freeze([
   {
     "hanja": "昆池碣石鉅野洞庭",
     "reading": "곤지갈석 거야동정",
-    "meaning": "운남의 곤지와 부평의 갈석, 거야의 넓은 들판과 동정의 큰 호수가 있다."
+    "meaning": "못인 곤지, 산인 갈석, 늪인 거야, 호수인 동정이 이름난 지형으로 꼽힌다."
   },
   {
     "hanja": "曠遠緜邈巖岫杳冥",
@@ -610,7 +610,7 @@ export const COUPLETS = Object.freeze([
   {
     "hanja": "指薪修祜永綏吉劭",
     "reading": "지신수우 영수길소",
-    "meaning": "손가락에 섶불을 단 듯 수양에 전념하면 영원토록 평안하고 길하리라."
+    "meaning": "섶은 다해도 불이 이어지듯 선행과 수양으로 복을 닦으면 오래도록 평안하고 길하리라."
   },
   {
     "hanja": "矩步引領俯仰廊廟",

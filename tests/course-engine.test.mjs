@@ -23,6 +23,7 @@ test("125일 과정은 매일 8자·전체 뜻·고유한 기억 장면·현대 
     const lesson = getLesson(day);
     assert.equal(lesson.items.length, 8);
     assert.ok(lesson.couplet.data.meaning.length > 10);
+    assert.ok(lesson.couplet.explanation.length > 60);
     assert.ok(lesson.memoryScene.length > 15);
     assert.equal(lesson.vocabulary.length, 4);
     assert.deepEqual(

@@ -2,6 +2,7 @@ import { COUPLETS, TOTAL_CHARACTERS } from "../data.js";
 import { CHARACTER_HUN } from "../character-meta.js";
 import { CHARACTER_FORMS, CHARACTER_WORDS } from "../character-content.js";
 import { CHARACTER_WORD_SUPPLEMENTS } from "./character-word-supplements.js?v=34";
+import { COUPLET_EXPLANATIONS } from "./lesson-content.js?v=35";
 import { normalizeSearch } from "./utils.js";
 
 const CONTEXT_HUN_OVERRIDES = new Map([
@@ -132,6 +133,7 @@ export const CHARACTERS = Object.freeze(
         couplet: couplet.hanja,
         coupletReading: couplet.reading,
         meaning: couplet.meaning,
+        explanation: COUPLET_EXPLANATIONS[coupletIndex],
         radical: form[1],
         totalStrokes: form[2],
         relatedWords: Object.freeze(getVerifiedRelatedWords(character, readings[offset])),
@@ -166,6 +168,7 @@ export function getCouplet(coupletIndex) {
     index,
     startIndex,
     data: COUPLETS[index],
+    explanation: COUPLET_EXPLANATIONS[index],
     firstPhrase: getPhrase(startIndex),
     secondPhrase: getPhrase(startIndex + 4),
     items: CHARACTERS.slice(startIndex, startIndex + 8),
@@ -206,6 +209,7 @@ export function findCharacterIndexes(query) {
       item.couplet,
       item.coupletReading,
       item.meaning,
+      item.explanation,
       ...item.relatedWords.flatMap(function (word) {
         return [word.word, word.origin, word.definition];
       }),
@@ -218,4 +222,4 @@ export function findCharacterIndexes(query) {
   });
 }
 
-export { COUPLETS, TOTAL_CHARACTERS };
+export { COUPLETS, COUPLET_EXPLANATIONS, TOTAL_CHARACTERS };
