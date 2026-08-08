@@ -407,7 +407,7 @@ if (
     return explanation.length < 60 || explanation.length > 220 || !/[.!?]$/.test(explanation);
   })
 ) {
-  throw new Error("125개 8자 관련 해설 데이터가 올바르지 않습니다.");
+  throw new Error("125개 8자 해설 데이터가 올바르지 않습니다.");
 }
 
 if (
