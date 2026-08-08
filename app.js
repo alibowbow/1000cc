@@ -160,6 +160,7 @@ const elements = {
   continuousBoard: document.querySelector("#continuous-board"),
   matchingFeedback: document.querySelector("#matching-feedback"),
   replayTarget: document.querySelector("#replay-target"),
+  nextMatchingQuestion: document.querySelector("#next-matching-question"),
   restartSession: document.querySelector("#restart-session"),
   endSession: document.querySelector("#end-session"),
   gridAnnouncement: document.querySelector("#grid-announcement"),
@@ -342,6 +343,7 @@ function bindEvents() {
   elements.continuousBoard.addEventListener("click", handleMatchingChoiceClick);
   elements.continuousBoard.addEventListener("keydown", handleMatchingChoiceKeyboard);
   elements.replayTarget.addEventListener("click", speakGridTarget);
+  elements.nextMatchingQuestion.addEventListener("click", advanceMatchingSession);
   elements.restartSession.addEventListener("click", restartGridSession);
   elements.endSession.addEventListener("click", endGridSession);
   elements.retryWrong.addEventListener("click", retryWrongCharacters);
@@ -1391,22 +1393,27 @@ function answerMatchingChoice(selectedIndex, button) {
   if (!session || !session.active || session.complete) return;
   const targetIndex = session.targetIndex;
   const result = selectMatchingChoice(session, selectedIndex);
-
-  if (!result.correct) {
-    handleWrongMatchingAnswer(targetIndex, button);
-    return;
-  }
-
+  const correct = result.correct;
   const item = CHARACTERS[targetIndex];
+  const errors = (session.errorsByTarget[targetIndex] || 0) + (correct ? 0 : 1);
+
   const nextSession = {
     ...session,
     ...result.session,
-    correctCount: session.correctCount + 1,
+    correctCount: session.correctCount + (correct ? 1 : 0),
+    wrongCount: session.wrongCount + (correct ? 0 : 1),
+    errorsByTarget: {
+      ...session.errorsByTarget,
+      [targetIndex]: errors,
+    },
+    wrongIndexes: correct || session.wrongIndexes.includes(targetIndex)
+      ? session.wrongIndexes
+      : [...session.wrongIndexes, targetIndex],
   };
   const endedAt = result.completed ? new Date().toISOString() : null;
 
   commit(function (state) {
-    state.progress = recordSkillAttempt(state.progress, targetIndex, "reverse", { correct: true });
+    state.progress = recordSkillAttempt(state.progress, targetIndex, "reverse", { correct });
     state.grid.session = {
       ...nextSession,
       active: !result.completed,
@@ -1416,12 +1423,29 @@ function answerMatchingChoice(selectedIndex, button) {
   });
 
   matchingTransitioning = true;
-  button.classList.add("is-correct");
-  button.setAttribute("aria-label", `정답, ${item.contextHun}`);
+
+  if (correct) {
+    button.classList.add("is-correct");
+    button.setAttribute("aria-label", `정답, ${item.contextHun}`);
+    elements.matchingFeedback.textContent = `정답 · ${item.contextHun}`;
+  } else {
+    button.classList.add("is-wrong");
+    const correctButton = elements.continuousBoard.querySelector(`.match-choice[data-index="${targetIndex}"]`);
+    if (correctButton) {
+      correctButton.classList.add("is-correct");
+    }
+    button.setAttribute("aria-label", `오답, ${CHARACTERS[selectedIndex].contextHun}`);
+    elements.matchingFeedback.textContent = `오답 · 정답은 ${item.contextHun}`;
+  }
+
   elements.continuousBoard.querySelectorAll(".match-choice").forEach(function (choice) {
     choice.disabled = true;
+    const idx = Number(choice.dataset.index);
+    if (Number.isInteger(idx)) {
+      const charItem = CHARACTERS[idx];
+      choice.innerHTML = `<span lang="zh-Hant">${charItem.character}</span><small>${charItem.contextHun}</small>`;
+    }
   });
-  elements.matchingFeedback.textContent = `정답 · ${item.contextHun}`;
 
   if (
     appState.settings.vibrate &&
@@ -1432,40 +1456,15 @@ function answerMatchingChoice(selectedIndex, button) {
   }
 
   tts.speak(item.contextHun, { kind: "matching-feedback", onError: handleTtsError });
+
+  const announcementPrefix = correct ? "정답" : "오답";
   elements.gridAnnouncement.textContent = result.completed
-    ? `정답, ${item.contextHun}. 8문제를 모두 마쳤습니다.`
-    : `정답, ${item.contextHun}. 다음 문제를 보여 줍니다.`;
+    ? `${announcementPrefix}, ${item.contextHun}. 8문제를 모두 마쳤습니다.`
+    : `${announcementPrefix}, ${item.contextHun}. 다음 문제로 넘어가려면 버튼을 누르세요.`;
 
-  matchingAdvanceTimer = window.setTimeout(function () {
-    matchingTransitioning = false;
-    renderGridScreen();
-    if (!result.completed) focusFirstMatchingChoice();
-  }, 260);
-}
-
-function handleWrongMatchingAnswer(targetIndex, button) {
-  const session = appState.grid.session;
-  const errors = (session.errorsByTarget[targetIndex] || 0) + 1;
-  commit(function (state) {
-    state.progress = recordSkillAttempt(state.progress, targetIndex, "reverse", { correct: false });
-    state.grid.session.wrongCount += 1;
-    state.grid.session.errorsByTarget[targetIndex] = errors;
-    if (!state.grid.session.wrongIndexes.includes(targetIndex)) {
-      state.grid.session.wrongIndexes.push(targetIndex);
-    }
-  });
-  button.classList.remove("is-wrong");
-  requestAnimationFrame(function () {
-    button.classList.add("is-wrong");
-  });
-  window.setTimeout(function () {
-    button.classList.remove("is-wrong");
-  }, 260);
-  elements.gridWrongCount.textContent = String(appState.grid.session.wrongCount);
-  const attempts = appState.grid.session.correctCount + appState.grid.session.wrongCount;
-  elements.gridAccuracy.textContent = `${Math.round((appState.grid.session.correctCount / attempts) * 100)}%`;
-  elements.matchingFeedback.textContent = "다시 살펴보고 고르세요.";
-  elements.gridAnnouncement.textContent = "오답입니다. 같은 문제에서 다시 고를 수 있습니다.";
+  elements.nextMatchingQuestion.textContent = result.completed ? "결과 보기" : "다음 문제";
+  elements.nextMatchingQuestion.hidden = false;
+  elements.nextMatchingQuestion.focus();
 }
 
 function renderGridSessionStatus() {
@@ -1478,6 +1477,9 @@ function renderGridSessionStatus() {
   elements.gridSessionProgress.textContent = `${Math.min(progress.total, progress.completed + 1)} / ${progress.total}`;
   elements.gridAccuracy.textContent = accuracy === null ? "—" : `${accuracy}%`;
   elements.gridWrongCount.textContent = String(session.wrongCount);
+
+  elements.nextMatchingQuestion.hidden = true;
+  elements.continuousBoard.hidden = false;
 
   if (target) {
     renderMatchingTarget(target, progress);
@@ -1499,6 +1501,17 @@ function speakGridTarget() {
     kind: "matching-target",
     onError: handleTtsError,
   });
+}
+
+function advanceMatchingSession() {
+  const session = appState.grid.session;
+  if (!session) return;
+  matchingTransitioning = false;
+  elements.nextMatchingQuestion.hidden = true;
+  renderGridScreen();
+  if (session.active && !session.complete) {
+    focusFirstMatchingChoice();
+  }
 }
 
 function restartGridSession() {
