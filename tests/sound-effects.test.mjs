@@ -94,6 +94,7 @@ class FakeAudioContext {
     this.resumeCount = 0;
     this.suspendCount = 0;
     this.rejectResume = Boolean(options.rejectResume);
+    this.resumeState = options.resumeState || "running";
   }
 
   createGain() {
@@ -117,7 +118,7 @@ class FakeAudioContext {
   resume() {
     this.resumeCount += 1;
     if (this.rejectResume) return Promise.reject(new Error("blocked"));
-    this.state = "running";
+    this.state = this.resumeState;
     return Promise.resolve();
   }
 
@@ -177,7 +178,7 @@ test("중단된 컨텍스트는 사용자 재생 안에서 한 번 재개한 뒤
   assert.equal(context.oscillators.length, 3);
 });
 
-test("컨텍스트 재개 거부는 삼키고 음을 예약하지 않는다", async function () {
+test("컨텍스트 재개 거부는 삼키고 다음 사용자 동작에서 다시 시도한다", async function () {
   const context = new FakeAudioContext({ state: "suspended", rejectResume: true });
   const sound = new SoundEffects({ contextFactory() { return context; } });
 
@@ -185,9 +186,15 @@ test("컨텍스트 재개 거부는 삼키고 음을 예약하지 않는다", as
   await flushMicrotasks();
   assert.equal(context.resumeCount, 1);
   assert.equal(context.oscillators.length, 0);
+
+  context.rejectResume = false;
+  assert.equal(sound.play("tap"), true);
+  await flushMicrotasks();
+  assert.equal(context.resumeCount, 2);
+  assert.equal(context.oscillators.length, 1);
 });
 
-test("다섯 효과음은 짧고 낮은 게인으로 각기 다른 음형을 만든다", function () {
+test("다섯 효과음은 휴대폰에서도 들리면서 부드러운 출력 범위를 지킨다", function () {
   const expectedVoices = {
     tap: 1,
     correct: 2,
@@ -203,11 +210,15 @@ test("다섯 효과음은 짧고 낮은 게인으로 각기 다른 음형을 만
     assert.equal(sound.play(cue), true);
     assert.equal(context.oscillators.length, voiceCount);
     assert.equal(context.gains.length, voiceCount + 1, "마스터 게인 하나와 음별 게인을 사용한다");
-    assert.ok(context.gains[0].gain.events[0].value <= 0.045);
+    const masterPeak = context.gains[0].gain.events[0].value;
+    assert.ok(masterPeak >= 0.16 && masterPeak <= 0.18);
+    let cuePeak = 0;
     context.gains.slice(1).forEach(function (gain) {
       const peak = Math.max(...gain.gain.events.map(function (event) { return event.value; }));
       assert.ok(peak <= 0.16, `${cue}의 음별 피크가 과도하지 않아야 한다`);
+      cuePeak = Math.max(cuePeak, peak * masterPeak);
     });
+    assert.ok(cuePeak >= 0.018 && cuePeak <= 0.03, `${cue}의 실효 출력이 작거나 과도하지 않아야 한다`);
     context.oscillators.forEach(function (oscillator) {
       assert.ok(oscillator.stoppedAt - oscillator.startedAt < 0.35);
     });
@@ -224,15 +235,47 @@ test("음성 합성 중에는 새 효과음을 막고 마스터 출력을 부드
   assert.equal(sound.play("correct"), false);
   assert.equal(context.oscillators.length, 1);
   assert.ok(master.events.some(function (event) {
-    return event.kind === "linear" && event.value < 0.004;
+    return event.kind === "linear" && event.value < 0.015;
   }));
 
   assert.equal(sound.setSpeechActive(false), false);
   assert.equal(sound.play("correct"), true);
   assert.equal(context.oscillators.length, 3);
   assert.ok(master.events.some(function (event) {
-    return event.kind === "linear" && event.value === 0.045;
+    return event.kind === "linear" && event.value === 0.17;
   }));
+});
+
+test("첫 사용자 동작은 무음 펄스로 모바일 오디오를 깨우고 실제 큐를 이어 재생한다", async function () {
+  const context = new FakeAudioContext({ state: "suspended" });
+  const sound = new SoundEffects({ contextFactory() { return context; } });
+
+  assert.equal(sound.unlock(), true);
+  assert.equal(context.resumeCount, 1);
+  assert.equal(context.oscillators.length, 1, "한 번만 무음 펄스를 만든다");
+  assert.equal(Math.max(...context.gains[1].gain.events.map(function (event) { return event.value; })), 0);
+  await flushMicrotasks();
+
+  assert.equal(sound.unlock(), true);
+  assert.equal(context.oscillators.length, 1, "이미 깨어난 컨텍스트는 다시 프라임하지 않는다");
+  assert.equal(sound.play("correct"), true);
+  assert.equal(context.oscillators.length, 3);
+});
+
+test("재개 뒤에도 interrupted인 컨텍스트는 큐를 만들지 않고 다음 동작에서 재시도한다", async function () {
+  const context = new FakeAudioContext({ state: "interrupted", resumeState: "interrupted" });
+  const sound = new SoundEffects({ contextFactory() { return context; } });
+
+  assert.equal(sound.play("correct"), true);
+  await flushMicrotasks();
+  assert.equal(context.oscillators.length, 0);
+
+  context.resumeState = "running";
+  assert.equal(sound.unlock(), true);
+  await flushMicrotasks();
+  assert.equal(context.state, "running");
+  assert.equal(sound.play("correct"), true);
+  assert.equal(context.oscillators.length, 3, "무음 펄스 하나와 정답음 두 개를 만든다");
 });
 
 test("효과음 설정을 끄면 새 음을 막고 다시 켜면 같은 컨텍스트를 사용한다", function () {

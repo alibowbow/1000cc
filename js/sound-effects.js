@@ -6,20 +6,23 @@ export const SOUND_EFFECT_CUES = Object.freeze([
   "game-complete",
 ]);
 
-const MASTER_GAIN = 0.045;
+// Keep the cues gentle, but loud enough to survive small phone speakers.
+// The previous 0.045 master multiplied by a 0.10–0.16 voice peak, leaving
+// only 0.0045–0.0072 at the destination and making the cues effectively mute.
+const MASTER_GAIN = 0.17;
 const SPEECH_DUCK_RATIO = 0.08;
 const SILENCE = 0.0001;
 
 const RECIPES = Object.freeze({
   tap: [
-    note({ type: "triangle", frequency: 310, endFrequency: 285, duration: 0.06, peak: 0.11, filter: 900 }),
+    note({ type: "triangle", frequency: 470, endFrequency: 410, duration: 0.065, peak: 0.13, filter: 1500 }),
   ],
   correct: [
     note({ frequency: 523.25, endFrequency: 532, duration: 0.16, peak: 0.16, filter: 1900 }),
     note({ frequency: 659.25, endFrequency: 667, offset: 0.045, duration: 0.17, peak: 0.12, filter: 2100 }),
   ],
   wrong: [
-    note({ type: "triangle", frequency: 210, endFrequency: 168, duration: 0.15, peak: 0.12, filter: 540 }),
+    note({ type: "triangle", frequency: 330, endFrequency: 247, duration: 0.16, peak: 0.14, filter: 980 }),
   ],
   "round-complete": [
     note({ frequency: 392, endFrequency: 396, duration: 0.21, peak: 0.11, filter: 1800 }),
@@ -46,8 +49,8 @@ const REDUCED_MOTION_RECIPES = Object.freeze({
 
 /**
  * Small, asset-free game sounds. The AudioContext is deliberately created only
- * from play(), so callers can keep construction at module scope without
- * triggering browser autoplay restrictions.
+ * from unlock() or play(), so callers can keep construction at module scope
+ * without triggering browser autoplay restrictions.
  */
 export class SoundEffects {
   constructor(options = {}) {
@@ -58,6 +61,7 @@ export class SoundEffects {
     this.reducedMotion = Boolean(options.reducedMotion);
     this.context = null;
     this.masterGain = null;
+    this.primed = false;
     this.speechActive = false;
     this.resumePromise = null;
     this.generation = 0;
@@ -109,11 +113,38 @@ export class SoundEffects {
     }
 
     this.resumePromise.then((resumed) => {
-      if (resumed === false || context.state === "closed") return;
+      if (resumed === false || context.state !== "running") return;
       this.renderCue(cue, context, generation);
     }).catch(function () {
       // A defensive final catch for non-standard AudioContext implementations.
     });
+    return true;
+  }
+
+  /**
+   * Prime Web Audio from pointerdown/keydown, before the later click handler.
+   * Some mobile browsers only unlock a newly-created context while the user
+   * activation is still synchronous. The silent pulse is created once and is
+   * never routed at an audible gain.
+   */
+  unlock() {
+    if (!this.enabled || this.speechActive) return false;
+    const context = this.ensureContext();
+    if (!context || context.state === "closed") return false;
+    this.primeContext(context);
+    if (context.state === "running" || typeof context.resume !== "function") return true;
+    if (!this.resumePromise) {
+      try {
+        this.resumePromise = Promise.resolve(context.resume())
+          .catch(function () { return false; })
+          .finally(() => {
+            this.resumePromise = null;
+          });
+      } catch (error) {
+        this.resumePromise = null;
+        return false;
+      }
+    }
     return true;
   }
 
@@ -136,6 +167,7 @@ export class SoundEffects {
     if (this.context && this.context.state !== "closed") return this.context;
     this.context = null;
     this.masterGain = null;
+    this.primed = false;
     try {
       const context = this.contextFactory();
       if (!context || typeof context.createGain !== "function" || !context.destination) return null;
@@ -148,7 +180,34 @@ export class SoundEffects {
     } catch (error) {
       this.context = null;
       this.masterGain = null;
+      this.primed = false;
       return null;
+    }
+  }
+
+  primeContext(context) {
+    if (this.primed || context !== this.context || !this.masterGain) return;
+    try {
+      const oscillator = context.createOscillator();
+      const silentGain = context.createGain();
+      const now = currentTime(context);
+      setValue(silentGain.gain, 0, now);
+      oscillator.connect(silentGain);
+      silentGain.connect(this.masterGain);
+      oscillator.start(now);
+      oscillator.stop(now + 0.012);
+      const cleanUp = () => {
+        disconnect(oscillator);
+        disconnect(silentGain);
+      };
+      if (typeof oscillator.addEventListener === "function") {
+        oscillator.addEventListener("ended", cleanUp, { once: true });
+      } else {
+        oscillator.onended = cleanUp;
+      }
+      this.primed = true;
+    } catch (error) {
+      // A failed silent pulse must not prevent the actual cue from trying.
     }
   }
 
