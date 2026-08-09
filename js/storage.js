@@ -1,7 +1,7 @@
 import { restoreMatchingSession } from "./matching-engine.js?v=24";
 import { normalizeConfusionPairs } from "./confusion-engine.js?v=1";
 import { restoreRecognitionSession } from "./recognition-engine.js?v=1";
-import { restoreCoupletOrderSession } from "./couplet-order-engine.js?v=1";
+import { restoreCoupletOrderSession } from "./couplet-order-engine.js?v=2";
 import { CHARACTERS } from "./data-model.js?v=35";
 import { createProgressRecord } from "./progress-engine.js";
 import { isPlainObject, toIsoString, uniqueValidIndexes } from "./utils.js";
@@ -36,6 +36,7 @@ export function createDefaultState() {
       rate: 0.85,
       voiceURI: "",
       vibrate: true,
+      soundEffects: true,
       boardSize: 16,
     },
     progress: {},
@@ -124,6 +125,8 @@ export function normalizeV2(value) {
     typeof settings.voiceURI === "string" ? settings.voiceURI.slice(0, 300) : "";
   defaults.settings.vibrate =
     typeof settings.vibrate === "boolean" ? settings.vibrate : true;
+  defaults.settings.soundEffects =
+    typeof settings.soundEffects === "boolean" ? settings.soundEffects : true;
   defaults.settings.boardSize = Number(settings.boardSize) === 25 ? 25 : 16;
 
   defaults.progress = normalizeProgress(value.progress);
@@ -242,6 +245,9 @@ function normalizeSavedSession(value) {
     }
   }
   if (value.kind === "couplet-order") {
+    // 단일 현재-8자 세션은 10세트 게임과 진행 단위가 달라 이어 붙이지 않는다.
+    // 이미 기록된 글자별 order 진척은 progress에 남아 있으므로 세션만 새로 시작한다.
+    if (Number(value.engineVersion) === 1) return null;
     try {
       return restoreCoupletOrderSession(value);
     } catch (error) {
@@ -387,7 +393,7 @@ function normalizeRecentRuns(value) {
     .filter(isPlainObject)
     .map(function (run) {
       return {
-        mode: ["adaptive", "random1000", "weak", "couplet"].includes(run.mode)
+        mode: ["adaptive", "random1000", "weak", "couplet", "order10"].includes(run.mode)
           ? run.mode
           : "adaptive",
         answeredCount: Math.max(0, Math.floor(Number(run.answeredCount) || 0)),

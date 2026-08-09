@@ -1,28 +1,28 @@
-/* Infinite recognition game · focused ink desk */
+/* Infinite recognition game · warm sunji desk */
 
 body[data-screen="grid"] {
-  --recognition-canvas: #08131c;
-  --recognition-canvas-deep: #050c12;
-  --recognition-surface: #101e28;
-  --recognition-surface-raised: #162630;
-  --recognition-ivory: #f4ead5;
-  --recognition-ivory-bright: #fff8e9;
-  --recognition-ink: #172027;
-  --recognition-text: #f4ead7;
-  --recognition-muted: #a99f8e;
-  --recognition-rule: rgba(230, 209, 174, 0.2);
-  --recognition-rule-strong: rgba(230, 209, 174, 0.38);
-  --recognition-cinnabar: #d76c54;
-  --recognition-cinnabar-deep: #a94435;
-  --recognition-jade: #70a878;
-  --recognition-jade-soft: #dfead7;
-  --recognition-brass: #d9b768;
-  --recognition-focus: #f2c566;
+  --recognition-canvas: #eee7d7;
+  --recognition-canvas-deep: #e4dac7;
+  --recognition-surface: #fbf6eb;
+  --recognition-surface-raised: #fffdf7;
+  --recognition-ivory: #fffaf0;
+  --recognition-ivory-bright: #ffffff;
+  --recognition-ink: #28231d;
+  --recognition-text: #2d2923;
+  --recognition-muted: #70675a;
+  --recognition-rule: rgba(71, 58, 42, 0.17);
+  --recognition-rule-strong: rgba(71, 58, 42, 0.3);
+  --recognition-cinnabar: #a44736;
+  --recognition-cinnabar-deep: #7d3227;
+  --recognition-jade: #4f7258;
+  --recognition-jade-soft: #dce9db;
+  --recognition-brass: #8c6a31;
+  --recognition-focus: #875625;
   color: var(--recognition-text);
   background-color: var(--recognition-canvas);
   background-image:
-    linear-gradient(rgba(4, 12, 18, 0.82), rgba(7, 18, 27, 0.9)),
-    url("../assets/hanji-charcoal-tile.webp");
+    linear-gradient(rgba(249, 244, 233, 0.7), rgba(237, 228, 210, 0.82)),
+    url("../assets/sunji-fiber-tile.webp");
   background-position: center;
   background-size: auto, 512px 512px;
   background-repeat: no-repeat, repeat;
@@ -32,20 +32,20 @@ body[data-screen="grid"] {
 body[data-screen="grid"] .topbar {
   color: var(--recognition-text);
   border-bottom-color: var(--recognition-rule);
-  background-color: rgba(7, 16, 24, 0.96);
-  background-image: url("../assets/hanji-charcoal-tile.webp");
+  background-color: rgba(250, 246, 237, 0.96);
+  background-image: url("../assets/sunji-fiber-tile.webp");
   background-size: 512px 512px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 24px rgba(73, 55, 34, 0.1);
 }
 
 body[data-screen="grid"] .brand__hanja { color: var(--recognition-muted); }
 body[data-screen="grid"] .brand__seal { color: var(--recognition-cinnabar); }
 body[data-screen="grid"] .brand:hover .brand__ko,
-body[data-screen="grid"] .brand:hover .brand__hanja { color: var(--recognition-ivory-bright); }
+body[data-screen="grid"] .brand:hover .brand__hanja { color: var(--recognition-text); }
 
 body[data-screen="grid"] .primary-nav {
   border-color: var(--recognition-rule);
-  background: rgba(8, 19, 28, 0.92);
+  background: rgba(251, 247, 239, 0.94);
 }
 
 body[data-screen="grid"] .primary-nav button {
@@ -58,7 +58,7 @@ body[data-screen="grid"] .primary-nav button:hover,
 body[data-screen="grid"] .primary-nav button[aria-pressed="true"] {
   color: var(--recognition-text);
   border-color: var(--recognition-rule-strong);
-  background: rgba(255, 248, 233, 0.07);
+  background: rgba(164, 71, 54, 0.08);
 }
 
 body[data-screen="grid"] .primary-nav button[aria-pressed="true"]::after {
@@ -73,7 +73,7 @@ body[data-screen="grid"] #settings-button {
 
 body[data-screen="grid"] #settings-button:hover {
   color: var(--recognition-text);
-  background: rgba(255, 248, 233, 0.07);
+  background: rgba(164, 71, 54, 0.08);
 }
 
 body[data-screen="grid"] .app-shell {
@@ -106,12 +106,12 @@ body[data-screen="grid"] .app-shell {
   overflow: hidden;
   border: 1px solid var(--recognition-rule);
   border-radius: 10px;
-  background-color: rgba(11, 26, 36, 0.9);
+  background-color: rgba(251, 246, 235, 0.94);
   background-image:
-    linear-gradient(rgba(8, 20, 29, 0.74), rgba(6, 15, 22, 0.88)),
-    url("../assets/hanji-charcoal-tile.webp");
+    linear-gradient(rgba(255, 252, 244, 0.74), rgba(241, 231, 212, 0.72)),
+    url("../assets/sunji-fiber-tile.webp");
   background-size: auto, 512px 512px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+  box-shadow: 0 18px 52px rgba(73, 55, 34, 0.12);
 }
 
 .recognition-setup::before {
@@ -119,7 +119,7 @@ body[data-screen="grid"] .app-shell {
   position: absolute;
   right: clamp(-34px, -2vw, -10px);
   top: clamp(-58px, -4vw, -28px);
-  color: rgba(231, 210, 176, 0.035);
+  color: rgba(91, 64, 35, 0.06);
   font-family: "Cheonjamun Hanja", "Noto Serif CJK KR", "AppleMyungjo", serif;
   font-size: clamp(15rem, 31vw, 30rem);
   font-weight: 500;
@@ -169,7 +169,7 @@ body[data-screen="grid"] .app-shell {
   color: var(--recognition-text);
   border: 1px solid var(--recognition-rule);
   border-radius: 7px;
-  background: rgba(255, 248, 233, 0.035);
+  background: rgba(255, 253, 247, 0.66);
   cursor: pointer;
   text-align: left;
   transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
@@ -177,7 +177,7 @@ body[data-screen="grid"] .app-shell {
 
 .recognition-mode:hover {
   border-color: var(--recognition-rule-strong);
-  background: rgba(255, 248, 233, 0.075);
+  background: rgba(255, 255, 255, 0.92);
   transform: translateY(-2px);
 }
 
@@ -186,7 +186,7 @@ body[data-screen="grid"] .app-shell {
   outline-offset: 3px;
 }
 
-.recognition-mode--recommended { border-color: rgba(215, 108, 84, 0.62); }
+.recognition-mode--recommended { border-color: rgba(164, 71, 54, 0.58); }
 .recognition-mode--couplet { grid-column: 1 / -1; min-height: 154px; }
 
 .recognition-mode__badge {
@@ -194,7 +194,7 @@ body[data-screen="grid"] .app-shell {
   top: 14px;
   right: 14px;
   padding: 3px 8px;
-  color: var(--recognition-canvas-deep);
+  color: #fffaf0;
   border-radius: 2px;
   background: var(--recognition-cinnabar);
   font-size: 0.64rem;
@@ -211,7 +211,7 @@ body[data-screen="grid"] .app-shell {
 
 .recognition-mode > strong {
   grid-column: 2;
-  color: var(--recognition-ivory-bright);
+  color: var(--recognition-text);
   font-family: "Noto Serif KR", "AppleMyungjo", serif;
   font-size: clamp(1.25rem, 2.4vw, 1.75rem);
   line-height: 1.2;
@@ -246,7 +246,7 @@ body[data-screen="grid"] .app-shell {
 
 .recognition-setup__note {
   margin: 18px 2px 0;
-  color: rgba(231, 218, 195, 0.62);
+  color: var(--recognition-muted);
   font-size: 0.74rem;
 }
 
@@ -267,7 +267,8 @@ body[data-screen="grid"] .app-shell {
   grid-template-columns: minmax(150px, 0.8fr) minmax(420px, 1.5fr) auto;
   align-items: stretch;
   border: 1px solid var(--recognition-rule);
-  background: rgba(9, 22, 31, 0.82);
+  background: rgba(255, 253, 247, 0.86);
+  box-shadow: 0 8px 24px rgba(73, 55, 34, 0.08);
 }
 
 .recognition-hud__identity {
@@ -343,7 +344,7 @@ body[data-screen="grid"] .app-shell {
 .recognition-icon-button:hover,
 .recognition-icon-button[aria-pressed="true"] {
   color: var(--recognition-text);
-  background: rgba(255, 248, 233, 0.065);
+  background: rgba(164, 71, 54, 0.08);
 }
 
 .recognition-icon-button > span { font-size: 1rem; }
@@ -419,7 +420,7 @@ body[data-screen="grid"] .app-shell {
   background-size: auto, 512px 512px;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.52) inset,
-    0 4px 12px rgba(0, 0, 0, 0.18);
+    0 5px 14px rgba(73, 55, 34, 0.12);
   cursor: pointer;
   user-select: none;
   touch-action: manipulation;
@@ -449,14 +450,14 @@ body[data-screen="grid"] .app-shell {
   color: #244f32;
   border-color: var(--recognition-jade);
   background-color: var(--recognition-jade-soft);
-  box-shadow: inset 0 0 0 3px var(--recognition-jade), 0 4px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 0 0 3px var(--recognition-jade), 0 5px 14px rgba(73, 55, 34, 0.12);
 }
 
 .recognition-cell.is-wrong {
   color: #7f2f28;
   border-color: var(--recognition-cinnabar);
   background-color: #f1d9cf;
-  box-shadow: inset 0 0 0 3px var(--recognition-cinnabar), 0 4px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 0 0 3px var(--recognition-cinnabar), 0 5px 14px rgba(73, 55, 34, 0.12);
 }
 
 .recognition-cell.is-replaced { animation: recognition-replace 220ms ease-out; }
@@ -471,7 +472,8 @@ body[data-screen="grid"] .app-shell {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
   border: 1px solid var(--recognition-rule-strong);
-  background: rgba(8, 20, 28, 0.86);
+  background: rgba(255, 253, 247, 0.94);
+  box-shadow: 0 10px 28px rgba(73, 55, 34, 0.09);
 }
 
 .recognition-feedback__answer {
@@ -538,7 +540,7 @@ body[data-screen="grid"] .app-shell {
   text-align: left;
 }
 
-.recognition-context:hover { background: rgba(255, 248, 233, 0.06); }
+.recognition-context:hover { background: rgba(164, 71, 54, 0.07); }
 .recognition-context > span:first-child { color: var(--recognition-muted); font-size: 0.62rem; }
 .recognition-context strong { font-family: "Noto Serif CJK KR", "AppleMyungjo", serif; letter-spacing: 0.1em; }
 .recognition-context > span:last-child { grid-column: 2; grid-row: 1 / 3; align-self: center; color: var(--recognition-cinnabar); font-size: 1.4rem; }
@@ -551,7 +553,9 @@ body[data-screen="grid"] .app-shell {
   margin: 10px auto 0;
   padding: clamp(18px, 3vw, 30px);
   border: 1px solid var(--recognition-rule-strong);
-  background: rgba(10, 24, 33, 0.92);
+  border-radius: 8px;
+  background: rgba(255, 253, 247, 0.94);
+  box-shadow: 0 12px 30px rgba(73, 55, 34, 0.1);
   text-align: center;
 }
 
@@ -571,7 +575,7 @@ body[data-screen="grid"] .app-shell {
   color: var(--recognition-text);
   border: 1px solid var(--recognition-rule);
   border-radius: 4px;
-  background: rgba(255, 248, 233, 0.045);
+  background: rgba(255, 255, 255, 0.78);
   cursor: pointer;
 }
 
@@ -601,7 +605,8 @@ body[data-screen="grid"] .app-shell {
   margin: clamp(36px, 9vh, 90px) auto 0;
   padding: 28px;
   border: 1px solid var(--recognition-rule-strong);
-  background: rgba(10, 24, 33, 0.96);
+  background: rgba(255, 253, 247, 0.97);
+  box-shadow: 0 12px 30px rgba(73, 55, 34, 0.1);
   text-align: center;
 }
 
@@ -635,8 +640,8 @@ body[data-screen="grid"] .app-shell {
   color: var(--recognition-text);
   border: 1px solid var(--recognition-rule);
   border-radius: 8px;
-  background: rgba(10, 24, 33, 0.92);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+  background: rgba(255, 253, 247, 0.95);
+  box-shadow: 0 18px 52px rgba(73, 55, 34, 0.12);
   text-align: left;
 }
 
@@ -692,6 +697,14 @@ body[data-screen="grid"] .app-shell {
   background: var(--recognition-ivory);
 }
 
+.recognition-order-summary {
+  margin: 10px 0 0;
+  color: var(--recognition-jade);
+  font-family: "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
 .recognition-confusions { margin-top: 10px; }
 .recognition-confusions p { margin: 0; color: var(--recognition-muted); font-size: 0.78rem; }
 .recognition-confusion { padding: 8px 0; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--recognition-rule); }
@@ -700,7 +713,7 @@ body[data-screen="grid"] .app-shell {
 
 .recognition-result__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .recognition-secondary { color: var(--recognition-text); border: 1px solid var(--recognition-rule-strong); background: transparent; }
-.recognition-secondary:hover { background: rgba(255, 248, 233, 0.07); }
+.recognition-secondary:hover { background: rgba(164, 71, 54, 0.07); }
 .recognition-text-button { margin-left: auto; color: var(--recognition-muted); border: 0; background: transparent; }
 .recognition-text-button:hover { color: var(--recognition-text); }
 
@@ -727,14 +740,14 @@ body[data-screen="grid"] .app-shell {
   }
 
   body[data-screen="grid"] .topbar {
-    background-color: rgba(7, 16, 24, 0.98);
-    background-image: url("../assets/hanji-charcoal-tile.webp");
+    background-color: rgba(250, 246, 237, 0.98);
+    background-image: url("../assets/sunji-fiber-tile.webp");
   }
 
   body[data-screen="grid"] .primary-nav {
     border-top: 1px solid var(--recognition-rule-strong);
-    background: #091720;
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.24);
+    background: #f9f4e9;
+    box-shadow: 0 -8px 24px rgba(73, 55, 34, 0.12);
   }
 
   body[data-screen="grid"] .app-shell {

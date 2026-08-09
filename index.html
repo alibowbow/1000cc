@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="theme-folio.css?v=27" />
     <link rel="stylesheet" href="passage-folio-v25.css?v=26" />
     <link rel="stylesheet" href="compact-sunji-v26.css?v=31" />
-    <link rel="stylesheet" href="styles/recognition-game.css?v=1" />
-    <script type="module" src="app.js?v=36"></script>
+    <link rel="stylesheet" href="styles/recognition-game.css?v=2" />
+    <script type="module" src="app.js?v=37"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -339,12 +339,12 @@
               <span class="recognition-mode__action">실력 확인 <span aria-hidden="true">→</span></span>
             </button>
 
-            <button class="recognition-mode recognition-mode--couplet" id="start-current-match" type="button">
+            <button class="recognition-mode recognition-mode--couplet" id="start-order-match" type="button">
               <span class="recognition-mode__number" aria-hidden="true">參</span>
-              <strong>현재 8자 복습</strong>
-              <span class="recognition-mode__copy">지금 보고 있던 8자의 순서와 문맥을 익힙니다.</span>
-              <span class="recognition-mode__context" id="matching-range-copy">天地玄黃宇宙洪荒</span>
-              <span class="recognition-mode__action">8자 복습 <span aria-hidden="true">→</span></span>
+              <strong>랜덤 8자 순서 맞추기</strong>
+              <span class="recognition-mode__copy">125개 연에서 무작위 10세트를 골라 원문 순서대로 완성합니다.</span>
+              <span class="recognition-mode__context">10세트 · 80글자</span>
+              <span class="recognition-mode__action">10세트 시작 <span aria-hidden="true">→</span></span>
             </button>
           </div>
 
@@ -361,8 +361,8 @@
               <strong>무한 한자 찾기</strong>
             </div>
             <div class="recognition-stats" aria-label="현재 기록">
-              <div><span>문제</span><strong id="grid-session-progress">0</strong></div>
-              <div class="recognition-stat--combo"><span>콤보</span><strong id="grid-combo">×0</strong></div>
+              <div><span id="grid-progress-label">문제</span><strong id="grid-session-progress">0</strong></div>
+              <div class="recognition-stat--combo"><span id="grid-combo-label">콤보</span><strong id="grid-combo">×0</strong></div>
               <div><span>정답률</span><strong id="grid-accuracy">—</strong></div>
               <div><span>점수</span><strong id="grid-score">0</strong></div>
             </div>
@@ -371,7 +371,7 @@
                 <span aria-hidden="true">Ⅱ</span><strong>일시정지</strong>
               </button>
               <button class="recognition-icon-button" id="end-session" type="button">
-                <span aria-hidden="true">↗</span><strong>나가기</strong>
+                <span aria-hidden="true">←</span><strong>나가기</strong>
               </button>
             </div>
           </header>
@@ -404,7 +404,7 @@
               <span id="order-instruction">원문 순서대로 글자를 누르세요.</span>
               <strong id="order-answer" lang="zh-Hant" aria-live="polite"></strong>
             </div>
-            <div class="recognition-order__board" id="order-board" role="grid" aria-label="현재 8자 순서 맞추기"></div>
+            <div class="recognition-order__board" id="order-board" role="grid" aria-label="랜덤 8자 순서 맞추기"></div>
           </section>
 
           <section class="recognition-feedback" id="matching-feedback" aria-live="polite" aria-atomic="true" hidden>
@@ -439,24 +439,24 @@
             <h2 id="result-title">이번 연습에서 달라진 것</h2>
           </header>
           <div class="recognition-result__stats">
-            <div><span>푼 문제</span><strong id="result-learned">0</strong></div>
+            <div><span id="result-learned-label">푼 문제</span><strong id="result-learned">0</strong></div>
             <div><span>정답률</span><strong id="result-accuracy">0%</strong></div>
-            <div><span>최고 콤보</span><strong id="result-combo">×0</strong></div>
+            <div><span id="result-combo-label">최고 콤보</span><strong id="result-combo">×0</strong></div>
             <div><span>점수</span><strong id="result-score">0</strong></div>
             <div><span>소요 시간</span><strong id="result-time">0초</strong></div>
           </div>
 
           <div class="recognition-result__insights">
             <section>
-              <span>확실해진 글자</span>
+              <span id="result-confident-label">확실해진 글자</span>
               <div class="result-characters" id="result-confident"></div>
             </section>
             <section>
-              <span>다시 나올 글자</span>
+              <span id="result-characters-label">다시 나올 글자</span>
               <div class="result-characters" id="result-characters"></div>
             </section>
             <section>
-              <span>새로 발견한 혼동</span>
+              <span id="result-confusions-label">새로 발견한 혼동</span>
               <div class="recognition-confusions" id="result-confusions"><p>이번에는 새 혼동이 없었습니다.</p></div>
             </section>
           </div>
@@ -517,6 +517,10 @@
         <label class="setting-row">
           <span><strong>정답 진동</strong><small>지원되는 기기에서 10ms의 가벼운 진동을 사용합니다.</small></span>
           <input id="setting-vibrate" type="checkbox" />
+        </label>
+        <label class="setting-row">
+          <span><strong>부드러운 효과음</strong><small>정답과 오답, 세트 완료를 작은 소리로 알려줍니다.</small></span>
+          <input id="setting-sound-effects" type="checkbox" />
         </label>
 
         <p class="offline-note">앱과 게임 진행은 오프라인에서도 동작합니다. 음성은 기기에 설치된 한국어 음성 환경에 따라 오프라인 재생이 제한될 수 있습니다.</p>
