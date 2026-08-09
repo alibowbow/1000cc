@@ -34,8 +34,10 @@ import {
 import {
   advanceCoupletOrderAfterFeedback,
   createCoupletOrderSession,
+  endCoupletOrderSession,
   getCoupletOrderStats,
   restoreCoupletOrderSession,
+  selectRandomCoupletIndexes,
   submitCoupletOrderAnswer,
 } from "../js/couplet-order-engine.js";
 
@@ -580,7 +582,7 @@ test("완전 랜덤 정답 성공은 후보 구성과 randomMode 메타데이터
   assert.equal(reverse.candidateSignatures.length, 1);
 });
 
-test("현재 8자 순서 API는 order만 기록하고 JSON 복원과 완료 통계를 제공한다", function () {
+test("단일 8자 호환 API는 order만 기록하고 JSON 복원과 완료 통계를 제공한다", function () {
   const options = { indexes: [80, 81, 82, 83, 84, 85, 86, 87], random: seededRandom(201), now: BASE_NOW };
   let session = createCoupletOrderSession(options);
   let progress = {};
@@ -606,18 +608,99 @@ test("현재 8자 순서 API는 order만 기록하고 JSON 복원과 완료 통�
   assert.equal(restoreCoupletOrderSession(JSON.parse(JSON.stringify(session))).phase, "ended");
 });
 
-test("현재 8자 복원은 조기 완료 feedback과 미완성 ended 상태를 거부한다", function () {
-  const options = { indexes: [0, 1, 2, 3, 4, 5, 6, 7], random: seededRandom(211), now: BASE_NOW };
-  const session = createCoupletOrderSession(options);
-  const answer = submitCoupletOrderAnswer(session, session.expectedIndex, { progress: {}, now: BASE_NOW });
-  const earlyFeedback = JSON.parse(JSON.stringify(answer.session));
-  earlyFeedback.feedback.completed = true;
-  assert.throws(function () { restoreCoupletOrderSession(earlyFeedback); });
-  const earlyEnded = {
+test("랜덤 8자 순서는 서로 다른 10세트를 골라 80글자 뒤에만 완료된다", function () {
+  const random = seededRandom(211);
+  const coupletIndexes = selectRandomCoupletIndexes(125, 10, random);
+  assert.equal(coupletIndexes.length, 10);
+  assert.equal(new Set(coupletIndexes).size, 10);
+
+  let session = createCoupletOrderSession({ coupletIndexes, random, now: BASE_NOW });
+  let progress = {};
+  assert.equal(session.roundCount, 10);
+  session.rounds.forEach(function (round) {
+    assert.equal(round.orderIndexes.length, 8);
+    assert.equal(new Set(round.tileIndexes).size, 8);
+    assert.notDeepEqual(round.tileIndexes, round.orderIndexes);
+  });
+
+  for (let round = 0; round < 10; round += 1) {
+    assert.equal(session.roundIndex, round);
+    for (let position = 0; position < 8; position += 1) {
+      const answer = submitCoupletOrderAnswer(session, session.expectedIndex, {
+        progress,
+        now: BASE_NOW + round * 10000 + position,
+      });
+      progress = answer.progress;
+      assert.equal(answer.roundCompleted, position === 7);
+      assert.equal(answer.sessionCompleted, round === 9 && position === 7);
+      session = advanceCoupletOrderAfterFeedback(answer.session, {
+        now: BASE_NOW + round * 10000 + position + 1,
+      });
+      if (round < 9 || position < 7) assert.notEqual(session.phase, "ended");
+    }
+  }
+
+  const stats = getCoupletOrderStats(session, { now: BASE_NOW + 100000 });
+  assert.equal(session.phase, "ended");
+  assert.equal(session.endReason, "completed");
+  assert.equal(stats.completedRounds, 10);
+  assert.equal(stats.completedCharacters, 80);
+  assert.equal(stats.totalCharacters, 80);
+  assert.equal(stats.correctCount, 80);
+  assert.equal(session.history.length, 80);
+  assert.deepEqual(restoreCoupletOrderSession(JSON.parse(JSON.stringify(session))), session);
+});
+
+test("랜덤 8자 순서는 세트 사이 상태를 보존하고 오답은 진행시키지 않는다", function () {
+  const random = seededRandom(223);
+  let session = createCoupletOrderSession({
+    coupletIndexes: [0, 1],
+    random,
+    now: BASE_NOW,
+  });
+  const wrongIndex = session.tileIndexes.find(function (index) { return index !== session.expectedIndex; });
+  const wrong = submitCoupletOrderAnswer(session, wrongIndex, { progress: {}, now: BASE_NOW + 1 });
+  assert.equal(wrong.correct, false);
+  assert.equal(wrong.session.position, 0);
+  session = advanceCoupletOrderAfterFeedback(wrong.session, { now: BASE_NOW + 2 });
+  assert.equal(session.expectedIndex, 0);
+
+  for (let position = 0; position < 8; position += 1) {
+    const answer = submitCoupletOrderAnswer(session, session.expectedIndex, {
+      progress: {},
+      now: BASE_NOW + 10 + position,
+    });
+    session = advanceCoupletOrderAfterFeedback(answer.session, { now: BASE_NOW + 20 + position });
+  }
+  assert.equal(session.roundIndex, 1);
+  assert.equal(session.position, 0);
+  assert.equal(session.expectedIndex, 8);
+  assert.equal(session.wrongCount, 1);
+  assert.equal(restoreCoupletOrderSession(JSON.parse(JSON.stringify(session))).roundIndex, 1);
+});
+
+test("랜덤 8자 순서의 공식 나가기는 미완성 상태에서도 통계와 복원이 안전하다", function () {
+  const session = createCoupletOrderSession({
+    coupletIndexes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    random: seededRandom(227),
+    now: BASE_NOW,
+  });
+  const answer = submitCoupletOrderAnswer(session, session.expectedIndex, {
+    progress: {},
+    now: BASE_NOW + 100,
+  });
+  const ended = endCoupletOrderSession(answer.session, { now: BASE_NOW + 200 });
+  const restored = restoreCoupletOrderSession(JSON.parse(JSON.stringify(ended)));
+  assert.equal(restored.phase, "ended");
+  assert.equal(restored.endReason, "quit");
+  assert.equal(getCoupletOrderStats(restored).completedCharacters, 1);
+
+  const invalidCompleted = {
     ...session,
     phase: "ended",
     inputLocked: true,
+    endReason: "completed",
     endedAt: new Date(BASE_NOW + 1000).toISOString(),
   };
-  assert.throws(function () { restoreCoupletOrderSession(earlyEnded); });
+  assert.throws(function () { restoreCoupletOrderSession(invalidCompleted); });
 });

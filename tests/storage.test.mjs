@@ -121,7 +121,7 @@ test("진행 중인 한자 맞추기 후보와 문제 위치를 저장하고 복
   assert.equal(loaded.state.grid.session.questionPosition, 0);
 });
 
-test("무한 그리드와 현재 8자 순서 세션을 v2 저장소에서 구분해 복원한다", function () {
+test("무한 그리드와 랜덤 8자 10세트 세션을 v2 저장소에서 구분해 복원한다", function () {
   const storage = memoryStorage();
   const state = createDefaultState();
   state.grid.session = createRecognitionSession({
@@ -140,16 +140,29 @@ test("무한 그리드와 현재 8자 순서 세션을 v2 저장소에서 구분
   assert.equal(restoredRecognition.boardIndexes[restoredRecognition.targetSlot], restoredRecognition.targetIndex);
 
   state.grid.session = createCoupletOrderSession({
-    indexes: CHARACTERS.slice(0, 8).map(function (item) { return item.index; }),
-    coupletIndex: 0,
+    coupletIndexes: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
     random: function () { return 0.42; },
     now: Date.UTC(2026, 7, 9),
   });
   saveStateToStorage(storage, state);
   const restoredOrder = loadStateFromStorage(storage).state.grid.session;
   assert.equal(restoredOrder.kind, "couplet-order");
+  assert.equal(restoredOrder.roundCount, 10);
+  assert.deepEqual(restoredOrder.coupletIndexes, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
   assert.equal(restoredOrder.orderIndexes.length, 8);
   assert.deepEqual(new Set(restoredOrder.tileIndexes), new Set(restoredOrder.orderIndexes));
+});
+
+test("부드러운 효과음은 기존 기록에 기본으로 켜지고 명시적 끄기를 보존한다", function () {
+  const missingSetting = createDefaultState();
+  delete missingSetting.settings.soundEffects;
+  assert.equal(normalizeV2(missingSetting).settings.soundEffects, true);
+
+  const storage = memoryStorage();
+  const state = createDefaultState();
+  state.settings.soundEffects = false;
+  saveStateToStorage(storage, state);
+  assert.equal(loadStateFromStorage(storage).state.settings.soundEffects, false);
 });
 
 test("혼동 쌍과 최근 게임 기록은 v2 안에서 크기를 제한해 보존한다", function () {

@@ -40,8 +40,9 @@ import {
   advanceCoupletOrderAfterFeedback,
   createCoupletOrderSession,
   getCoupletOrderStats,
+  selectRandomCoupletIndexes,
   submitCoupletOrderAnswer,
-} from "./js/couplet-order-engine.js?v=1";
+} from "./js/couplet-order-engine.js?v=2";
 import {
   describeCharacterDifference,
   getRecognitionColumns,
@@ -52,7 +53,8 @@ import {
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=26";
+} from "./js/storage.js?v=27";
+import { SoundEffects } from "./js/sound-effects.js?v=1";
 import { createStore } from "./js/state.js";
 import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=26";
 import { formatDuration } from "./js/utils.js";
@@ -174,12 +176,13 @@ const elements = {
   gridSetup: document.querySelector("#grid-setup"),
   gridSession: document.querySelector("#grid-session"),
   sessionResult: document.querySelector("#session-result"),
-  matchingRangeCopy: document.querySelector("#matching-range-copy"),
   startAdaptiveMatch: document.querySelector("#start-adaptive-match"),
-  startCurrentMatch: document.querySelector("#start-current-match"),
+  startOrderMatch: document.querySelector("#start-order-match"),
   startRandomMatch: document.querySelector("#start-random-match"),
   gridModeLabel: document.querySelector("#grid-mode-label"),
+  gridProgressLabel: document.querySelector("#grid-progress-label"),
   gridSessionProgress: document.querySelector("#grid-session-progress"),
+  gridComboLabel: document.querySelector("#grid-combo-label"),
   gridCombo: document.querySelector("#grid-combo"),
   gridAccuracy: document.querySelector("#grid-accuracy"),
   gridScore: document.querySelector("#grid-score"),
@@ -204,6 +207,7 @@ const elements = {
   recallPrompt: document.querySelector("#recall-prompt"),
   recallChoices: document.querySelector("#recall-choices"),
   recognitionOrder: document.querySelector("#recognition-order"),
+  orderInstruction: document.querySelector("#order-instruction"),
   orderAnswer: document.querySelector("#order-answer"),
   orderBoard: document.querySelector("#order-board"),
   pauseSession: document.querySelector("#pause-session"),
@@ -212,8 +216,10 @@ const elements = {
   restartSession: document.querySelector("#restart-session"),
   endSession: document.querySelector("#end-session"),
   gridAnnouncement: document.querySelector("#grid-announcement"),
+  resultLearnedLabel: document.querySelector("#result-learned-label"),
   resultLearned: document.querySelector("#result-learned"),
   resultAccuracy: document.querySelector("#result-accuracy"),
+  resultComboLabel: document.querySelector("#result-combo-label"),
   resultCombo: document.querySelector("#result-combo"),
   resultScore: document.querySelector("#result-score"),
   resultTime: document.querySelector("#result-time"),
@@ -221,6 +227,9 @@ const elements = {
   resultCharacters: document.querySelector("#result-characters"),
   resultMode: document.querySelector("#result-mode"),
   resultTitle: document.querySelector("#result-title"),
+  resultConfidentLabel: document.querySelector("#result-confident-label"),
+  resultCharactersLabel: document.querySelector("#result-characters-label"),
+  resultConfusionsLabel: document.querySelector("#result-confusions-label"),
   resultConfusions: document.querySelector("#result-confusions"),
   retryWrong: document.querySelector("#retry-wrong"),
   shareResult: document.querySelector("#share-result"),
@@ -232,15 +241,21 @@ const elements = {
   voiceNote: document.querySelector("#voice-note"),
   settingTapToSpeak: document.querySelector("#setting-tap-to-speak"),
   settingVibrate: document.querySelector("#setting-vibrate"),
+  settingSoundEffects: document.querySelector("#setting-sound-effects"),
   toast: document.querySelector("#toast"),
 };
 
+const soundEffects = new SoundEffects({
+  enabled: appState.settings.soundEffects,
+  reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+});
 const tts = new TTSManager();
 tts.voiceURI = appState.settings.voiceURI;
 tts.rate = appState.settings.rate;
 tts.onVoicesChange = renderVoiceControls;
 tts.onStateChange = function (nextSpeechState) {
   speechState = nextSpeechState;
+  soundEffects.setSpeechActive(nextSpeechState.speaking);
   renderSpeechState();
 };
 tts.onVoiceFallback = function (voice) {
@@ -393,7 +408,7 @@ function bindEvents() {
     syncSettingsControls();
   });
   elements.startAdaptiveMatch.addEventListener("click", startAdaptiveMatchingGame);
-  elements.startCurrentMatch.addEventListener("click", startCurrentMatchingGame);
+  elements.startOrderMatch.addEventListener("click", startRandomOrderGame);
   elements.startRandomMatch.addEventListener("click", startRandomMatchingGame);
   elements.continuousBoard.addEventListener("click", handleMatchingChoiceClick);
   elements.continuousBoard.addEventListener("keydown", handleMatchingChoiceKeyboard);
@@ -405,7 +420,7 @@ function bindEvents() {
   elements.resumeSession.addEventListener("click", resumeGridSession);
   elements.openAnswerContext.addEventListener("click", openGridAnswerContext);
   elements.restartSession.addEventListener("click", restartGridSession);
-  elements.endSession.addEventListener("click", endGridSession);
+  elements.endSession.addEventListener("click", exitGridSession);
   elements.retryWrong.addEventListener("click", retryWrongCharacters);
   elements.shareResult.addEventListener("click", shareRecognitionResult);
   elements.closeResult.addEventListener("click", closeSessionResult);
@@ -440,13 +455,22 @@ function bindEvents() {
       state.settings.vibrate = elements.settingVibrate.checked;
     });
   });
+  elements.settingSoundEffects.addEventListener("change", function () {
+    commit(function (state) {
+      state.settings.soundEffects = elements.settingSoundEffects.checked;
+    });
+    soundEffects.setEnabled(appState.settings.soundEffects);
+    if (appState.settings.soundEffects) soundEffects.play("tap");
+  });
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) return;
     stopAllSpeech();
+    soundEffects.suspend();
     pauseGridSession({ render: false });
   });
   window.addEventListener("pagehide", function () {
     stopAllSpeech();
+    soundEffects.suspend();
     pauseGridSession({ render: false });
   });
 }
@@ -1367,7 +1391,6 @@ function keepPassageInView() {
 
 function renderGridScreen() {
   const session = appState.grid.session;
-  renderMatchingLaunch();
   if (isEndedGridSession(session)) {
     elements.gridSetup.hidden = true;
     elements.gridSession.hidden = true;
@@ -1389,29 +1412,22 @@ function renderGridScreen() {
   elements.sessionResult.hidden = true;
 }
 
-function renderMatchingLaunch() {
-  const selected = CHARACTERS[appState.ui.selectedIndex];
-  const couplet = getCouplet(selected.coupletIndex);
-  elements.matchingRangeCopy.textContent = couplet.data.hanja;
-}
-
 function startAdaptiveMatchingGame() {
   startRecognitionGame("adaptive");
 }
 
-function startCurrentMatchingGame() {
-  const selected = CHARACTERS[appState.ui.selectedIndex];
-  const couplet = getCouplet(selected.coupletIndex);
+function startRandomOrderGame() {
+  stopAllSpeech();
   clearGridTimers();
   recognitionFocusSlot = 0;
   const session = createCoupletOrderSession({
-    indexes: couplet.items.map(function (item) { return item.index; }),
-    coupletIndex: selected.coupletIndex,
+    coupletIndexes: selectRandomCoupletIndexes(COUPLETS.length, 10),
   });
   commit(function (state) {
     state.grid.session = session;
     state.grid.lastCursor = 0;
   });
+  soundEffects.play("tap");
   renderGridScreen();
   focusRecognitionInput();
 }
@@ -1438,6 +1454,7 @@ function startRecognitionGame(mode, weakIndexes = []) {
     state.grid.lastCursor = 0;
     state.settings.boardSize = boardSize;
   });
+  soundEffects.play("tap");
   renderGridScreen();
   focusRecognitionInput();
   scheduleWeakReviewEnd();
@@ -1476,7 +1493,9 @@ function renderRecognitionSession(session) {
   const paused = session.phase === "paused";
 
   elements.gridModeLabel.textContent = getRecognitionModeLabel(session.mode);
+  elements.gridProgressLabel.textContent = "문제";
   elements.gridSessionProgress.textContent = String(stats.answeredGridCount);
+  elements.gridComboLabel.textContent = "콤보";
   elements.gridCombo.textContent = `×${stats.combo}`;
   elements.gridAccuracy.textContent = stats.answeredGridCount > 0
     ? `${Math.round(stats.accuracy * 100)}%`
@@ -1580,6 +1599,7 @@ function answerMatchingChoice(selectedSlot) {
 
   matchingTransitioning = true;
   const item = CHARACTERS[result.attempt.targetIndex];
+  soundEffects.play(result.correct ? "correct" : "wrong");
   renderGridScreen();
   if (
     result.correct &&
@@ -1613,6 +1633,7 @@ function handleRecallChoiceClick(event) {
     state.grid.session = result.session;
   });
   matchingTransitioning = true;
+  soundEffects.play(result.correct ? "correct" : "wrong");
   renderGridScreen();
   const item = CHARACTERS[result.attempt.targetIndex];
   elements.gridAnnouncement.textContent = result.correct
@@ -1638,6 +1659,15 @@ function handleOrderChoiceClick(event) {
     state.grid.lastCursor = recognitionFocusSlot;
   });
   matchingTransitioning = true;
+  soundEffects.play(
+    !result.correct
+      ? "wrong"
+      : result.sessionCompleted
+        ? "game-complete"
+        : result.roundCompleted
+          ? "round-complete"
+          : "correct",
+  );
   renderGridScreen();
   const expected = CHARACTERS[result.attempt.expectedIndex];
   elements.gridAnnouncement.textContent = result.correct
@@ -1667,6 +1697,9 @@ function scheduleGridAdvance(delay) {
         state.grid.session = next;
         if (next.phase === "ended") appendRecentRun(state, next);
       });
+      if (next.roundIndex !== session.roundIndex) {
+        recognitionFocusSlot = 0;
+      }
     }
     matchingTransitioning = false;
     renderGridScreen();
@@ -1700,9 +1733,11 @@ function renderRecognitionFeedback(session) {
 function renderCoupletOrderSession(session) {
   const stats = getCoupletOrderStats(session);
   const couplet = getCouplet(session.coupletIndex);
-  elements.gridModeLabel.textContent = "현재 8자 복습";
-  elements.gridSessionProgress.textContent = `${stats.position} / ${stats.total}`;
-  elements.gridCombo.textContent = `×${session.placedIndexes.length}`;
+  elements.gridModeLabel.textContent = "랜덤 8자 순서";
+  elements.gridProgressLabel.textContent = "세트";
+  elements.gridSessionProgress.textContent = `${stats.round} / ${stats.roundCount}`;
+  elements.gridComboLabel.textContent = "현재 순서";
+  elements.gridCombo.textContent = `${stats.position} / ${stats.total}`;
   elements.gridAccuracy.textContent = session.correctCount + session.wrongCount > 0
     ? `${Math.round(stats.accuracy * 100)}%`
     : "—";
@@ -1715,6 +1750,7 @@ function renderCoupletOrderSession(session) {
   elements.continuousBoard.hidden = true;
   elements.recognitionRecall.hidden = true;
   elements.recognitionOrder.hidden = false;
+  elements.orderInstruction.textContent = `${stats.round}세트 / ${stats.roundCount} · 원문 순서대로 누르세요`;
   elements.orderAnswer.textContent = session.placedIndexes.map(function (index) {
     return CHARACTERS[index].character;
   }).join("");
@@ -1734,7 +1770,7 @@ function renderCoupletOrderSession(session) {
     elements.feedbackMark.textContent = session.feedback.correct ? "✓" : "×";
     elements.feedbackStatus.textContent = session.feedback.correct ? "순서 정답" : "다음 글자 확인";
     elements.feedbackAnswer.textContent = `${target.character} · ${target.contextHun}`;
-    elements.feedbackGloss.textContent = `${session.feedback.position + 1}번째 글자`;
+    elements.feedbackGloss.textContent = `${stats.round}세트 · ${session.feedback.position + 1}번째 글자`;
     elements.feedbackComparison.hidden = session.feedback.correct;
     if (!session.feedback.correct) {
       elements.feedbackSelected.textContent = `${selected.character} · ${selected.contextHun}`;
@@ -1789,20 +1825,9 @@ function resumeGridSession() {
 
 function endGridSession() {
   const session = appState.grid.session;
-  if (!isRecognitionSession(session) && !isCoupletOrderSession(session)) return;
+  if (!isRecognitionSession(session)) return;
   clearGridTimers();
-  let ended;
-  if (isRecognitionSession(session)) {
-    ended = endRecognitionSession(session, { characterData: CHARACTERS });
-  } else {
-    ended = {
-      ...session,
-      phase: "ended",
-      inputLocked: true,
-      feedback: null,
-      endedAt: new Date().toISOString(),
-    };
-  }
+  const ended = endRecognitionSession(session, { characterData: CHARACTERS });
   commit(function (state) {
     state.grid.session = ended;
     appendRecentRun(state, ended);
@@ -1811,24 +1836,51 @@ function endGridSession() {
   focusRecognitionInput();
 }
 
+function exitGridSession() {
+  const session = appState.grid.session;
+  if (!isRecognitionSession(session) && !isCoupletOrderSession(session)) return;
+  if (isRecognitionSession(session)) {
+    endGridSession();
+    return;
+  }
+  clearGridTimers();
+  commit(function (state) {
+    state.grid.session = null;
+  });
+  soundEffects.play("tap");
+  renderGridScreen();
+  elements.startOrderMatch.focus({ preventScroll: true });
+}
+
 function renderSessionResult(session) {
   const orderMode = session.kind === "couplet-order";
   const stats = orderMode ? getCoupletOrderStats(session) : getRecognitionStats(session);
-  const answered = orderMode
-    ? stats.correctCount + stats.wrongCount
-    : stats.answeredGridCount;
   const wrongIndexes = getSessionWrongIndexes(session);
   const confidentIndexes = orderMode ? [] : getSessionConfidentIndexes(session);
-  elements.resultMode.textContent = orderMode
-    ? "현재 8자 복습 완료"
-    : `${getRecognitionModeLabel(session.mode)} 기록`;
-  elements.resultLearned.textContent = String(answered);
+  elements.resultMode.textContent = orderMode ? "랜덤 8자 순서 완료" : `${getRecognitionModeLabel(session.mode)} 기록`;
+  elements.resultTitle.textContent = orderMode ? "10세트를 모두 완성했습니다" : "이번 연습에서 달라진 것";
+  elements.resultLearnedLabel.textContent = orderMode ? "완료 세트" : "푼 문제";
+  elements.resultLearned.textContent = orderMode
+    ? `${stats.completedRounds} / ${stats.roundCount}`
+    : String(stats.answeredGridCount);
   elements.resultAccuracy.textContent = `${Math.round(stats.accuracy * 100)}%`;
-  elements.resultCombo.textContent = `×${orderMode ? session.placedIndexes.length : stats.bestCombo}`;
+  elements.resultComboLabel.textContent = orderMode ? "맞춘 글자" : "최고 콤보";
+  elements.resultCombo.textContent = orderMode ? String(stats.correctCount) : `×${stats.bestCombo}`;
   elements.resultScore.textContent = (orderMode ? session.correctCount * 100 : stats.score).toLocaleString("ko-KR");
   elements.resultTime.textContent = formatDuration(stats.elapsedMs);
-  renderResultCharacters(elements.resultConfident, confidentIndexes, "아직 조건을 모두 채운 글자는 없습니다.");
-  renderResultCharacters(elements.resultCharacters, wrongIndexes, "다시 나올 글자가 없습니다.");
+  elements.resultConfidentLabel.textContent = orderMode ? "완성한 순서" : "확실해진 글자";
+  elements.resultCharactersLabel.textContent = orderMode ? "헷갈린 글자" : "다시 나올 글자";
+  elements.resultConfusionsLabel.textContent = orderMode ? "다시 볼 비교" : "새로 발견한 혼동";
+  if (orderMode) {
+    renderOrderCompletion(elements.resultConfident, stats);
+  } else {
+    renderResultCharacters(elements.resultConfident, confidentIndexes, "아직 조건을 모두 채운 글자는 없습니다.");
+  }
+  renderResultCharacters(
+    elements.resultCharacters,
+    wrongIndexes,
+    orderMode ? "틀린 순서 없이 완주했습니다." : "다시 나올 글자가 없습니다.",
+  );
   renderResultConfusions(session);
   elements.retryWrong.disabled = wrongIndexes.length === 0;
   elements.resultTitle.tabIndex = -1;
@@ -1846,15 +1898,7 @@ function restartGridSession() {
   const session = appState.grid.session;
   if (!isEndedGridSession(session)) return;
   if (session.kind === "couplet-order") {
-    const couplet = getCouplet(session.coupletIndex);
-    clearGridTimers();
-    const next = createCoupletOrderSession({
-      indexes: couplet.items.map(function (item) { return item.index; }),
-      coupletIndex: session.coupletIndex,
-    });
-    commit(function (state) { state.grid.session = next; });
-    renderGridScreen();
-    focusRecognitionInput();
+    startRandomOrderGame();
     return;
   }
   startRecognitionGame(session.mode, session.weakIndexes);
@@ -2026,15 +2070,30 @@ function renderResultCharacters(container, indexes, emptyText) {
   container.replaceChildren(fragment);
 }
 
+function renderOrderCompletion(container, stats) {
+  const summary = document.createElement("p");
+  summary.className = "recognition-order-summary";
+  summary.textContent = `${stats.completedRounds}개 8자 세트 · ${stats.totalCharacters}글자 완성`;
+  container.replaceChildren(summary);
+}
+
 function renderResultConfusions(session) {
   const pairs = [];
   const seen = new Set();
   (Array.isArray(session.history) ? session.history : []).forEach(function (attempt) {
-    if (attempt.kind !== "grid" || attempt.correct || !Number.isInteger(attempt.selectedIndex)) return;
-    const key = `${attempt.targetIndex}:${attempt.selectedIndex}`;
+    const correctIndex = attempt.kind === "couplet-order"
+      ? attempt.expectedIndex
+      : attempt.targetIndex;
+    if (
+      !["grid", "couplet-order"].includes(attempt.kind) ||
+      attempt.correct ||
+      !Number.isInteger(correctIndex) ||
+      !Number.isInteger(attempt.selectedIndex)
+    ) return;
+    const key = `${correctIndex}:${attempt.selectedIndex}`;
     if (seen.has(key)) return;
     seen.add(key);
-    pairs.push([attempt.targetIndex, attempt.selectedIndex]);
+    pairs.push([correctIndex, attempt.selectedIndex]);
   });
   const fragment = document.createDocumentFragment();
   pairs.slice(-4).forEach(function ([correctIndex, selectedIndex]) {
@@ -2065,11 +2124,11 @@ function appendRecentRun(state, session) {
   state.grid.recentRuns = [
     ...(state.grid.recentRuns || []),
     {
-      mode: orderMode ? "couplet" : session.mode,
-      answeredCount: orderMode ? stats.correctCount + stats.wrongCount : stats.answeredGridCount,
+      mode: orderMode ? "order10" : session.mode,
+      answeredCount: orderMode ? stats.completedCharacters : stats.answeredGridCount,
       correctCount: stats.correctCount,
       wrongCount: stats.wrongCount,
-      bestCombo: orderMode ? session.placedIndexes.length : stats.bestCombo,
+      bestCombo: orderMode ? stats.completedRounds : stats.bestCombo,
       score: orderMode ? session.correctCount * 100 : stats.score,
       duration: stats.elapsedMs,
       completedAt: session.endedAt,
@@ -2104,7 +2163,9 @@ async function shareRecognitionResult() {
   const orderMode = session.kind === "couplet-order";
   const stats = orderMode ? getCoupletOrderStats(session) : getRecognitionStats(session);
   const answered = orderMode ? stats.correctCount + stats.wrongCount : stats.answeredGridCount;
-  const text = `1000cc ${orderMode ? "현재 8자 복습" : getRecognitionModeLabel(session.mode)} · ${answered}문제 · 정답률 ${Math.round(stats.accuracy * 100)}%`;
+  const text = orderMode
+    ? `1000cc 랜덤 8자 순서 · ${stats.completedRounds}/${stats.roundCount}세트 · ${answered}회 선택 · 정답률 ${Math.round(stats.accuracy * 100)}%`
+    : `1000cc ${getRecognitionModeLabel(session.mode)} · ${answered}문제 · 정답률 ${Math.round(stats.accuracy * 100)}%`;
   try {
     if (navigator.share) {
       await navigator.share({ title: "1000cc 한자 맞추기", text, url: window.location.href });
@@ -2172,6 +2233,7 @@ function renderVoiceNote() {
 function syncSettingsControls() {
   elements.settingTapToSpeak.checked = appState.settings.tapToSpeak;
   elements.settingVibrate.checked = appState.settings.vibrate;
+  elements.settingSoundEffects.checked = appState.settings.soundEffects;
   elements.rateSelect.value = String(appState.settings.rate);
   elements.voiceSelect.value = appState.settings.voiceURI;
 }
