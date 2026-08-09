@@ -54,7 +54,7 @@ import {
   loadStateFromStorage,
   saveStateToStorage,
 } from "./js/storage.js?v=27";
-import { SoundEffects } from "./js/sound-effects.js?v=1";
+import { SoundEffects } from "./js/sound-effects.js?v=2";
 import { createStore } from "./js/state.js";
 import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=26";
 import { formatDuration } from "./js/utils.js";
@@ -410,6 +410,10 @@ function bindEvents() {
   elements.startAdaptiveMatch.addEventListener("click", startAdaptiveMatchingGame);
   elements.startOrderMatch.addEventListener("click", startRandomOrderGame);
   elements.startRandomMatch.addEventListener("click", startRandomMatchingGame);
+  [elements.gridSetup, elements.gridSession].forEach(function (surface) {
+    surface.addEventListener("pointerdown", unlockRecognitionSound, { passive: true });
+    surface.addEventListener("keydown", unlockRecognitionSound);
+  });
   elements.continuousBoard.addEventListener("click", handleMatchingChoiceClick);
   elements.continuousBoard.addEventListener("keydown", handleMatchingChoiceKeyboard);
   elements.recallChoices.addEventListener("click", handleRecallChoiceClick);
@@ -465,14 +469,17 @@ function bindEvents() {
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) return;
     stopAllSpeech();
-    soundEffects.suspend();
     pauseGridSession({ render: false });
   });
   window.addEventListener("pagehide", function () {
     stopAllSpeech();
-    soundEffects.suspend();
     pauseGridSession({ render: false });
   });
+}
+
+function unlockRecognitionSound(event) {
+  if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
+  soundEffects.unlock();
 }
 
 function renderApp() {

@@ -12,11 +12,11 @@ const recognitionModuleVersions = {
   "js/recognition-renderer.js": 1,
   "js/recognition-score.js": 1,
   "js/couplet-order-engine.js": 2,
-  "js/sound-effects.js": 1,
+  "js/sound-effects.js": 2,
 };
 const recognitionModulePaths = Object.keys(recognitionModuleVersions);
 
-test("순지 필사판·반응형 조선 서첩·무한 한자 찾기 v37이 오프라인 셸에 함께 연결된다", async function () {
+test("순지 필사판·반응형 조선 서첩·무한 한자 찾기 v38이 오프라인 셸에 함께 연결된다", async function () {
   const atlasAssetPaths = [
     "assets/joseon-folio-spread.webp",
     "assets/joseon-folio-single.webp",
@@ -68,9 +68,9 @@ test("순지 필사판·반응형 조선 서첩·무한 한자 찾기 v37이 오
   assert.match(html, /theme-folio\.css\?v=27/);
   assert.match(html, /passage-folio-v25\.css\?v=26/);
   assert.match(html, /compact-sunji-v26\.css\?v=31/);
-  assert.match(html, /styles\/recognition-game\.css\?v=2/);
+  assert.match(html, /styles\/recognition-game\.css\?v=3/);
   assert.match(html, /manifest\.webmanifest\?v=25/);
-  assert.match(html, /app\.js\?v=37/);
+  assert.match(html, /app\.js\?v=38/);
   assert.match(html, /styles\.css\?v=25/);
   assert.match(styles, /html\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/);
   assert.match(styles, /body\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/);
@@ -166,7 +166,7 @@ test("순지 필사판·반응형 조선 서첩·무한 한자 찾기 v37이 오
   assert.match(app, /이 말에서는 ‘\$\{characterReading\}’로 읽음/);
   assert.match(app, /matching-engine\.js\?v=24/);
   assert.match(app, /storage\.js\?v=27/);
-  assert.match(app, /sound-effects\.js\?v=1/);
+  assert.match(app, /sound-effects\.js\?v=2/);
   assert.match(app, /tts-manager\.js\?v=26/);
   assert.match(app, /startAdaptiveMatch\.addEventListener\("click", startAdaptiveMatchingGame\)/);
   assert.match(app, /startOrderMatch\.addEventListener\("click", startRandomOrderGame\)/);
@@ -263,6 +263,9 @@ test("순지 필사판·반응형 조선 서첩·무한 한자 찾기 v37이 오
   assert.match(recognitionTheme, /grid-template-columns:\s*repeat\(var\(--board-columns\)/);
   assert.match(recognitionTheme, /@media \(max-width: 360px\)/);
   assert.match(recognitionTheme, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(recognitionTheme, /\.recognition-feedback\s*\{[^}]*position:\s*fixed;/s);
+  assert.match(recognitionTheme, /bottom:\s*calc\(var\(--mobile-nav-height, 66px\)/);
+  assert.match(recognitionTheme, /max-height:\s*calc\(\s*100dvh/s);
   assert.match(recognitionTheme, /sunji-fiber-tile\.webp/);
   assert.doesNotMatch(recognitionTheme, /hanji-charcoal-tile\.webp/);
   assert.match(recognitionTheme, /--recognition-canvas:\s*#eee7d7/);
@@ -334,11 +337,11 @@ test("순지 필사판·반응형 조선 서첩·무한 한자 찾기 v37이 오
   assert.match(serviceWorker, /theme-folio\.css/);
   assert.match(serviceWorker, /theme-folio\.css\?v=27/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v39-20260809/);
+  assert.match(serviceWorker, /1000cc-static-v40-20260809/);
   assert.match(serviceWorker, /styles\.css\?v=25/);
   assert.match(serviceWorker, /compact-sunji-v26\.css\?v=31/);
-  assert.match(serviceWorker, /styles\/recognition-game\.css\?v=2/);
-  assert.match(serviceWorker, /app\.js\?v=37/);
+  assert.match(serviceWorker, /styles\/recognition-game\.css\?v=3/);
+  assert.match(serviceWorker, /app\.js\?v=38/);
   assert.match(serviceWorker, /manifest\.webmanifest\?v=25/);
   assert.match(serviceWorker, /data-model\.js\?v=35/);
   assert.match(serviceWorker, /course-engine\.js\?v=25/);
@@ -359,7 +362,7 @@ test("순지 필사판·반응형 조선 서첩·무한 한자 찾기 v37이 오
   assert.match(serviceWorker, /assets\/learning-seasons-atlas\.webp/);
   assert.match(serviceWorker, /passage-folio-v25\.css\?v=26/);
   assert.match(serviceWorker, /compact-sunji-v26\.css\?v=31/);
-  assert.match(serviceWorker, /app\.js\?v=37/);
+  assert.match(serviceWorker, /app\.js\?v=38/);
   assert.match(serviceWorker, /data-model\.js\?v=35/);
   assert.match(serviceWorker, /character-word-supplements\.js\?v=34/);
   assert.match(serviceWorker, /storage\.js\?v=27/);

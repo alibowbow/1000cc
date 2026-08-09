@@ -465,15 +465,24 @@ body[data-screen="grid"] .app-shell {
 .recognition-play.is-locked .recognition-cell { pointer-events: none; }
 
 .recognition-feedback {
-  width: min(100%, 760px);
+  position: fixed;
+  z-index: 70;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(14px, env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
+  width: auto;
+  max-width: 760px;
+  max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   min-height: 86px;
-  margin: 14px auto 0;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--recognition-rule-strong);
   background: rgba(255, 253, 247, 0.94);
-  box-shadow: 0 10px 28px rgba(73, 55, 34, 0.09);
+  box-shadow: 0 14px 38px rgba(73, 55, 34, 0.18);
 }
 
 .recognition-feedback__answer {
@@ -819,7 +828,18 @@ body[data-screen="grid"] .app-shell {
   .recognition-board[data-size="25"] .recognition-cell__hanja { font-size: clamp(2rem, 10.5vw, 3.4rem); }
 
   .recognition-feedback {
-    margin-top: 8px;
+    right: max(8px, env(safe-area-inset-right));
+    bottom: calc(var(--mobile-nav-height, 66px) + env(safe-area-inset-bottom) + 8px);
+    left: max(8px, env(safe-area-inset-left));
+    width: auto;
+    max-height: calc(
+      100dvh
+      - var(--mobile-header-height, 56px)
+      - var(--mobile-nav-height, 66px)
+      - env(safe-area-inset-top)
+      - env(safe-area-inset-bottom)
+      - 24px
+    );
     grid-template-columns: minmax(0, 1fr);
   }
 
