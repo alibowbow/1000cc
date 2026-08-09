@@ -8,7 +8,6 @@ import {
 } from "./js/data-model.js?v=35";
 import {
   createMatchingSession,
-  getMatchingProgress,
   selectMatchingChoice,
 } from "./js/matching-engine.js?v=24";
 import {
@@ -25,18 +24,43 @@ import {
   normalizeOverviewRangeStart,
   shuffleOverviewIndexes,
 } from "./js/overview-layout.js?v=28";
-import { recordSkillAttempt } from "./js/progress-engine.js";
+import { isIndependentRecognitionConfident } from "./js/progress-engine.js?v=1";
 import { createOverviewCell, createPassageCharacter } from "./js/render.js?v=29";
+import {
+  advanceAfterFeedback,
+  createRecognitionSession,
+  endRecognitionSession,
+  getRecognitionStats,
+  pauseRecognitionSession,
+  resumeRecognitionSession,
+  submitGridAnswer,
+  submitRecallAnswer,
+} from "./js/recognition-engine.js?v=1";
+import {
+  advanceCoupletOrderAfterFeedback,
+  createCoupletOrderSession,
+  getCoupletOrderStats,
+  submitCoupletOrderAnswer,
+} from "./js/couplet-order-engine.js?v=1";
+import {
+  describeCharacterDifference,
+  getRecognitionColumns,
+  renderCoupletOrderBoard,
+  renderRecallChoices,
+  renderRecognitionBoard,
+} from "./js/recognition-renderer.js?v=1";
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=25";
+} from "./js/storage.js?v=26";
 import { createStore } from "./js/state.js";
 import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=26";
 import { formatDuration } from "./js/utils.js";
 
 const OVERVIEW_COMPACT_QUERY =
   "(max-width: 660px), (max-width: 920px) and (max-height: 520px)";
+const RECOGNITION_WIDE_QUERY = "(min-width: 760px) and (min-height: 660px)";
+const WEAK_REVIEW_DURATION_MS = 60 * 1000;
 
 const loaded = loadStateFromStorage(window.localStorage);
 const store = createStore(loaded.state, function (value) {
@@ -57,6 +81,8 @@ let overviewShuffledIndexes = [];
 let toastTimer = 0;
 let matchingAdvanceTimer = 0;
 let matchingTransitioning = false;
+let weakReviewTimer = 0;
+let recognitionFocusSlot = 0;
 let memoryClueRevealed = new Set();
 let renderedMemoryDay = -1;
 let sharedChallengeDay = parseChallengeDay(window.location.search);
@@ -149,26 +175,55 @@ const elements = {
   gridSession: document.querySelector("#grid-session"),
   sessionResult: document.querySelector("#session-result"),
   matchingRangeCopy: document.querySelector("#matching-range-copy"),
+  startAdaptiveMatch: document.querySelector("#start-adaptive-match"),
   startCurrentMatch: document.querySelector("#start-current-match"),
   startRandomMatch: document.querySelector("#start-random-match"),
+  gridModeLabel: document.querySelector("#grid-mode-label"),
   gridSessionProgress: document.querySelector("#grid-session-progress"),
+  gridCombo: document.querySelector("#grid-combo"),
   gridAccuracy: document.querySelector("#grid-accuracy"),
-  gridWrongCount: document.querySelector("#grid-wrong-count"),
+  gridScore: document.querySelector("#grid-score"),
   targetPanel: document.querySelector("#target-panel"),
+  targetType: document.querySelector("#target-type"),
   targetPrompt: document.querySelector("#target-prompt"),
   targetPosition: document.querySelector("#target-position"),
   continuousBoard: document.querySelector("#continuous-board"),
   matchingFeedback: document.querySelector("#matching-feedback"),
-  replayTarget: document.querySelector("#replay-target"),
+  feedbackMark: document.querySelector("#feedback-mark"),
+  feedbackStatus: document.querySelector("#feedback-status"),
+  feedbackAnswer: document.querySelector("#feedback-answer"),
+  feedbackGloss: document.querySelector("#feedback-gloss"),
+  feedbackComparison: document.querySelector("#feedback-comparison"),
+  feedbackSelected: document.querySelector("#feedback-selected"),
+  feedbackCorrect: document.querySelector("#feedback-correct"),
+  feedbackDifference: document.querySelector("#feedback-difference"),
+  feedbackContext: document.querySelector("#feedback-context"),
+  openAnswerContext: document.querySelector("#open-answer-context"),
+  recognitionRecall: document.querySelector("#recognition-recall"),
+  recallCharacter: document.querySelector("#recall-character"),
+  recallPrompt: document.querySelector("#recall-prompt"),
+  recallChoices: document.querySelector("#recall-choices"),
+  recognitionOrder: document.querySelector("#recognition-order"),
+  orderAnswer: document.querySelector("#order-answer"),
+  orderBoard: document.querySelector("#order-board"),
+  pauseSession: document.querySelector("#pause-session"),
+  recognitionPause: document.querySelector("#recognition-pause"),
+  resumeSession: document.querySelector("#resume-session"),
   restartSession: document.querySelector("#restart-session"),
   endSession: document.querySelector("#end-session"),
   gridAnnouncement: document.querySelector("#grid-announcement"),
   resultLearned: document.querySelector("#result-learned"),
   resultAccuracy: document.querySelector("#result-accuracy"),
-  resultWrong: document.querySelector("#result-wrong"),
+  resultCombo: document.querySelector("#result-combo"),
+  resultScore: document.querySelector("#result-score"),
   resultTime: document.querySelector("#result-time"),
+  resultConfident: document.querySelector("#result-confident"),
   resultCharacters: document.querySelector("#result-characters"),
+  resultMode: document.querySelector("#result-mode"),
+  resultTitle: document.querySelector("#result-title"),
+  resultConfusions: document.querySelector("#result-confusions"),
   retryWrong: document.querySelector("#retry-wrong"),
+  shareResult: document.querySelector("#share-result"),
   closeResult: document.querySelector("#close-result"),
   settingsButton: document.querySelector("#settings-button"),
   settingsDialog: document.querySelector("#settings-dialog"),
@@ -337,14 +392,22 @@ function bindEvents() {
     renderPassage();
     syncSettingsControls();
   });
+  elements.startAdaptiveMatch.addEventListener("click", startAdaptiveMatchingGame);
   elements.startCurrentMatch.addEventListener("click", startCurrentMatchingGame);
   elements.startRandomMatch.addEventListener("click", startRandomMatchingGame);
   elements.continuousBoard.addEventListener("click", handleMatchingChoiceClick);
   elements.continuousBoard.addEventListener("keydown", handleMatchingChoiceKeyboard);
-  elements.replayTarget.addEventListener("click", speakGridTarget);
+  elements.recallChoices.addEventListener("click", handleRecallChoiceClick);
+  elements.recallChoices.addEventListener("keydown", handleRecallChoiceKeyboard);
+  elements.orderBoard.addEventListener("click", handleOrderChoiceClick);
+  elements.orderBoard.addEventListener("keydown", handleOrderChoiceKeyboard);
+  elements.pauseSession.addEventListener("click", pauseGridSession);
+  elements.resumeSession.addEventListener("click", resumeGridSession);
+  elements.openAnswerContext.addEventListener("click", openGridAnswerContext);
   elements.restartSession.addEventListener("click", restartGridSession);
   elements.endSession.addEventListener("click", endGridSession);
   elements.retryWrong.addEventListener("click", retryWrongCharacters);
+  elements.shareResult.addEventListener("click", shareRecognitionResult);
   elements.closeResult.addEventListener("click", closeSessionResult);
 
   elements.settingsButton.addEventListener("click", function () {
@@ -378,9 +441,14 @@ function bindEvents() {
     });
   });
   document.addEventListener("visibilitychange", function () {
-    if (document.hidden) stopAllSpeech();
+    if (!document.hidden) return;
+    stopAllSpeech();
+    pauseGridSession({ render: false });
   });
-  window.addEventListener("pagehide", stopAllSpeech);
+  window.addEventListener("pagehide", function () {
+    stopAllSpeech();
+    pauseGridSession({ render: false });
+  });
 }
 
 function renderApp() {
@@ -417,6 +485,7 @@ function setSceneQuarter(dayIndex) {
 function goHome(event) {
   event.preventDefault();
   stopAllSpeech();
+  pauseGridForNavigation();
   leaveChallengeView();
   overviewRevealedIndexes = new Set();
   commit(function (state) {
@@ -432,11 +501,13 @@ function setMode(mode) {
   if (!["today", "overview", "passage", "memory", "grid"].includes(mode)) return;
   if (sharedChallengeDay !== null) leaveChallengeView();
   if (mode !== appState.ui.mode) stopAllSpeech();
+  if (appState.ui.mode === "grid" && mode !== "grid") pauseGridForNavigation();
   commit(function (state) {
     state.ui.mode = mode;
     state.ui.revealAnswer = false;
   });
   renderApp();
+  if (mode === "grid") focusRecognitionInput();
 }
 
 function renderTodayScreen() {
@@ -1296,304 +1367,756 @@ function keepPassageInView() {
 
 function renderGridScreen() {
   const session = appState.grid.session;
-  if (session && session.active) {
-    elements.gridSetup.hidden = true;
-    elements.sessionResult.hidden = true;
-    elements.gridSession.hidden = false;
-    renderGridSessionStatus();
-    return;
-  }
-  if (session && session.endedAt) {
+  renderMatchingLaunch();
+  if (isEndedGridSession(session)) {
     elements.gridSetup.hidden = true;
     elements.gridSession.hidden = true;
     elements.sessionResult.hidden = false;
     renderSessionResult(session);
     return;
   }
+  if (isRecognitionSession(session) || isCoupletOrderSession(session)) {
+    elements.gridSetup.hidden = true;
+    elements.sessionResult.hidden = true;
+    elements.gridSession.hidden = false;
+    if (isRecognitionSession(session)) renderRecognitionSession(session);
+    else renderCoupletOrderSession(session);
+    scheduleWeakReviewEnd();
+    return;
+  }
   elements.gridSetup.hidden = false;
   elements.gridSession.hidden = true;
   elements.sessionResult.hidden = true;
-  renderMatchingLaunch();
 }
 
 function renderMatchingLaunch() {
   const selected = CHARACTERS[appState.ui.selectedIndex];
   const couplet = getCouplet(selected.coupletIndex);
-  elements.matchingRangeCopy.textContent = `현재 8자 · ${couplet.data.hanja}`;
+  elements.matchingRangeCopy.textContent = couplet.data.hanja;
+}
+
+function startAdaptiveMatchingGame() {
+  startRecognitionGame("adaptive");
 }
 
 function startCurrentMatchingGame() {
   const selected = CHARACTERS[appState.ui.selectedIndex];
-  const indexes = getCouplet(selected.coupletIndex).items.map(function (item) { return item.index; });
-  startMatchingSession(indexes, "current");
+  const couplet = getCouplet(selected.coupletIndex);
+  clearGridTimers();
+  recognitionFocusSlot = 0;
+  const session = createCoupletOrderSession({
+    indexes: couplet.items.map(function (item) { return item.index; }),
+    coupletIndex: selected.coupletIndex,
+  });
+  commit(function (state) {
+    state.grid.session = session;
+    state.grid.lastCursor = 0;
+  });
+  renderGridScreen();
+  focusRecognitionInput();
 }
 
 function startRandomMatchingGame() {
-  const couplet = getCouplet(Math.floor(Math.random() * COUPLETS.length));
-  startMatchingSession(couplet.items.map(function (item) { return item.index; }), "random");
+  startRecognitionGame("random1000");
 }
 
-function startMatchingSession(indexes, scope) {
+function startRecognitionGame(mode, weakIndexes = []) {
   stopAllSpeech();
-  window.clearTimeout(matchingAdvanceTimer);
-  matchingTransitioning = false;
-  const session = createMatchingSessionMetadata(
-    createMatchingSession({ indexes, choiceCount: 4 }),
-    scope,
-  );
+  clearGridTimers();
+  recognitionFocusSlot = 0;
+  const boardSize = window.matchMedia(RECOGNITION_WIDE_QUERY).matches ? 25 : 16;
+  const session = createRecognitionSession({
+    mode,
+    boardSize,
+    characterData: CHARACTERS,
+    progress: appState.progress,
+    confusionPairs: appState.grid.confusionPairs,
+    weakIndexes,
+  });
   commit(function (state) {
     state.grid.session = session;
-    state.grid.lastCursor = indexes[0];
+    state.grid.lastCursor = 0;
+    state.settings.boardSize = boardSize;
   });
   renderGridScreen();
-  focusFirstMatchingChoice();
+  focusRecognitionInput();
+  scheduleWeakReviewEnd();
 }
 
-function createMatchingSessionMetadata(engine, scope) {
+function isRecognitionSession(session) {
+  return Boolean(session && session.kind === "recognition-grid" && session.phase !== "ended");
+}
+
+function isCoupletOrderSession(session) {
+  return Boolean(session && session.kind === "couplet-order" && session.phase !== "ended");
+}
+
+function isEndedGridSession(session) {
+  return Boolean(
+    session &&
+    ["recognition-grid", "couplet-order"].includes(session.kind) &&
+    session.phase === "ended",
+  );
+}
+
+function getRecognitionModeLabel(mode) {
   return {
-    ...engine,
-    active: true,
-    scope,
-    correctCount: 0,
-    wrongCount: 0,
-    wrongIndexes: [],
-    errorsByTarget: {},
-    startedAt: new Date().toISOString(),
-    endedAt: null,
-  };
+    adaptive: "맞춤 연습",
+    random1000: "완전 랜덤",
+    weak: "취약 글자 1분 복습",
+  }[mode] || "맞춤 연습";
 }
 
-function renderMatchingChoices(session) {
-  const fragment = document.createDocumentFragment();
-  session.choiceIndexes.forEach(function (index) {
-    const item = CHARACTERS[index];
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "match-choice";
-    button.dataset.index = String(index);
-    button.setAttribute("aria-label", `후보 한자 ${item.character}`);
-    button.innerHTML = `<span lang="zh-Hant">${item.character}</span>`;
-    fragment.append(button);
-  });
-  elements.continuousBoard.replaceChildren(fragment);
+function renderRecognitionSession(session) {
+  const stats = getRecognitionStats(session);
+  const viewPhase = session.phase === "paused" ? session.pausedFromPhase : session.phase;
+  const feedbackSource = session.feedback && session.feedback.source;
+  const showsGrid = viewPhase === "question" || (viewPhase === "feedback" && feedbackSource === "grid");
+  const showsRecall = viewPhase === "recall" || (viewPhase === "feedback" && feedbackSource === "recall");
+  const paused = session.phase === "paused";
+
+  elements.gridModeLabel.textContent = getRecognitionModeLabel(session.mode);
+  elements.gridSessionProgress.textContent = String(stats.answeredGridCount);
+  elements.gridCombo.textContent = `×${stats.combo}`;
+  elements.gridAccuracy.textContent = stats.answeredGridCount > 0
+    ? `${Math.round(stats.accuracy * 100)}%`
+    : "—";
+  elements.gridScore.textContent = stats.score.toLocaleString("ko-KR");
+  elements.pauseSession.hidden = false;
+  elements.pauseSession.disabled = paused;
+  elements.pauseSession.setAttribute("aria-pressed", String(paused));
+  elements.gridSession.classList.toggle("is-paused", paused);
+  elements.gridSession.classList.toggle("is-locked", session.inputLocked);
+  elements.recognitionPause.hidden = !paused;
+  elements.targetPanel.hidden = !showsGrid;
+  elements.continuousBoard.hidden = !showsGrid;
+  elements.recognitionRecall.hidden = !showsRecall;
+  elements.recognitionOrder.hidden = true;
+  elements.matchingFeedback.hidden = viewPhase !== "feedback";
+
+  if (showsGrid) {
+    elements.targetType.textContent = session.prompt.type === "gloss-to-character"
+      ? "뜻에서 찾기"
+      : "훈음에서 찾기";
+    elements.targetPrompt.textContent = session.prompt.text;
+    elements.targetPosition.textContent = session.currentReview
+      ? "1,000자 전범위 · 지연 복습"
+      : "1,000자 전범위";
+    const gridFeedback = viewPhase === "feedback" && feedbackSource === "grid"
+      ? session.feedback
+      : null;
+    const focusIndex = session.boardIndexes[
+      Math.min(session.boardSize - 1, Math.max(0, recognitionFocusSlot))
+    ];
+    renderRecognitionBoard(elements.continuousBoard, {
+      boardIndexes: session.boardIndexes,
+      characters: CHARACTERS,
+      selectedIndex: gridFeedback ? gridFeedback.selectedIndex : null,
+      correctIndex: gridFeedback ? gridFeedback.targetIndex : null,
+      changedSlot: viewPhase === "question" ? session.lastBoardChange.replacedSlots[0] : -1,
+      disabled: session.inputLocked,
+      focusIndex,
+    });
+    elements.continuousBoard.classList.toggle(
+      "is-shuffling",
+      viewPhase === "question" && session.lastBoardChange.shuffled,
+    );
+  }
+
+  if (showsRecall && session.recall) {
+    const recallFeedback = viewPhase === "feedback" && feedbackSource === "recall"
+      ? session.feedback
+      : null;
+    const selectedChoice = recallFeedback
+      ? session.recall.choices.findIndex(function (choice) {
+          return choice.index === recallFeedback.selectedIndex;
+        })
+      : -1;
+    const correctChoice = recallFeedback
+      ? session.recall.choices.findIndex(function (choice) {
+          return choice.index === session.recall.correctIndex;
+        })
+      : -1;
+    elements.recallCharacter.textContent = CHARACTERS[session.recall.targetIndex].character;
+    elements.recallPrompt.textContent = session.recall.type === "character-to-meaning"
+      ? "이 글자의 뜻은?"
+      : "이 글자의 훈음은?";
+    renderRecallChoices(elements.recallChoices, session.recall, {
+      selectedChoice,
+      correctChoice,
+      disabled: session.inputLocked,
+    });
+  }
+
+  if (viewPhase === "feedback") renderRecognitionFeedback(session);
+  setRecognitionPlayInert(paused);
 }
 
 function handleMatchingChoiceClick(event) {
-  const button = event.target.closest(".match-choice");
+  const button = event.target.closest(".recognition-cell");
   if (!button || button.disabled || matchingTransitioning) return;
-  const index = Number(button.dataset.index);
-  if (!Number.isInteger(index)) return;
-  answerMatchingChoice(index, button);
+  const slot = Number(button.dataset.slot);
+  if (!Number.isInteger(slot)) return;
+  answerMatchingChoice(slot);
 }
 
-function answerMatchingChoice(selectedIndex, button) {
+function answerMatchingChoice(selectedSlot) {
   const session = appState.grid.session;
-  if (!session || !session.active || session.complete) return;
-  const targetIndex = session.targetIndex;
-  const result = selectMatchingChoice(session, selectedIndex);
-
-  if (!result.correct) {
-    handleWrongMatchingAnswer(targetIndex, button);
-    return;
-  }
-
-  const item = CHARACTERS[targetIndex];
-  const nextSession = {
-    ...session,
-    ...result.session,
-    correctCount: session.correctCount + 1,
-  };
-  const endedAt = result.completed ? new Date().toISOString() : null;
+  if (!isRecognitionSession(session) || session.phase !== "question") return;
+  const result = submitGridAnswer(session, selectedSlot, {
+    characterData: CHARACTERS,
+    progress: appState.progress,
+    confusionPairs: appState.grid.confusionPairs,
+  });
+  if (!result.accepted) return;
+  recognitionFocusSlot = selectedSlot;
 
   commit(function (state) {
-    state.progress = recordSkillAttempt(state.progress, targetIndex, "reverse", { correct: true });
-    state.grid.session = {
-      ...nextSession,
-      active: !result.completed,
-      endedAt,
-    };
-    state.grid.lastCursor = result.session.targetIndex ?? targetIndex;
+    state.progress = result.progress;
+    state.grid.confusionPairs = result.confusionPairs;
+    state.grid.session = result.session;
+    state.grid.lastCursor = selectedSlot;
   });
 
   matchingTransitioning = true;
-  button.classList.add("is-correct");
-  button.setAttribute("aria-label", `정답, ${item.contextHun}`);
-  elements.continuousBoard.querySelectorAll(".match-choice").forEach(function (choice) {
-    choice.disabled = true;
-  });
-  elements.matchingFeedback.textContent = `정답 · ${item.contextHun}`;
-
+  const item = CHARACTERS[result.attempt.targetIndex];
+  renderGridScreen();
   if (
+    result.correct &&
     appState.settings.vibrate &&
     navigator.vibrate &&
     !window.matchMedia("(prefers-reduced-motion: reduce)").matches
   ) {
     navigator.vibrate(10);
   }
+  elements.gridAnnouncement.textContent = result.correct
+    ? `정답, ${item.contextHun}. 잠시 뒤 다음 문제로 이어집니다.`
+    : `오답입니다. 정답은 ${item.contextHun}입니다. 몇 문제 뒤 다시 나옵니다.`;
+  scheduleGridAdvance(result.correct ? 950 : 1300);
+}
 
-  tts.speak(item.contextHun, { kind: "matching-feedback", onError: handleTtsError });
-  elements.gridAnnouncement.textContent = result.completed
-    ? `정답, ${item.contextHun}. 8문제를 모두 마쳤습니다.`
-    : `정답, ${item.contextHun}. 다음 문제를 보여 줍니다.`;
+function handleRecallChoiceClick(event) {
+  const button = event.target.closest("button[data-choice]");
+  const session = appState.grid.session;
+  if (!button || button.disabled || !isRecognitionSession(session) || session.phase !== "recall") return;
+  const choice = session.recall.choices[Number(button.dataset.choice)];
+  if (!choice) return;
+  const result = submitRecallAnswer(session, choice.index, {
+    characterData: CHARACTERS,
+    progress: appState.progress,
+    confusionPairs: appState.grid.confusionPairs,
+  });
+  if (!result.accepted) return;
+  commit(function (state) {
+    state.progress = result.progress;
+    state.grid.confusionPairs = result.confusionPairs;
+    state.grid.session = result.session;
+  });
+  matchingTransitioning = true;
+  renderGridScreen();
+  const item = CHARACTERS[result.attempt.targetIndex];
+  elements.gridAnnouncement.textContent = result.correct
+    ? `역방향 확인 정답, ${item.contextHun}.`
+    : `역방향 확인 오답입니다. ${item.contextHun}을 기억해 두세요.`;
+  scheduleGridAdvance(result.correct ? 900 : 1200);
+}
 
+function handleOrderChoiceClick(event) {
+  const button = event.target.closest(".recognition-cell");
+  const session = appState.grid.session;
+  if (!button || button.disabled || matchingTransitioning || !isCoupletOrderSession(session)) return;
+  const selectedIndex = Number(button.dataset.index);
+  if (!Number.isInteger(selectedIndex)) return;
+  const result = submitCoupletOrderAnswer(session, selectedIndex, {
+    progress: appState.progress,
+  });
+  if (!result.accepted) return;
+  recognitionFocusSlot = Number(button.dataset.slot) || 0;
+  commit(function (state) {
+    state.progress = result.progress;
+    state.grid.session = result.session;
+    state.grid.lastCursor = recognitionFocusSlot;
+  });
+  matchingTransitioning = true;
+  renderGridScreen();
+  const expected = CHARACTERS[result.attempt.expectedIndex];
+  elements.gridAnnouncement.textContent = result.correct
+    ? `맞았습니다. ${expected.contextHun}.`
+    : `순서가 다릅니다. 다음 글자는 ${expected.contextHun}입니다.`;
+  scheduleGridAdvance(result.correct ? 520 : 950);
+}
+
+function scheduleGridAdvance(delay) {
+  window.clearTimeout(matchingAdvanceTimer);
   matchingAdvanceTimer = window.setTimeout(function () {
+    const session = appState.grid.session;
+    if (isRecognitionSession(session) && session.phase === "feedback") {
+      const next = advanceAfterFeedback(session, {
+        characterData: CHARACTERS,
+        progress: appState.progress,
+        confusionPairs: appState.grid.confusionPairs,
+      });
+      commit(function (state) {
+        state.grid.session = next;
+        state.grid.lastCursor = next.targetSlot;
+      });
+      recognitionFocusSlot = Math.min(next.boardSize - 1, Math.max(0, next.targetSlot));
+    } else if (isCoupletOrderSession(session) && session.phase === "feedback") {
+      const next = advanceCoupletOrderAfterFeedback(session);
+      commit(function (state) {
+        state.grid.session = next;
+        if (next.phase === "ended") appendRecentRun(state, next);
+      });
+    }
     matchingTransitioning = false;
     renderGridScreen();
-    if (!result.completed) focusFirstMatchingChoice();
-  }, 260);
+    focusRecognitionInput();
+  }, delay);
 }
 
-function handleWrongMatchingAnswer(targetIndex, button) {
-  const session = appState.grid.session;
-  const errors = (session.errorsByTarget[targetIndex] || 0) + 1;
-  commit(function (state) {
-    state.progress = recordSkillAttempt(state.progress, targetIndex, "reverse", { correct: false });
-    state.grid.session.wrongCount += 1;
-    state.grid.session.errorsByTarget[targetIndex] = errors;
-    if (!state.grid.session.wrongIndexes.includes(targetIndex)) {
-      state.grid.session.wrongIndexes.push(targetIndex);
+function renderRecognitionFeedback(session) {
+  const feedback = session.feedback;
+  if (!feedback) return;
+  const target = CHARACTERS[feedback.targetIndex];
+  const selected = CHARACTERS[feedback.selectedIndex];
+  const correct = feedback.correct;
+  elements.matchingFeedback.classList.toggle("is-wrong", !correct);
+  elements.feedbackMark.textContent = correct ? "✓" : "×";
+  elements.feedbackStatus.textContent = correct ? "정답" : "오답 · 정답 확인";
+  elements.feedbackAnswer.textContent = `${target.character} · ${target.contextHun}`;
+  elements.feedbackGloss.textContent = target.gloss || target.meaning || "";
+  elements.feedbackComparison.hidden = correct;
+  if (!correct && selected) {
+    elements.feedbackSelected.textContent = `${selected.character} · ${selected.contextHun}`;
+    elements.feedbackCorrect.textContent = `${target.character} · ${target.contextHun}`;
+    elements.feedbackDifference.textContent = describeCharacterDifference(target, selected);
+  }
+  const couplet = getCouplet(target.coupletIndex);
+  elements.feedbackContext.textContent = couplet.data.hanja;
+  elements.openAnswerContext.hidden = false;
+  elements.openAnswerContext.disabled = false;
+}
+
+function renderCoupletOrderSession(session) {
+  const stats = getCoupletOrderStats(session);
+  const couplet = getCouplet(session.coupletIndex);
+  elements.gridModeLabel.textContent = "현재 8자 복습";
+  elements.gridSessionProgress.textContent = `${stats.position} / ${stats.total}`;
+  elements.gridCombo.textContent = `×${session.placedIndexes.length}`;
+  elements.gridAccuracy.textContent = session.correctCount + session.wrongCount > 0
+    ? `${Math.round(stats.accuracy * 100)}%`
+    : "—";
+  elements.gridScore.textContent = (session.correctCount * 100).toLocaleString("ko-KR");
+  elements.pauseSession.hidden = true;
+  elements.gridSession.classList.remove("is-paused");
+  elements.gridSession.classList.toggle("is-locked", session.inputLocked);
+  elements.recognitionPause.hidden = true;
+  elements.targetPanel.hidden = true;
+  elements.continuousBoard.hidden = true;
+  elements.recognitionRecall.hidden = true;
+  elements.recognitionOrder.hidden = false;
+  elements.orderAnswer.textContent = session.placedIndexes.map(function (index) {
+    return CHARACTERS[index].character;
+  }).join("");
+  const wrongIndex = session.phase === "feedback" && !session.feedback.correct
+    ? session.feedback.selectedIndex
+    : null;
+  renderCoupletOrderBoard(elements.orderBoard, session, CHARACTERS, {
+    wrongIndex,
+    disabled: session.inputLocked,
+    focusSlot: recognitionFocusSlot,
+  });
+  elements.matchingFeedback.hidden = session.phase !== "feedback";
+  if (session.phase === "feedback") {
+    const target = CHARACTERS[session.feedback.expectedIndex];
+    const selected = CHARACTERS[session.feedback.selectedIndex];
+    elements.matchingFeedback.classList.toggle("is-wrong", !session.feedback.correct);
+    elements.feedbackMark.textContent = session.feedback.correct ? "✓" : "×";
+    elements.feedbackStatus.textContent = session.feedback.correct ? "순서 정답" : "다음 글자 확인";
+    elements.feedbackAnswer.textContent = `${target.character} · ${target.contextHun}`;
+    elements.feedbackGloss.textContent = `${session.feedback.position + 1}번째 글자`;
+    elements.feedbackComparison.hidden = session.feedback.correct;
+    if (!session.feedback.correct) {
+      elements.feedbackSelected.textContent = `${selected.character} · ${selected.contextHun}`;
+      elements.feedbackCorrect.textContent = `${target.character} · ${target.contextHun}`;
+      elements.feedbackDifference.textContent = "원문 순서에서 다음에 오는 글자를 다시 확인해 보세요.";
     }
-  });
-  button.classList.remove("is-wrong");
-  requestAnimationFrame(function () {
-    button.classList.add("is-wrong");
-  });
-  window.setTimeout(function () {
-    button.classList.remove("is-wrong");
-  }, 260);
-  elements.gridWrongCount.textContent = String(appState.grid.session.wrongCount);
-  const attempts = appState.grid.session.correctCount + appState.grid.session.wrongCount;
-  elements.gridAccuracy.textContent = `${Math.round((appState.grid.session.correctCount / attempts) * 100)}%`;
-  elements.matchingFeedback.textContent = "다시 살펴보고 고르세요.";
-  elements.gridAnnouncement.textContent = "오답입니다. 같은 문제에서 다시 고를 수 있습니다.";
+    elements.feedbackContext.textContent = couplet.data.hanja;
+    elements.openAnswerContext.hidden = true;
+  }
+  setRecognitionPlayInert(false);
 }
 
-function renderGridSessionStatus() {
+function pauseGridForNavigation() {
   const session = appState.grid.session;
-  if (!session) return;
-  const progress = getMatchingProgress(session);
-  const attempts = session.correctCount + session.wrongCount;
-  const accuracy = attempts > 0 ? Math.round((session.correctCount / attempts) * 100) : null;
-  const target = session.complete ? null : CHARACTERS[session.targetIndex];
-  elements.gridSessionProgress.textContent = `${Math.min(progress.total, progress.completed + 1)} / ${progress.total}`;
-  elements.gridAccuracy.textContent = accuracy === null ? "—" : `${accuracy}%`;
-  elements.gridWrongCount.textContent = String(session.wrongCount);
+  if (!isRecognitionSession(session) || session.phase === "paused") return;
+  clearGridTimers();
+  commit(function (state) {
+    state.grid.session = pauseRecognitionSession(state.grid.session, {
+      characterData: CHARACTERS,
+    });
+  });
+}
 
-  if (target) {
-    renderMatchingTarget(target, progress);
-    renderMatchingChoices(session);
-    elements.matchingFeedback.textContent = "맞는 한자를 고르세요.";
+function pauseGridSession(options = {}) {
+  const shouldRender = !options || options.render !== false;
+  const session = appState.grid.session;
+  if (!isRecognitionSession(session) || session.phase === "paused") return;
+  clearGridTimers();
+  commit(function (state) {
+    state.grid.session = pauseRecognitionSession(state.grid.session, {
+      characterData: CHARACTERS,
+    });
+  });
+  if (shouldRender) {
+    renderGridScreen();
+    elements.resumeSession.focus({ preventScroll: true });
   }
 }
 
-function renderMatchingTarget(target, progress) {
-  elements.targetPanel.classList.remove("is-concealed");
-  elements.targetPrompt.textContent = target.contextHun;
-  elements.targetPosition.textContent = `문제 ${progress.completed + 1} / ${progress.total}`;
-}
-
-function speakGridTarget() {
+function resumeGridSession() {
   const session = appState.grid.session;
-  if (!session || session.complete) return;
-  tts.speak(CHARACTERS[session.targetIndex].contextHun, {
-    kind: "matching-target",
-    onError: handleTtsError,
-  });
-}
-
-function restartGridSession() {
-  const session = appState.grid.session;
-  if (!session) return;
-  const confirmed = window.confirm("이번 게임을 처음부터 다시 시작할까요?");
-  if (!confirmed) return;
-  stopAllSpeech();
-  window.clearTimeout(matchingAdvanceTimer);
-  matchingTransitioning = false;
-  const restarted = createMatchingSessionMetadata(
-    createMatchingSession({ indexes: session.questionIndexes, choiceCount: session.choiceCount }),
-    session.scope,
-  );
+  if (!isRecognitionSession(session) || session.phase !== "paused") return;
+  const next = resumeRecognitionSession(session, { characterData: CHARACTERS });
   commit(function (state) {
-    state.grid.session = restarted;
-    state.grid.lastCursor = restarted.targetIndex;
+    state.grid.session = next;
   });
   renderGridScreen();
-  focusFirstMatchingChoice();
+  if (next.phase === "feedback") scheduleGridAdvance(next.feedback.correct ? 900 : 1200);
+  focusRecognitionInput();
+  scheduleWeakReviewEnd();
 }
 
 function endGridSession() {
   const session = appState.grid.session;
-  if (!session) return;
-  stopAllSpeech();
-  window.clearTimeout(matchingAdvanceTimer);
-  matchingTransitioning = false;
+  if (!isRecognitionSession(session) && !isCoupletOrderSession(session)) return;
+  clearGridTimers();
+  let ended;
+  if (isRecognitionSession(session)) {
+    ended = endRecognitionSession(session, { characterData: CHARACTERS });
+  } else {
+    ended = {
+      ...session,
+      phase: "ended",
+      inputLocked: true,
+      feedback: null,
+      endedAt: new Date().toISOString(),
+    };
+  }
   commit(function (state) {
-    state.grid.session.active = false;
-    state.grid.session.endedAt = new Date().toISOString();
+    state.grid.session = ended;
+    appendRecentRun(state, ended);
   });
   renderGridScreen();
+  focusRecognitionInput();
 }
 
 function renderSessionResult(session) {
-  const attempts = session.correctCount + session.wrongCount;
-  const accuracy = attempts > 0 ? Math.round((session.correctCount / attempts) * 100) : 0;
-  const elapsed = new Date(session.endedAt || Date.now()).getTime() - new Date(session.startedAt).getTime();
-  elements.resultLearned.textContent = String(session.correctCount);
-  elements.resultAccuracy.textContent = `${accuracy}%`;
-  elements.resultWrong.textContent = String(session.wrongCount);
-  elements.resultTime.textContent = formatDuration(elapsed);
-  elements.resultCharacters.replaceChildren();
-  session.wrongIndexes.forEach(function (index) {
-    const item = CHARACTERS[index];
-    const span = document.createElement("span");
-    span.className = "result-character";
-    span.innerHTML = `<strong lang="zh-Hant">${item.character}</strong><small>${item.reading}</small>`;
-    span.title = item.contextHun;
-    elements.resultCharacters.append(span);
-  });
-  elements.retryWrong.disabled = session.wrongIndexes.length === 0;
+  const orderMode = session.kind === "couplet-order";
+  const stats = orderMode ? getCoupletOrderStats(session) : getRecognitionStats(session);
+  const answered = orderMode
+    ? stats.correctCount + stats.wrongCount
+    : stats.answeredGridCount;
+  const wrongIndexes = getSessionWrongIndexes(session);
+  const confidentIndexes = orderMode ? [] : getSessionConfidentIndexes(session);
+  elements.resultMode.textContent = orderMode
+    ? "현재 8자 복습 완료"
+    : `${getRecognitionModeLabel(session.mode)} 기록`;
+  elements.resultLearned.textContent = String(answered);
+  elements.resultAccuracy.textContent = `${Math.round(stats.accuracy * 100)}%`;
+  elements.resultCombo.textContent = `×${orderMode ? session.placedIndexes.length : stats.bestCombo}`;
+  elements.resultScore.textContent = (orderMode ? session.correctCount * 100 : stats.score).toLocaleString("ko-KR");
+  elements.resultTime.textContent = formatDuration(stats.elapsedMs);
+  renderResultCharacters(elements.resultConfident, confidentIndexes, "아직 조건을 모두 채운 글자는 없습니다.");
+  renderResultCharacters(elements.resultCharacters, wrongIndexes, "다시 나올 글자가 없습니다.");
+  renderResultConfusions(session);
+  elements.retryWrong.disabled = wrongIndexes.length === 0;
+  elements.resultTitle.tabIndex = -1;
 }
 
 function retryWrongCharacters() {
   const session = appState.grid.session;
-  if (!session || session.wrongIndexes.length === 0) return;
-  const indexes = Array.from(new Set(session.wrongIndexes));
-  startMatchingSession(indexes, "wrong");
+  if (!isEndedGridSession(session)) return;
+  const indexes = getSessionWrongIndexes(session);
+  if (indexes.length === 0) return;
+  startRecognitionGame("weak", indexes);
+}
+
+function restartGridSession() {
+  const session = appState.grid.session;
+  if (!isEndedGridSession(session)) return;
+  if (session.kind === "couplet-order") {
+    const couplet = getCouplet(session.coupletIndex);
+    clearGridTimers();
+    const next = createCoupletOrderSession({
+      indexes: couplet.items.map(function (item) { return item.index; }),
+      coupletIndex: session.coupletIndex,
+    });
+    commit(function (state) { state.grid.session = next; });
+    renderGridScreen();
+    focusRecognitionInput();
+    return;
+  }
+  startRecognitionGame(session.mode, session.weakIndexes);
 }
 
 function closeSessionResult() {
+  clearGridTimers();
   commit(function (state) {
     state.grid.session = null;
   });
   renderGridScreen();
+  elements.startAdaptiveMatch.focus({ preventScroll: true });
 }
 
 function handleMatchingChoiceKeyboard(event) {
-  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
-    return;
-  }
-  const button = event.target.closest(".match-choice");
+  const session = appState.grid.session;
+  if (!isRecognitionSession(session)) return;
+  moveRecognitionFocus(event, elements.continuousBoard, getRecognitionColumns(session.boardSize));
+}
+
+function handleRecallChoiceKeyboard(event) {
+  moveRecognitionFocus(event, elements.recallChoices, 2, "button:not(:disabled)");
+}
+
+function handleOrderChoiceKeyboard(event) {
+  moveRecognitionFocus(event, elements.orderBoard, 4);
+}
+
+function moveRecognitionFocus(event, container, columns, selector = ".recognition-cell:not(:disabled)") {
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+  const button = event.target.closest("button");
   if (!button) return;
-  event.preventDefault();
-  const buttons = Array.from(elements.continuousBoard.querySelectorAll(".match-choice:not(:disabled)"));
+  const buttons = Array.from(container.querySelectorAll(selector));
   const current = buttons.indexOf(button);
-  const columns = 2;
+  if (current < 0 || buttons.length === 0) return;
+  event.preventDefault();
   let next = current;
-  if (event.key === "ArrowLeft") next = current - 1;
-  if (event.key === "ArrowRight") next = current + 1;
-  if (event.key === "ArrowUp") next = current - columns;
-  if (event.key === "ArrowDown") next = current + columns;
+  if (event.key === "ArrowLeft") next -= 1;
+  if (event.key === "ArrowRight") next += 1;
+  if (event.key === "ArrowUp") next -= columns;
+  if (event.key === "ArrowDown") next += columns;
   if (event.key === "Home") next = 0;
   if (event.key === "End") next = buttons.length - 1;
   next = Math.min(buttons.length - 1, Math.max(0, next));
-  buttons[next].focus();
+  buttons.forEach(function (candidate, index) { candidate.tabIndex = index === next ? 0 : -1; });
+  buttons[next].focus({ preventScroll: true });
+  if (Number.isInteger(Number(buttons[next].dataset.slot))) {
+    recognitionFocusSlot = Number(buttons[next].dataset.slot);
+  }
 }
 
-function focusFirstMatchingChoice() {
+function focusRecognitionInput() {
   window.setTimeout(function () {
-    const button = elements.continuousBoard.querySelector(".match-choice:not(:disabled)");
-    if (button) button.focus({ preventScroll: true });
+    const session = appState.grid.session;
+    if (isEndedGridSession(session)) {
+      elements.resultTitle.focus({ preventScroll: true });
+      return;
+    }
+    if (isRecognitionSession(session)) {
+      if (session.phase === "paused") {
+        elements.resumeSession.focus({ preventScroll: true });
+        return;
+      }
+      if (session.phase === "recall") {
+        elements.recallChoices.querySelector("button:not(:disabled)")?.focus({ preventScroll: true });
+        return;
+      }
+      elements.continuousBoard.querySelector(".recognition-cell[tabindex='0']:not(:disabled)")
+        ?.focus({ preventScroll: true });
+      return;
+    }
+    if (isCoupletOrderSession(session)) {
+      elements.orderBoard.querySelector(".recognition-cell:not(:disabled)")?.focus({ preventScroll: true });
+    }
   }, 0);
+}
+
+function setRecognitionPlayInert(paused) {
+  [
+    elements.targetPanel,
+    elements.continuousBoard,
+    elements.recognitionRecall,
+    elements.recognitionOrder,
+    elements.matchingFeedback,
+  ].forEach(function (element) {
+    element.inert = paused;
+    if (paused) element.setAttribute("inert", "");
+    else element.removeAttribute("inert");
+  });
+}
+
+function openGridAnswerContext() {
+  const session = appState.grid.session;
+  if (!isRecognitionSession(session) || !session.feedback) return;
+  const targetIndex = session.feedback.targetIndex;
+  pauseGridForNavigation();
+  commit(function (state) {
+    state.ui.selectedIndex = targetIndex;
+    state.ui.rangeStart = normalizeOverviewRangeStart(
+      targetIndex,
+      overviewPageSize,
+      TOTAL_CHARACTERS,
+    );
+    state.ui.revealAnswer = false;
+    state.ui.mode = "passage";
+  });
+  renderApp();
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function getSessionWrongIndexes(session) {
+  const values = (Array.isArray(session && session.history) ? session.history : [])
+    .filter(function (attempt) { return attempt && attempt.correct === false; })
+    .map(function (attempt) {
+      return Number.isInteger(attempt.targetIndex) ? attempt.targetIndex : attempt.expectedIndex;
+    })
+    .filter(Number.isInteger);
+  return Array.from(new Set(values));
+}
+
+function getSessionConfidentIndexes(session) {
+  const correctIndexes = Array.from(new Set(
+    (Array.isArray(session.history) ? session.history : [])
+      .filter(function (attempt) { return attempt.kind === "grid" && attempt.correct; })
+      .map(function (attempt) { return attempt.targetIndex; }),
+  ));
+  return correctIndexes.filter(function (index) {
+    return isIndependentRecognitionConfident(appState.progress[index], {
+      recentConfusionCount: getCharacterConfusionCount(index),
+    });
+  });
+}
+
+function getCharacterConfusionCount(index) {
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  return Object.values(appState.grid.confusionPairs || {}).reduce(function (sum, pair) {
+    const lastAt = pair && pair.lastAt ? new Date(pair.lastAt).getTime() : 0;
+    return sum + (
+      pair &&
+      lastAt >= cutoff &&
+      (pair.correctIndex === index || pair.selectedIndex === index)
+        ? Math.max(0, Number(pair.count) || 0)
+        : 0
+    );
+  }, 0);
+}
+
+function renderResultCharacters(container, indexes, emptyText) {
+  const fragment = document.createDocumentFragment();
+  indexes.slice(0, 12).forEach(function (index) {
+    const item = CHARACTERS[index];
+    if (!item) return;
+    const span = document.createElement("span");
+    const glyph = document.createElement("strong");
+    const reading = document.createElement("small");
+    span.className = "result-character";
+    span.title = item.contextHun;
+    glyph.lang = "zh-Hant";
+    glyph.textContent = item.character;
+    reading.textContent = item.reading;
+    span.append(glyph, reading);
+    fragment.append(span);
+  });
+  if (fragment.childNodes.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = emptyText;
+    fragment.append(empty);
+  }
+  container.replaceChildren(fragment);
+}
+
+function renderResultConfusions(session) {
+  const pairs = [];
+  const seen = new Set();
+  (Array.isArray(session.history) ? session.history : []).forEach(function (attempt) {
+    if (attempt.kind !== "grid" || attempt.correct || !Number.isInteger(attempt.selectedIndex)) return;
+    const key = `${attempt.targetIndex}:${attempt.selectedIndex}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    pairs.push([attempt.targetIndex, attempt.selectedIndex]);
+  });
+  const fragment = document.createDocumentFragment();
+  pairs.slice(-4).forEach(function ([correctIndex, selectedIndex]) {
+    const correct = CHARACTERS[correctIndex];
+    const selected = CHARACTERS[selectedIndex];
+    const row = document.createElement("div");
+    const left = document.createElement("strong");
+    const arrow = document.createElement("span");
+    const right = document.createElement("strong");
+    row.className = "recognition-confusion";
+    left.textContent = `${selected.character} ${selected.contextHun}`;
+    arrow.textContent = "↔";
+    right.textContent = `${correct.character} ${correct.contextHun}`;
+    row.append(left, arrow, right);
+    fragment.append(row);
+  });
+  if (fragment.childNodes.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = "이번에는 새 혼동이 없었습니다.";
+    fragment.append(empty);
+  }
+  elements.resultConfusions.replaceChildren(fragment);
+}
+
+function appendRecentRun(state, session) {
+  const orderMode = session.kind === "couplet-order";
+  const stats = orderMode ? getCoupletOrderStats(session) : getRecognitionStats(session);
+  state.grid.recentRuns = [
+    ...(state.grid.recentRuns || []),
+    {
+      mode: orderMode ? "couplet" : session.mode,
+      answeredCount: orderMode ? stats.correctCount + stats.wrongCount : stats.answeredGridCount,
+      correctCount: stats.correctCount,
+      wrongCount: stats.wrongCount,
+      bestCombo: orderMode ? session.placedIndexes.length : stats.bestCombo,
+      score: orderMode ? session.correctCount * 100 : stats.score,
+      duration: stats.elapsedMs,
+      completedAt: session.endedAt,
+    },
+  ].slice(-30);
+}
+
+function scheduleWeakReviewEnd() {
+  window.clearTimeout(weakReviewTimer);
+  weakReviewTimer = 0;
+  const session = appState.grid.session;
+  if (!isRecognitionSession(session) || session.mode !== "weak" || session.phase === "paused") return;
+  const remaining = WEAK_REVIEW_DURATION_MS - getRecognitionStats(session).elapsedMs;
+  if (remaining <= 0) {
+    endGridSession();
+    return;
+  }
+  weakReviewTimer = window.setTimeout(endGridSession, remaining);
+}
+
+function clearGridTimers() {
+  window.clearTimeout(matchingAdvanceTimer);
+  window.clearTimeout(weakReviewTimer);
+  matchingAdvanceTimer = 0;
+  weakReviewTimer = 0;
+  matchingTransitioning = false;
+}
+
+async function shareRecognitionResult() {
+  const session = appState.grid.session;
+  if (!isEndedGridSession(session)) return;
+  const orderMode = session.kind === "couplet-order";
+  const stats = orderMode ? getCoupletOrderStats(session) : getRecognitionStats(session);
+  const answered = orderMode ? stats.correctCount + stats.wrongCount : stats.answeredGridCount;
+  const text = `1000cc ${orderMode ? "현재 8자 복습" : getRecognitionModeLabel(session.mode)} · ${answered}문제 · 정답률 ${Math.round(stats.accuracy * 100)}%`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: "1000cc 한자 맞추기", text, url: window.location.href });
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(`${text}\n${window.location.href}`);
+      showToast("결과를 복사했습니다.");
+    } else {
+      window.prompt("결과를 복사하세요.", text);
+    }
+  } catch (error) {
+    if (error && error.name !== "AbortError") showToast("결과를 공유하지 못했습니다.");
+  }
 }
 
 function renderVoiceControls() {

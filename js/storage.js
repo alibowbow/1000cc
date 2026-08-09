@@ -1,4 +1,8 @@
 import { restoreMatchingSession } from "./matching-engine.js?v=24";
+import { normalizeConfusionPairs } from "./confusion-engine.js?v=1";
+import { restoreRecognitionSession } from "./recognition-engine.js?v=1";
+import { restoreCoupletOrderSession } from "./couplet-order-engine.js?v=1";
+import { CHARACTERS } from "./data-model.js?v=35";
 import { createProgressRecord } from "./progress-engine.js";
 import { isPlainObject, toIsoString, uniqueValidIndexes } from "./utils.js";
 
@@ -39,6 +43,8 @@ export function createDefaultState() {
       lastCursor: 0,
       session: null,
       bestScores: {},
+      confusionPairs: {},
+      recentRuns: [],
     },
     review: {
       selectedIndexes: [],
@@ -124,6 +130,8 @@ export function normalizeV2(value) {
   defaults.grid.lastCursor = clampCursor(grid.lastCursor);
   defaults.grid.session = grid.session ? normalizeSavedSession(grid.session) : null;
   defaults.grid.bestScores = normalizeBestScores(grid.bestScores);
+  defaults.grid.confusionPairs = normalizeConfusionPairs(grid.confusionPairs);
+  defaults.grid.recentRuns = normalizeRecentRuns(grid.recentRuns);
   defaults.review.selectedIndexes = uniqueValidIndexes(review.selectedIndexes);
   defaults.review.source = ["due", "recent", "frequent", "range"].includes(review.source)
     ? review.source
@@ -226,6 +234,20 @@ function normalizeProgress(value) {
 
 function normalizeSavedSession(value) {
   if (!isPlainObject(value)) return null;
+  if (value.kind === "recognition-grid") {
+    try {
+      return restoreRecognitionSession(value, { characterData: CHARACTERS });
+    } catch (error) {
+      return null;
+    }
+  }
+  if (value.kind === "couplet-order") {
+    try {
+      return restoreCoupletOrderSession(value);
+    } catch (error) {
+      return null;
+    }
+  }
   try {
     const engine = restoreMatchingSession(value);
     const errorsByTarget = {};
@@ -358,6 +380,27 @@ function normalizeBestScores(value, maximumKey = 1000) {
     };
   });
   return result;
+}
+
+function normalizeRecentRuns(value) {
+  return (Array.isArray(value) ? value : [])
+    .filter(isPlainObject)
+    .map(function (run) {
+      return {
+        mode: ["adaptive", "random1000", "weak", "couplet"].includes(run.mode)
+          ? run.mode
+          : "adaptive",
+        answeredCount: Math.max(0, Math.floor(Number(run.answeredCount) || 0)),
+        correctCount: Math.max(0, Math.floor(Number(run.correctCount) || 0)),
+        wrongCount: Math.max(0, Math.floor(Number(run.wrongCount) || 0)),
+        bestCombo: Math.max(0, Math.floor(Number(run.bestCombo) || 0)),
+        score: Math.max(0, Math.floor(Number(run.score) || 0)),
+        duration: Math.max(0, Math.floor(Number(run.duration) || 0)),
+        completedAt: toIsoString(run.completedAt),
+      };
+    })
+    .filter(function (run) { return Boolean(run.completedAt); })
+    .slice(-30);
 }
 
 function assertStrictState(value) {

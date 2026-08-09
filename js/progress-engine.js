@@ -19,6 +19,15 @@ export function createSkillRecord(overrides = {}, fallback = {}) {
     : fallbackDay
       ? [fallbackDay]
       : [];
+  const candidateSignatures = Array.isArray(overrides.candidateSignatures)
+    ? Array.from(
+        new Set(
+          overrides.candidateSignatures
+            .map(function (value) { return String(value).trim().slice(0, 120); })
+            .filter(Boolean),
+        ),
+      ).slice(-12)
+    : [];
 
   return {
     seenCount: Math.max(0, Number(overrides.seenCount ?? fallback.seenCount) || 0),
@@ -35,6 +44,11 @@ export function createSkillRecord(overrides = {}, fallback = {}) {
     lastWrongAt: toIsoString(overrides.lastWrongAt, toIsoString(fallback.lastWrongAt)),
     dueAt: toIsoString(overrides.dueAt, toIsoString(fallback.dueAt)),
     correctDays,
+    randomCorrectCount: Math.max(
+      0,
+      Math.floor(Number(overrides.randomCorrectCount ?? fallback.randomCorrectCount) || 0),
+    ),
+    candidateSignatures,
   };
 }
 
@@ -98,6 +112,12 @@ export function recordSkillAttempt(progress, index, skill, options = {}) {
     if (!dimension.correctDays.includes(day)) {
       dimension.correctDays.push(day);
       dimension.correctDays = dimension.correctDays.slice(-30);
+    }
+    if (options.randomMode) dimension.randomCorrectCount += 1;
+    const signature = String(options.candidateSignature || "").trim().slice(0, 120);
+    if (signature && !dimension.candidateSignatures.includes(signature)) {
+      dimension.candidateSignatures.push(signature);
+      dimension.candidateSignatures = dimension.candidateSignatures.slice(-12);
     }
     const repeatedLevel = masteryFromDistinctDays(dimension.correctDays.length);
     dimension.masteryLevel = Math.max(dimension.masteryLevel, repeatedLevel);
@@ -217,6 +237,20 @@ export function getWeakestSkill(record) {
 export function getSkillMastery(record, skill) {
   if (!SKILL_KEYS.includes(skill)) return 0;
   return createProgressRecord(record).skills[skill].masteryLevel;
+}
+
+export function isIndependentRecognitionConfident(record, options = {}) {
+  const normalized = createProgressRecord(record);
+  const recognition = normalized.skills.reverse;
+  const recallCorrect =
+    normalized.skills.reading.correctCount + normalized.skills.meaning.correctCount;
+  return (
+    recognition.correctDays.length >= 3 &&
+    recognition.candidateSignatures.length >= 2 &&
+    recognition.randomCorrectCount >= 1 &&
+    recallCorrect >= 1 &&
+    Math.max(0, Number(options.recentConfusionCount) || 0) < 3
+  );
 }
 
 function masteryFromDistinctDays(count) {

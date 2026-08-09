@@ -1,0 +1,849 @@
+/* Infinite recognition game · focused ink desk */
+
+body[data-screen="grid"] {
+  --recognition-canvas: #08131c;
+  --recognition-canvas-deep: #050c12;
+  --recognition-surface: #101e28;
+  --recognition-surface-raised: #162630;
+  --recognition-ivory: #f4ead5;
+  --recognition-ivory-bright: #fff8e9;
+  --recognition-ink: #172027;
+  --recognition-text: #f4ead7;
+  --recognition-muted: #a99f8e;
+  --recognition-rule: rgba(230, 209, 174, 0.2);
+  --recognition-rule-strong: rgba(230, 209, 174, 0.38);
+  --recognition-cinnabar: #d76c54;
+  --recognition-cinnabar-deep: #a94435;
+  --recognition-jade: #70a878;
+  --recognition-jade-soft: #dfead7;
+  --recognition-brass: #d9b768;
+  --recognition-focus: #f2c566;
+  color: var(--recognition-text);
+  background-color: var(--recognition-canvas);
+  background-image:
+    linear-gradient(rgba(4, 12, 18, 0.82), rgba(7, 18, 27, 0.9)),
+    url("../assets/hanji-charcoal-tile.webp");
+  background-position: center;
+  background-size: auto, 512px 512px;
+  background-repeat: no-repeat, repeat;
+  background-attachment: fixed, fixed;
+}
+
+body[data-screen="grid"] .topbar {
+  color: var(--recognition-text);
+  border-bottom-color: var(--recognition-rule);
+  background-color: rgba(7, 16, 24, 0.96);
+  background-image: url("../assets/hanji-charcoal-tile.webp");
+  background-size: 512px 512px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+body[data-screen="grid"] .brand__hanja { color: var(--recognition-muted); }
+body[data-screen="grid"] .brand__seal { color: var(--recognition-cinnabar); }
+body[data-screen="grid"] .brand:hover .brand__ko,
+body[data-screen="grid"] .brand:hover .brand__hanja { color: var(--recognition-ivory-bright); }
+
+body[data-screen="grid"] .primary-nav {
+  border-color: var(--recognition-rule);
+  background: rgba(8, 19, 28, 0.92);
+}
+
+body[data-screen="grid"] .primary-nav button {
+  color: var(--recognition-muted);
+  border-color: transparent;
+  background: transparent;
+}
+
+body[data-screen="grid"] .primary-nav button:hover,
+body[data-screen="grid"] .primary-nav button[aria-pressed="true"] {
+  color: var(--recognition-text);
+  border-color: var(--recognition-rule-strong);
+  background: rgba(255, 248, 233, 0.07);
+}
+
+body[data-screen="grid"] .primary-nav button[aria-pressed="true"]::after {
+  background: var(--recognition-cinnabar);
+}
+
+body[data-screen="grid"] #settings-button {
+  color: var(--recognition-muted);
+  border-color: var(--recognition-rule-strong);
+  background: transparent;
+}
+
+body[data-screen="grid"] #settings-button:hover {
+  color: var(--recognition-text);
+  background: rgba(255, 248, 233, 0.07);
+}
+
+body[data-screen="grid"] .app-shell {
+  width: 100%;
+  max-width: none;
+  padding: clamp(12px, 2vw, 26px) clamp(10px, 2.5vw, 34px) 42px;
+}
+
+#screen-grid:not([hidden]) {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: 0;
+}
+
+.recognition-kicker {
+  margin: 0;
+  color: var(--recognition-cinnabar);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+/* Launcher */
+
+#screen-grid .recognition-setup {
+  position: relative;
+  min-height: 0;
+  padding: clamp(24px, 4vw, 54px);
+  overflow: hidden;
+  border: 1px solid var(--recognition-rule);
+  border-radius: 10px;
+  background-color: rgba(11, 26, 36, 0.9);
+  background-image:
+    linear-gradient(rgba(8, 20, 29, 0.74), rgba(6, 15, 22, 0.88)),
+    url("../assets/hanji-charcoal-tile.webp");
+  background-size: auto, 512px 512px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+}
+
+.recognition-setup::before {
+  content: "千";
+  position: absolute;
+  right: clamp(-34px, -2vw, -10px);
+  top: clamp(-58px, -4vw, -28px);
+  color: rgba(231, 210, 176, 0.035);
+  font-family: "Cheonjamun Hanja", "Noto Serif CJK KR", "AppleMyungjo", serif;
+  font-size: clamp(15rem, 31vw, 30rem);
+  font-weight: 500;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.recognition-setup > * { position: relative; z-index: 1; }
+
+.recognition-setup__heading {
+  max-width: 720px;
+  margin-bottom: clamp(24px, 4vw, 44px);
+}
+
+.recognition-setup__heading h1 {
+  margin: 5px 0 7px;
+  color: var(--recognition-text);
+  font-family: "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: clamp(2.2rem, 5vw, 4.9rem);
+  font-weight: 650;
+  letter-spacing: -0.065em;
+  line-height: 1.12;
+}
+
+.recognition-setup__heading > p:last-child {
+  margin: 0;
+  color: var(--recognition-muted);
+  font-size: clamp(0.96rem, 1.6vw, 1.16rem);
+}
+
+.recognition-mode-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.recognition-mode {
+  position: relative;
+  min-width: 0;
+  min-height: 190px;
+  padding: clamp(20px, 3vw, 30px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr auto;
+  align-items: start;
+  gap: 8px 18px;
+  color: var(--recognition-text);
+  border: 1px solid var(--recognition-rule);
+  border-radius: 7px;
+  background: rgba(255, 248, 233, 0.035);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
+}
+
+.recognition-mode:hover {
+  border-color: var(--recognition-rule-strong);
+  background: rgba(255, 248, 233, 0.075);
+  transform: translateY(-2px);
+}
+
+.recognition-mode:focus-visible {
+  outline: 3px solid var(--recognition-focus);
+  outline-offset: 3px;
+}
+
+.recognition-mode--recommended { border-color: rgba(215, 108, 84, 0.62); }
+.recognition-mode--couplet { grid-column: 1 / -1; min-height: 154px; }
+
+.recognition-mode__badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 3px 8px;
+  color: var(--recognition-canvas-deep);
+  border-radius: 2px;
+  background: var(--recognition-cinnabar);
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.recognition-mode__number {
+  grid-row: 1 / 3;
+  color: var(--recognition-cinnabar);
+  font-family: "Noto Serif CJK KR", "AppleMyungjo", serif;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.recognition-mode > strong {
+  grid-column: 2;
+  color: var(--recognition-ivory-bright);
+  font-family: "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: clamp(1.25rem, 2.4vw, 1.75rem);
+  line-height: 1.2;
+}
+
+.recognition-mode__copy {
+  grid-column: 2 / -1;
+  max-width: 38rem;
+  color: var(--recognition-muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.recognition-mode__context {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  align-self: center;
+  color: var(--recognition-brass);
+  font-family: "Noto Serif CJK KR", "AppleMyungjo", serif;
+  font-size: clamp(1.1rem, 2.5vw, 1.65rem);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.recognition-mode__action {
+  grid-column: 2 / -1;
+  align-self: end;
+  color: var(--recognition-cinnabar);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.recognition-setup__note {
+  margin: 18px 2px 0;
+  color: rgba(231, 218, 195, 0.62);
+  font-size: 0.74rem;
+}
+
+/* Active play */
+
+#screen-grid .recognition-play {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.recognition-hud {
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(420px, 1.5fr) auto;
+  align-items: stretch;
+  border: 1px solid var(--recognition-rule);
+  background: rgba(9, 22, 31, 0.82);
+}
+
+.recognition-hud__identity {
+  min-width: 0;
+  padding: 9px 16px;
+  display: grid;
+  align-content: center;
+  border-right: 1px solid var(--recognition-rule);
+}
+
+.recognition-hud__identity span {
+  color: var(--recognition-cinnabar);
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+.recognition-hud__identity strong {
+  overflow: hidden;
+  color: var(--recognition-text);
+  font-family: "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recognition-stats {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.recognition-stats > div {
+  min-width: 0;
+  padding: 8px 12px;
+  display: grid;
+  place-content: center;
+  border-right: 1px solid var(--recognition-rule);
+  text-align: center;
+}
+
+.recognition-stats span {
+  color: var(--recognition-muted);
+  font-size: 0.62rem;
+}
+
+.recognition-stats strong {
+  color: var(--recognition-text);
+  font-size: clamp(0.95rem, 1.7vw, 1.25rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.recognition-stat--combo strong { color: var(--recognition-brass); }
+
+.recognition-hud__actions {
+  display: flex;
+  align-items: stretch;
+}
+
+.recognition-icon-button {
+  min-width: 74px;
+  min-height: 60px;
+  padding: 7px 12px;
+  display: grid;
+  place-content: center;
+  gap: 1px;
+  color: var(--recognition-muted);
+  border: 0;
+  border-left: 1px solid var(--recognition-rule);
+  background: transparent;
+  cursor: pointer;
+}
+
+.recognition-icon-button:hover,
+.recognition-icon-button[aria-pressed="true"] {
+  color: var(--recognition-text);
+  background: rgba(255, 248, 233, 0.065);
+}
+
+.recognition-icon-button > span { font-size: 1rem; }
+.recognition-icon-button > strong { font-size: 0.66rem; font-weight: 700; }
+
+.recognition-question {
+  min-height: clamp(88px, 13vh, 132px);
+  margin: 0;
+  padding: 14px 12px 11px;
+  display: grid;
+  place-content: center;
+  gap: 1px;
+  color: var(--recognition-text);
+  border: 0;
+  background: transparent;
+  text-align: center;
+}
+
+.recognition-question__type,
+.recognition-question > span:last-child {
+  color: var(--recognition-muted);
+  font-size: 0.66rem;
+}
+
+.recognition-question > strong {
+  color: var(--recognition-text);
+  font-family: "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: clamp(2rem, 5vw, 3.65rem);
+  font-weight: 600;
+  letter-spacing: -0.055em;
+  line-height: 1.2;
+}
+
+.recognition-board {
+  --board-columns: 4;
+  width: min(100%, 610px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(4px, 0.7vw, 7px);
+}
+
+.recognition-board[data-size="25"] {
+  --board-columns: 5;
+  width: min(100%, 640px);
+}
+
+.recognition-grid-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr));
+  gap: inherit;
+}
+
+.recognition-gridcell { min-width: 0; }
+.recognition-gridcell .recognition-cell { width: 100%; }
+
+.recognition-cell {
+  position: relative;
+  min-width: 0;
+  min-height: 64px;
+  aspect-ratio: 1;
+  padding: 4px;
+  display: grid;
+  place-items: center;
+  color: var(--recognition-ink);
+  border: 1px solid rgba(64, 50, 31, 0.35);
+  border-radius: 5px;
+  background-color: var(--recognition-ivory);
+  background-image:
+    linear-gradient(rgba(255, 252, 242, 0.56), rgba(228, 211, 179, 0.1)),
+    url("../assets/hanji-ivory-tile.webp");
+  background-size: auto, 512px 512px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.52) inset,
+    0 4px 12px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.recognition-cell:hover { background-color: var(--recognition-ivory-bright); transform: translateY(-1px); }
+
+.recognition-cell:focus-visible {
+  z-index: 2;
+  outline: 3px solid var(--recognition-focus);
+  outline-offset: 2px;
+}
+
+.recognition-cell__hanja {
+  font-family: "Cheonjamun Hanja", "Noto Serif CJK KR", "AppleMyungjo", serif;
+  font-size: clamp(2.75rem, 6.3vw, 5rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.recognition-board[data-size="25"] .recognition-cell__hanja {
+  font-size: clamp(2.45rem, 5.1vw, 4.3rem);
+}
+
+.recognition-cell.is-correct {
+  color: #244f32;
+  border-color: var(--recognition-jade);
+  background-color: var(--recognition-jade-soft);
+  box-shadow: inset 0 0 0 3px var(--recognition-jade), 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.recognition-cell.is-wrong {
+  color: #7f2f28;
+  border-color: var(--recognition-cinnabar);
+  background-color: #f1d9cf;
+  box-shadow: inset 0 0 0 3px var(--recognition-cinnabar), 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.recognition-cell.is-replaced { animation: recognition-replace 220ms ease-out; }
+.recognition-board.is-shuffling .recognition-cell { animation: recognition-settle 220ms ease-out; }
+.recognition-play.is-locked .recognition-cell { pointer-events: none; }
+
+.recognition-feedback {
+  width: min(100%, 760px);
+  min-height: 86px;
+  margin: 14px auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  border: 1px solid var(--recognition-rule-strong);
+  background: rgba(8, 20, 28, 0.86);
+}
+
+.recognition-feedback__answer {
+  min-width: 0;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.recognition-feedback__mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  color: var(--recognition-jade);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-weight: 800;
+}
+
+.recognition-feedback.is-wrong .recognition-feedback__mark { color: var(--recognition-cinnabar); }
+
+.recognition-feedback__answer > div { min-width: 0; display: grid; }
+.recognition-feedback__answer > div > span { color: var(--recognition-jade); font-size: 0.64rem; font-weight: 800; }
+.recognition-feedback.is-wrong .recognition-feedback__answer > div > span { color: var(--recognition-cinnabar); }
+
+.recognition-feedback__answer strong {
+  overflow-wrap: anywhere;
+  color: var(--recognition-text);
+  font-family: "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: clamp(1rem, 2vw, 1.32rem);
+}
+
+.recognition-feedback__answer small { color: var(--recognition-muted); font-size: 0.7rem; }
+
+.recognition-feedback__comparison {
+  grid-column: 1 / -1;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  border-top: 1px solid var(--recognition-rule);
+}
+
+.recognition-feedback__comparison > div { display: grid; }
+.recognition-feedback__comparison span { color: var(--recognition-muted); font-size: 0.62rem; }
+.recognition-feedback__comparison strong { color: var(--recognition-text); font-size: 0.84rem; }
+.recognition-feedback__comparison p { grid-column: 1 / -1; margin: 0; color: var(--recognition-muted); font-size: 0.72rem; }
+
+.recognition-context {
+  min-width: 218px;
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 1px 10px;
+  color: var(--recognition-text);
+  border: 0;
+  border-left: 1px solid var(--recognition-rule);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.recognition-context:hover { background: rgba(255, 248, 233, 0.06); }
+.recognition-context > span:first-child { color: var(--recognition-muted); font-size: 0.62rem; }
+.recognition-context strong { font-family: "Noto Serif CJK KR", "AppleMyungjo", serif; letter-spacing: 0.1em; }
+.recognition-context > span:last-child { grid-column: 2; grid-row: 1 / 3; align-self: center; color: var(--recognition-cinnabar); font-size: 1.4rem; }
+
+/* Reverse recall and current-eight order */
+
+.recognition-recall,
+.recognition-order {
+  width: min(100%, 680px);
+  margin: 10px auto 0;
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px solid var(--recognition-rule-strong);
+  background: rgba(10, 24, 33, 0.92);
+  text-align: center;
+}
+
+.recognition-recall > p { margin: 0; color: var(--recognition-cinnabar); font-size: 0.66rem; font-weight: 800; }
+.recognition-recall__hanja { display: block; margin: 7px 0 2px; font-size: clamp(4.5rem, 11vw, 7rem); font-weight: 500; line-height: 1; }
+.recognition-recall h3 { margin: 6px 0 16px; font-size: 1rem; }
+
+.recognition-recall__choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recognition-recall__choices button {
+  min-height: 56px;
+  padding: 10px;
+  color: var(--recognition-text);
+  border: 1px solid var(--recognition-rule);
+  border-radius: 4px;
+  background: rgba(255, 248, 233, 0.045);
+  cursor: pointer;
+}
+
+.recognition-recall__choices button:hover,
+.recognition-recall__choices button:focus-visible { border-color: var(--recognition-cinnabar); }
+
+.recognition-order__progress { min-height: 62px; display: grid; place-content: center; gap: 4px; }
+.recognition-order__progress span { color: var(--recognition-muted); font-size: 0.76rem; }
+.recognition-order__progress strong { min-height: 1.5em; color: var(--recognition-brass); font-size: clamp(1.4rem, 4vw, 2.1rem); letter-spacing: 0.18em; }
+
+.recognition-order__board {
+  --board-columns: 4;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.recognition-order__board .recognition-cell { aspect-ratio: 1.1; }
+.recognition-order__board .recognition-cell[aria-pressed="true"] { opacity: 0.28; pointer-events: none; }
+
+/* Pause and results */
+
+.recognition-play.is-paused > :not(.recognition-hud, .recognition-pause) { opacity: 0.18; pointer-events: none; }
+
+.recognition-pause {
+  width: min(100%, 480px);
+  margin: clamp(36px, 9vh, 90px) auto 0;
+  padding: 28px;
+  border: 1px solid var(--recognition-rule-strong);
+  background: rgba(10, 24, 33, 0.96);
+  text-align: center;
+}
+
+.recognition-pause h3 { margin: 5px 0 18px; font-family: "Noto Serif KR", serif; font-size: 1.6rem; }
+
+.recognition-resume,
+.recognition-primary,
+.recognition-secondary,
+.recognition-text-button {
+  min-height: 48px;
+  padding: 0 17px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.recognition-resume,
+.recognition-primary {
+  color: #fffaf0;
+  border: 1px solid var(--recognition-cinnabar);
+  background: var(--recognition-cinnabar-deep);
+}
+
+.recognition-resume:hover,
+.recognition-primary:hover { background: var(--recognition-cinnabar); }
+
+#screen-grid .recognition-result {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 46px);
+  color: var(--recognition-text);
+  border: 1px solid var(--recognition-rule);
+  border-radius: 8px;
+  background: rgba(10, 24, 33, 0.92);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+  text-align: left;
+}
+
+.recognition-result > header h2 {
+  margin: 5px 0 22px;
+  font-family: "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: clamp(1.7rem, 3vw, 2.5rem);
+  letter-spacing: -0.04em;
+}
+
+.recognition-result__stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-block: 1px solid var(--recognition-rule);
+}
+
+.recognition-result__stats > div {
+  min-width: 0;
+  min-height: 78px;
+  padding: 12px;
+  display: grid;
+  place-content: center;
+  border-right: 1px solid var(--recognition-rule);
+  text-align: center;
+}
+
+.recognition-result__stats > div:last-child { border-right: 0; }
+.recognition-result__stats span { color: var(--recognition-muted); font-size: 0.66rem; }
+.recognition-result__stats strong { font-size: clamp(1rem, 2vw, 1.35rem); font-variant-numeric: tabular-nums; }
+
+.recognition-result__insights {
+  margin: 22px 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.recognition-result__insights > section { min-width: 0; padding-top: 10px; border-top: 1px solid var(--recognition-rule); }
+.recognition-result__insights > section > span { color: var(--recognition-muted); font-size: 0.7rem; font-weight: 700; }
+
+#screen-grid .result-characters {
+  min-height: 54px;
+  margin: 10px 0 0;
+  justify-content: flex-start;
+}
+
+#screen-grid .result-character {
+  min-width: 52px;
+  min-height: 52px;
+  color: var(--recognition-ink);
+  border-color: rgba(64, 50, 31, 0.3);
+  border-radius: 3px;
+  background: var(--recognition-ivory);
+}
+
+.recognition-confusions { margin-top: 10px; }
+.recognition-confusions p { margin: 0; color: var(--recognition-muted); font-size: 0.78rem; }
+.recognition-confusion { padding: 8px 0; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--recognition-rule); }
+.recognition-confusion strong { color: var(--recognition-text); font-family: "Noto Serif KR", serif; }
+.recognition-confusion span { color: var(--recognition-cinnabar); }
+
+.recognition-result__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.recognition-secondary { color: var(--recognition-text); border: 1px solid var(--recognition-rule-strong); background: transparent; }
+.recognition-secondary:hover { background: rgba(255, 248, 233, 0.07); }
+.recognition-text-button { margin-left: auto; color: var(--recognition-muted); border: 0; background: transparent; }
+.recognition-text-button:hover { color: var(--recognition-text); }
+
+@keyframes recognition-replace {
+  0% { opacity: 0.15; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes recognition-settle {
+  0% { opacity: 0.72; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .recognition-hud { grid-template-columns: minmax(120px, 0.65fr) minmax(360px, 1.35fr) auto; }
+  .recognition-hud__identity { padding-inline: 11px; }
+  .recognition-stats > div { padding-inline: 7px; }
+  .recognition-icon-button { min-width: 62px; padding-inline: 8px; }
+}
+
+@media (max-width: 660px) {
+  body[data-screen="grid"] {
+    background-attachment: scroll, scroll;
+  }
+
+  body[data-screen="grid"] .topbar {
+    background-color: rgba(7, 16, 24, 0.98);
+    background-image: url("../assets/hanji-charcoal-tile.webp");
+  }
+
+  body[data-screen="grid"] .primary-nav {
+    border-top: 1px solid var(--recognition-rule-strong);
+    background: #091720;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.24);
+  }
+
+  body[data-screen="grid"] .app-shell {
+    padding: 6px 8px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 10px);
+  }
+
+  #screen-grid:not([hidden]) { width: 100%; }
+
+  #screen-grid .recognition-setup {
+    padding: 22px 14px 18px;
+    border-radius: 7px;
+  }
+
+  .recognition-setup::before { right: -42px; top: -20px; font-size: 15rem; }
+  .recognition-setup__heading { margin-bottom: 20px; }
+  .recognition-setup__heading h1 { font-size: clamp(2rem, 11vw, 3.1rem); }
+
+  .recognition-mode-list { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+
+  .recognition-mode,
+  .recognition-mode--couplet {
+    grid-column: auto;
+    min-height: 132px;
+    padding: 17px 14px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 5px 10px;
+  }
+
+  .recognition-mode__badge { top: 10px; right: 10px; }
+  .recognition-mode__number { font-size: 1.35rem; }
+  .recognition-mode > strong { font-size: 1.22rem; }
+  .recognition-mode__copy { grid-column: 2; font-size: 0.78rem; }
+  .recognition-mode__context { grid-column: 2; grid-row: auto; align-self: auto; font-size: 0.92rem; letter-spacing: 0.08em; }
+  .recognition-mode__action { grid-column: 2; }
+  .recognition-setup__note { font-size: 0.68rem; line-height: 1.5; }
+
+  .recognition-hud {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "identity actions"
+      "stats stats";
+  }
+
+  .recognition-hud__identity { grid-area: identity; min-height: 48px; border-right: 0; }
+  .recognition-hud__identity span { font-size: 0.56rem; }
+  .recognition-hud__identity strong { font-size: 0.88rem; }
+  .recognition-stats { grid-area: stats; border-top: 1px solid var(--recognition-rule); }
+  .recognition-stats > div { min-height: 44px; padding: 4px 6px; }
+  .recognition-stats > div:last-child { border-right: 0; }
+  .recognition-stats span { font-size: 0.54rem; }
+  .recognition-stats strong { font-size: 0.88rem; }
+  .recognition-hud__actions { grid-area: actions; }
+  .recognition-icon-button { min-width: 54px; min-height: 48px; padding: 3px 7px; }
+  .recognition-icon-button > span { font-size: 0.86rem; }
+  .recognition-icon-button > strong { font-size: 0.56rem; }
+
+  .recognition-question { min-height: 84px; padding: 10px 8px 8px; }
+  .recognition-question > strong { font-size: clamp(2rem, 10vw, 3rem); }
+
+  .recognition-board {
+    width: min(100%, 420px);
+    gap: clamp(3px, 1.2vw, 5px);
+  }
+
+  .recognition-board[data-size="25"] { width: min(100%, 500px); }
+  .recognition-cell { min-height: 0; border-radius: 4px; }
+  .recognition-cell__hanja { font-size: clamp(2.55rem, 14vw, 4.4rem); }
+  .recognition-board[data-size="25"] .recognition-cell__hanja { font-size: clamp(2rem, 10.5vw, 3.4rem); }
+
+  .recognition-feedback {
+    margin-top: 8px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .recognition-feedback__answer { min-height: 64px; padding: 9px 11px; }
+  .recognition-feedback__mark { width: 30px; height: 30px; flex-basis: 30px; }
+  .recognition-context { min-width: 0; min-height: 50px; border-top: 1px solid var(--recognition-rule); border-left: 0; }
+  .recognition-feedback__comparison { padding: 9px 11px; }
+
+  .recognition-recall,
+  .recognition-order { margin-top: 6px; padding: 16px 10px; }
+  .recognition-recall__hanja { font-size: 4.4rem; }
+  .recognition-recall__choices button { min-height: 52px; padding: 7px; }
+  .recognition-order__board { gap: 4px; }
+
+  #screen-grid .recognition-result { padding: 22px 14px; }
+  .recognition-result__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recognition-result__stats > div { min-height: 64px; border-bottom: 1px solid var(--recognition-rule); }
+  .recognition-result__stats > div:nth-child(2n) { border-right: 0; }
+  .recognition-result__stats > div:last-child { grid-column: 1 / -1; border-bottom: 0; }
+  .recognition-result__insights { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .recognition-result__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recognition-result__actions > button { width: 100%; padding-inline: 8px; }
+  .recognition-text-button { grid-column: 1 / -1; margin-left: 0; }
+}
+
+@media (max-width: 360px) {
+  body[data-screen="grid"] .app-shell { padding-inline: 5px; }
+  .recognition-cell__hanja { font-size: clamp(2.25rem, 13.5vw, 3.5rem); }
+  .recognition-mode { padding-inline: 11px; }
+  .recognition-result__actions { grid-template-columns: minmax(0, 1fr); }
+  .recognition-result__actions .recognition-text-button { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recognition-mode,
+  .recognition-cell { transition: none; }
+
+  .recognition-cell.is-replaced,
+  .recognition-board.is-shuffling .recognition-cell { animation: none; }
+}
