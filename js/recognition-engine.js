@@ -35,6 +35,11 @@ export const RECOGNITION_PHASES = Object.freeze([
   "ended",
 ]);
 export const RECOGNITION_BOARD_SIZES = Object.freeze([16, 25]);
+export const RECOGNITION_PAUSE_REASONS = Object.freeze([
+  "manual",
+  "navigation",
+  "background",
+]);
 
 const RECENT_TARGET_LIMIT = 12;
 const HISTORY_LIMIT = 60;
@@ -144,6 +149,7 @@ export function createRecognitionSession(options = {}) {
     questionStartedAt: nowIso,
     pausedAt: null,
     pausedFromPhase: null,
+    pauseReason: null,
     totalPausedMs: 0,
     endedAt: null,
     history: [],
@@ -544,12 +550,16 @@ export function pauseRecognitionSession(session, options = {}) {
   const current = restoreRecognitionSession(session, options);
   if (current.phase === "paused" || current.phase === "ended") return current;
   const now = resolveNow(options.now);
+  const pauseReason = RECOGNITION_PAUSE_REASONS.includes(options.reason)
+    ? options.reason
+    : "manual";
   return {
     ...current,
     phase: "paused",
     inputLocked: true,
     pausedAt: new Date(now).toISOString(),
     pausedFromPhase: current.phase,
+    pauseReason,
   };
 }
 
@@ -567,6 +577,7 @@ export function resumeRecognitionSession(session, options = {}) {
     inputLocked: resumedPhase === "feedback",
     pausedAt: null,
     pausedFromPhase: null,
+    pauseReason: null,
     totalPausedMs: current.totalPausedMs + Math.max(0, now - pausedAt),
     questionStartedAt: resumedPhase === "question" ? new Date(now).toISOString() : current.questionStartedAt,
   };
@@ -587,6 +598,7 @@ export function endRecognitionSession(session, options = {}) {
     ),
     pausedAt: null,
     pausedFromPhase: null,
+    pauseReason: null,
   };
 }
 
@@ -659,6 +671,14 @@ export function restoreRecognitionSession(value, options = {}) {
   const pausedFromPhase = ["question", "recall", "feedback"].includes(value.pausedFromPhase)
     ? value.pausedFromPhase
     : null;
+  // v39 and earlier did not distinguish automatic suspension from a user pause.
+  // Those stored pauses were overwhelmingly created by pagehide/navigation, so
+  // treating a missing reason as background lets the UI recover them once.
+  const pauseReason = phase === "paused"
+    ? RECOGNITION_PAUSE_REASONS.includes(value.pauseReason)
+      ? value.pauseReason
+      : "background"
+    : null;
   const endedAt = value.endedAt ? validIso(value.endedAt) : null;
   if (phase === "paused" && (!pausedAt || !pausedFromPhase)) {
     throw new Error("일시 정지 단계의 저장 값이 없습니다.");
@@ -715,6 +735,7 @@ export function restoreRecognitionSession(value, options = {}) {
     questionStartedAt: validIso(value.questionStartedAt),
     pausedAt,
     pausedFromPhase,
+    pauseReason,
     totalPausedMs: Math.max(0, Number(value.totalPausedMs) || 0),
     endedAt,
     history: normalizeHistory(value.history),
