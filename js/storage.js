@@ -1,6 +1,6 @@
 import { restoreMatchingSession } from "./matching-engine.js?v=24";
 import { normalizeConfusionPairs } from "./confusion-engine.js?v=1";
-import { restoreRecognitionSession } from "./recognition-engine.js?v=1";
+import { restoreRecognitionSession } from "./recognition-engine.js?v=2";
 import { restoreCoupletOrderSession } from "./couplet-order-engine.js?v=2";
 import { CHARACTERS } from "./data-model.js?v=35";
 import { createProgressRecord } from "./progress-engine.js";

@@ -35,8 +35,8 @@ test("랜덤 배열 버튼은 원래 배열 복귀 동작으로 전환된다", a
   assert.match(app, /concealNumber: isShuffled/);
   assert.doesNotMatch(app, /function shuffleOverviewGrid\(\)/);
   assert.match(html, /id="overview-shuffle"[^>]*aria-pressed="false"/);
-  assert.match(html, /app\.js\?v=39/);
-  assert.match(serviceWorker, /1000cc-static-v41-20260810/);
+  assert.match(html, /app\.js\?v=40/);
+  assert.match(serviceWorker, /1000cc-static-v42-20260810/);
   assert.match(serviceWorker, /render\.js\?v=29/);
 });
 

@@ -35,7 +35,7 @@ import {
   resumeRecognitionSession,
   submitGridAnswer,
   submitRecallAnswer,
-} from "./js/recognition-engine.js?v=1";
+} from "./js/recognition-engine.js?v=2";
 import {
   advanceCoupletOrderAfterFeedback,
   createCoupletOrderSession,
@@ -53,7 +53,7 @@ import {
 import {
   loadStateFromStorage,
   saveStateToStorage,
-} from "./js/storage.js?v=27";
+} from "./js/storage.js?v=28";
 import { SoundEffects } from "./js/sound-effects.js?v=2";
 import { createStore } from "./js/state.js";
 import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=26";
@@ -467,13 +467,19 @@ function bindEvents() {
     if (appState.settings.soundEffects) soundEffects.play("tap");
   });
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) return;
-    stopAllSpeech();
-    pauseGridSession({ render: false });
+    if (document.hidden) {
+      stopAllSpeech();
+      pauseGridForBackground();
+      return;
+    }
+    resumeAutomaticGridPause("background", { render: true });
   });
   window.addEventListener("pagehide", function () {
     stopAllSpeech();
-    pauseGridSession({ render: false });
+    pauseGridForBackground();
+  });
+  window.addEventListener("pageshow", function () {
+    resumeAutomaticGridPause("background", { render: true });
   });
 }
 
@@ -533,6 +539,7 @@ function setMode(mode) {
   if (sharedChallengeDay !== null) leaveChallengeView();
   if (mode !== appState.ui.mode) stopAllSpeech();
   if (appState.ui.mode === "grid" && mode !== "grid") pauseGridForNavigation();
+  if (mode === "grid") resumeAutomaticGridPause();
   commit(function (state) {
     state.ui.mode = mode;
     state.ui.revealAnswer = false;
@@ -1900,6 +1907,19 @@ function pauseGridForNavigation() {
   commit(function (state) {
     state.grid.session = pauseRecognitionSession(state.grid.session, {
       characterData: CHARACTERS,
+      reason: "navigation",
+    });
+  });
+}
+
+function pauseGridForBackground() {
+  const session = appState.grid.session;
+  if (!isRecognitionSession(session) || session.phase === "paused") return;
+  clearGridTimers();
+  commit(function (state) {
+    state.grid.session = pauseRecognitionSession(state.grid.session, {
+      characterData: CHARACTERS,
+      reason: "background",
     });
   });
 }
@@ -1912,12 +1932,35 @@ function pauseGridSession(options = {}) {
   commit(function (state) {
     state.grid.session = pauseRecognitionSession(state.grid.session, {
       characterData: CHARACTERS,
+      reason: "manual",
     });
   });
   if (shouldRender) {
     renderGridScreen();
     elements.resumeSession.focus({ preventScroll: true });
   }
+}
+
+function resumeAutomaticGridPause(expectedReason = null, options = {}) {
+  const session = appState.grid.session;
+  if (
+    !isRecognitionSession(session) ||
+    session.phase !== "paused" ||
+    session.pauseReason === "manual" ||
+    (expectedReason && session.pauseReason !== expectedReason)
+  ) return false;
+
+  clearGridTimers();
+  const next = resumeRecognitionSession(session, { characterData: CHARACTERS });
+  commit(function (state) {
+    state.grid.session = next;
+  });
+
+  if (options.render && appState.ui.mode === "grid") {
+    renderGridScreen();
+    focusRecognitionInput();
+  }
+  return true;
 }
 
 function resumeGridSession() {

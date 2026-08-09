@@ -530,6 +530,7 @@ test("세션은 question, feedback, recall, paused, ended 상태를 JSON으로 �
   });
   const paused = pauseRecognitionSession(session, { ...options, now: BASE_NOW + 1000 });
   assert.equal(paused.phase, "paused");
+  assert.equal(paused.pauseReason, "manual");
   assert.equal(restoreRecognitionSession(JSON.parse(JSON.stringify(paused)), options).phase, "paused");
   const resumed = resumeRecognitionSession(paused, { ...options, now: BASE_NOW + 5000 });
   assert.equal(resumed.phase, "question");
@@ -538,6 +539,16 @@ test("세션은 question, feedback, recall, paused, ended 상태를 JSON으로 �
   assert.equal(ended.phase, "ended");
   assert.equal(restoreRecognitionSession(JSON.parse(JSON.stringify(ended)), options).phase, "ended");
   assert.equal(getRecognitionStats(ended).elapsedMs, 6000);
+
+  const navigated = pauseRecognitionSession(session, {
+    ...options,
+    now: BASE_NOW + 11000,
+    reason: "navigation",
+  });
+  assert.equal(navigated.pauseReason, "navigation");
+  const legacyPause = JSON.parse(JSON.stringify(navigated));
+  delete legacyPause.pauseReason;
+  assert.equal(restoreRecognitionSession(legacyPause, options).pauseReason, "background");
 
   session = resumed;
   state.progress = answer.progress;
