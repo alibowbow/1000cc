@@ -10,12 +10,13 @@
     />
     <title>천자문 · 千字文</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="manifest.webmanifest?v=24" />
+    <link rel="manifest" href="manifest.webmanifest?v=25" />
     <link rel="stylesheet" href="styles.css?v=25" />
     <link rel="stylesheet" href="theme-folio.css?v=27" />
     <link rel="stylesheet" href="passage-folio-v25.css?v=26" />
     <link rel="stylesheet" href="compact-sunji-v26.css?v=31" />
-    <script type="module" src="app.js?v=35"></script>
+    <link rel="stylesheet" href="styles/recognition-game.css?v=1" />
+    <script type="module" src="app.js?v=36"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -315,67 +316,158 @@
       </section>
 
       <section class="screen" id="screen-grid" data-screen="grid" aria-labelledby="grid-title" hidden>
-        <div class="grid-setup" id="grid-setup">
-          <div class="screen-heading grid-mode-heading">
-            <div>
-              <p class="eyebrow">부가 기능 · 4지선다</p>
-              <h1 id="grid-title">한자 맞추기 게임</h1>
-            </div>
-            <p class="screen-summary">뜻과 독음을 보고 맞는 한자를 고릅니다.</p>
+        <section class="recognition-setup" id="grid-setup" aria-labelledby="grid-title">
+          <header class="recognition-setup__heading">
+            <p class="recognition-kicker">전범위 독립 식별</p>
+            <h1 id="grid-title">무한 한자 찾기</h1>
+            <p>1,000자 어디서 나와도 알아보는 연습</p>
+          </header>
+
+          <div class="recognition-mode-list" aria-label="연습 방식 선택">
+            <button class="recognition-mode recognition-mode--recommended" id="start-adaptive-match" type="button">
+              <span class="recognition-mode__badge">추천</span>
+              <span class="recognition-mode__number" aria-hidden="true">壹</span>
+              <strong>맞춤 연습</strong>
+              <span class="recognition-mode__copy">약한 글자와 복습할 글자를 전범위에서 자동으로 골라냅니다.</span>
+              <span class="recognition-mode__action">바로 시작 <span aria-hidden="true">→</span></span>
+            </button>
+
+            <button class="recognition-mode" id="start-random-match" type="button">
+              <span class="recognition-mode__number" aria-hidden="true">貳</span>
+              <strong>완전 랜덤</strong>
+              <span class="recognition-mode__copy">1,000자 모두 같은 확률로 출제합니다.</span>
+              <span class="recognition-mode__action">실력 확인 <span aria-hidden="true">→</span></span>
+            </button>
+
+            <button class="recognition-mode recognition-mode--couplet" id="start-current-match" type="button">
+              <span class="recognition-mode__number" aria-hidden="true">參</span>
+              <strong>현재 8자 복습</strong>
+              <span class="recognition-mode__copy">지금 보고 있던 8자의 순서와 문맥을 익힙니다.</span>
+              <span class="recognition-mode__context" id="matching-range-copy">天地玄黃宇宙洪荒</span>
+              <span class="recognition-mode__action">8자 복습 <span aria-hidden="true">→</span></span>
+            </button>
           </div>
 
-          <section class="matching-launch" aria-labelledby="matching-launch-title">
-            <div class="matching-launch__copy">
-              <p class="eyebrow">8문제 · 네 개의 후보</p>
-              <h2 id="matching-launch-title">한 글자씩 바로 확인</h2>
-              <p id="matching-range-copy">현재 보고 있는 8자로 시작합니다.</p>
+          <p class="recognition-setup__note">
+            문맥은 정답 뒤에만 표시됩니다. 듣기 문제 없이 한자 자체를 알아보는 데 집중합니다.
+          </p>
+        </section>
+
+        <section class="recognition-play" id="grid-session" aria-labelledby="recognition-session-title" hidden>
+          <h2 class="sr-only" id="recognition-session-title">무한 한자 찾기 진행 중</h2>
+          <header class="recognition-hud">
+            <div class="recognition-hud__identity">
+              <span id="grid-mode-label">맞춤 연습</span>
+              <strong>무한 한자 찾기</strong>
             </div>
-            <div class="matching-launch__actions">
-              <button class="primary-action" id="start-current-match" type="button">현재 8자 시작</button>
-              <button class="quiet-button" id="start-random-match" type="button">랜덤 8자</button>
+            <div class="recognition-stats" aria-label="현재 기록">
+              <div><span>문제</span><strong id="grid-session-progress">0</strong></div>
+              <div class="recognition-stat--combo"><span>콤보</span><strong id="grid-combo">×0</strong></div>
+              <div><span>정답률</span><strong id="grid-accuracy">—</strong></div>
+              <div><span>점수</span><strong id="grid-score">0</strong></div>
             </div>
+            <div class="recognition-hud__actions">
+              <button class="recognition-icon-button" id="pause-session" type="button" aria-pressed="false">
+                <span aria-hidden="true">Ⅱ</span><strong>일시정지</strong>
+              </button>
+              <button class="recognition-icon-button" id="end-session" type="button">
+                <span aria-hidden="true">↗</span><strong>나가기</strong>
+              </button>
+            </div>
+          </header>
+
+          <div class="recognition-question" id="target-panel">
+            <span class="recognition-question__type" id="target-type">훈음에서 찾기</span>
+            <strong id="target-prompt">하늘 천</strong>
+            <span id="target-position">1,000자 전범위</span>
+          </div>
+
+          <div
+            class="recognition-board"
+            id="continuous-board"
+            role="grid"
+            aria-label="한자 후보 16칸"
+            aria-describedby="recognition-instruction"
+            data-size="16"
+          ></div>
+          <p class="sr-only" id="recognition-instruction">방향키로 이동하고 Enter 또는 Space 키로 선택하세요.</p>
+
+          <section class="recognition-recall" id="recognition-recall" aria-labelledby="recall-prompt" hidden>
+            <p>짧은 역방향 확인</p>
+            <strong class="recognition-recall__hanja" id="recall-character" lang="zh-Hant">天</strong>
+            <h3 id="recall-prompt">이 글자의 훈음은?</h3>
+            <div class="recognition-recall__choices" id="recall-choices"></div>
           </section>
-          <p class="matching-launch__hint">8자 보기에서 연을 바꾼 뒤, 같은 8자로 바로 풀 수 있습니다.</p>
-        </div>
 
-        <div class="grid-session" id="grid-session" hidden>
-          <div class="session-topline">
-            <div><span>이번 게임</span><strong id="grid-session-progress">1 / 8</strong></div>
-            <div><span>정답률</span><strong id="grid-accuracy">—</strong></div>
-            <div><span>오답</span><strong id="grid-wrong-count">0</strong></div>
-          </div>
+          <section class="recognition-order" id="recognition-order" aria-labelledby="order-instruction" hidden>
+            <div class="recognition-order__progress">
+              <span id="order-instruction">원문 순서대로 글자를 누르세요.</span>
+              <strong id="order-answer" lang="zh-Hant" aria-live="polite"></strong>
+            </div>
+            <div class="recognition-order__board" id="order-board" role="grid" aria-label="현재 8자 순서 맞추기"></div>
+          </section>
 
-          <div class="target-panel" id="target-panel">
-            <span class="target-panel__label">뜻과 독음</span>
-            <strong id="target-prompt">하늘 · 천</strong>
-            <span id="target-position">문제 1 / 8</span>
-          </div>
+          <section class="recognition-feedback" id="matching-feedback" aria-live="polite" aria-atomic="true" hidden>
+            <div class="recognition-feedback__answer">
+              <span class="recognition-feedback__mark" id="feedback-mark" aria-hidden="true">✓</span>
+              <div>
+                <span id="feedback-status">정답</span>
+                <strong id="feedback-answer"><span lang="zh-Hant">天</span> · 하늘 천</strong>
+                <small id="feedback-gloss">하늘</small>
+              </div>
+            </div>
+            <div class="recognition-feedback__comparison" id="feedback-comparison" hidden>
+              <div><span>내 선택</span><strong id="feedback-selected">宇 · 집 우</strong></div>
+              <div><span>정답</span><strong id="feedback-correct">宙 · 집 주</strong></div>
+              <p id="feedback-difference">부수와 획수를 함께 비교해 보세요.</p>
+            </div>
+            <button class="recognition-context" id="open-answer-context" type="button">
+              <span>원래 8자</span><strong id="feedback-context" lang="zh-Hant">天地玄黃宇宙洪荒</strong><span aria-hidden="true">›</span>
+            </button>
+          </section>
 
-          <div class="matching-choices" id="continuous-board" aria-label="한자 후보"></div>
-          <p class="matching-feedback" id="matching-feedback" aria-live="polite"></p>
+          <section class="recognition-pause" id="recognition-pause" aria-labelledby="pause-title" hidden>
+            <p class="recognition-kicker">기록은 그대로 보존됩니다</p>
+            <h3 id="pause-title">잠시 멈췄습니다</h3>
+            <button class="recognition-resume" id="resume-session" type="button">계속하기</button>
+          </section>
+        </section>
 
-          <div class="session-controls">
-            <button class="quiet-button" id="replay-target" type="button" data-tts>훈음 듣기</button>
-            <button class="text-button" id="restart-session" type="button">다시 시작</button>
-            <button class="text-button" id="end-session" type="button">그만하기</button>
-          </div>
-        </div>
-
-        <div class="session-result" id="session-result" hidden>
-          <p class="eyebrow">세션 완료</p>
-          <h2>게임 결과</h2>
-          <div class="result-stats">
-            <div><span>맞힌 글자</span><strong id="result-learned">0</strong></div>
+        <section class="recognition-result" id="session-result" aria-labelledby="result-title" hidden>
+          <header>
+            <p class="recognition-kicker" id="result-mode">맞춤 연습 기록</p>
+            <h2 id="result-title">이번 연습에서 달라진 것</h2>
+          </header>
+          <div class="recognition-result__stats">
+            <div><span>푼 문제</span><strong id="result-learned">0</strong></div>
             <div><span>정답률</span><strong id="result-accuracy">0%</strong></div>
-            <div><span>오답</span><strong id="result-wrong">0</strong></div>
+            <div><span>최고 콤보</span><strong id="result-combo">×0</strong></div>
+            <div><span>점수</span><strong id="result-score">0</strong></div>
             <div><span>소요 시간</span><strong id="result-time">0초</strong></div>
           </div>
-          <div class="result-characters" id="result-characters"></div>
-          <div class="result-actions">
-            <button class="quiet-button" id="retry-wrong" type="button">틀린 글자 다시 풀기</button>
-            <button class="quiet-button" id="close-result" type="button">게임 끝내기</button>
+
+          <div class="recognition-result__insights">
+            <section>
+              <span>확실해진 글자</span>
+              <div class="result-characters" id="result-confident"></div>
+            </section>
+            <section>
+              <span>다시 나올 글자</span>
+              <div class="result-characters" id="result-characters"></div>
+            </section>
+            <section>
+              <span>새로 발견한 혼동</span>
+              <div class="recognition-confusions" id="result-confusions"><p>이번에는 새 혼동이 없었습니다.</p></div>
+            </section>
           </div>
-        </div>
+
+          <div class="recognition-result__actions">
+            <button class="recognition-primary" id="restart-session" type="button">다시 시작</button>
+            <button class="recognition-secondary" id="retry-wrong" type="button">취약 글자 1분 복습</button>
+            <button class="recognition-secondary" id="share-result" type="button">결과 공유</button>
+            <button class="recognition-text-button" id="close-result" type="button">한자 맞추기 나가기</button>
+          </div>
+        </section>
         <p class="sr-only" id="grid-announcement" aria-live="assertive" aria-atomic="true"></p>
       </section>
 

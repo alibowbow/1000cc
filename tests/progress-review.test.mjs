@@ -4,7 +4,9 @@ import {
   createProgressRecord,
   getDueIndexes,
   getMasteredCount,
+  isIndependentRecognitionConfident,
   recordAttempt,
+  recordSkillAttempt,
 } from "../js/progress-engine.js";
 import { DAY_MS, calculateDueAt } from "../js/review-scheduler.js";
 
@@ -41,4 +43,21 @@ test("오답은 진행을 올리지 않고 숙련도를 한 단계 낮춰 즉시
   assert.equal(next[12].wrongCount, 1);
   assert.equal(next[12].currentStreak, 0);
   assert.deepEqual(getDueIndexes(next, now), [12]);
+});
+
+test("독립 식별 확실함은 여러 날짜·후보 구성·완전 랜덤·역방향 회상을 모두 요구한다", function () {
+  const start = Date.UTC(2026, 7, 4);
+  let progress = {};
+  for (let day = 0; day < 3; day += 1) {
+    progress = recordSkillAttempt(progress, 0, "reverse", {
+      correct: true,
+      now: start + day * 24 * 60 * 60 * 1000,
+      randomMode: day === 2,
+      candidateSignature: `board-${day % 2}`,
+    });
+  }
+  assert.equal(isIndependentRecognitionConfident(progress[0]), false);
+  progress = recordSkillAttempt(progress, 0, "reading", { correct: true, now: start + 3 });
+  assert.equal(isIndependentRecognitionConfident(progress[0]), true);
+  assert.equal(isIndependentRecognitionConfident(progress[0], { recentConfusionCount: 3 }), false);
 });

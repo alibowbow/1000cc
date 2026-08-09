@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createMatchingSession } from "../js/matching-engine.js";
+import { CHARACTERS } from "../js/data-model.js";
+import { createRecognitionSession } from "../js/recognition-engine.js";
+import { createCoupletOrderSession } from "../js/couplet-order-engine.js";
 import {
   STORAGE_KEY_V1,
   STORAGE_KEY_V2,
@@ -116,6 +119,66 @@ test("진행 중인 한자 맞추기 후보와 문제 위치를 저장하고 복
   assert.deepEqual(loaded.state.grid.session.choiceIndexes, state.grid.session.choiceIndexes);
   assert.equal(loaded.state.grid.session.targetIndex, 40);
   assert.equal(loaded.state.grid.session.questionPosition, 0);
+});
+
+test("무한 그리드와 현재 8자 순서 세션을 v2 저장소에서 구분해 복원한다", function () {
+  const storage = memoryStorage();
+  const state = createDefaultState();
+  state.grid.session = createRecognitionSession({
+    mode: "adaptive",
+    boardSize: 16,
+    characterData: CHARACTERS,
+    progress: {},
+    confusionPairs: {},
+    random: function () { return 0.42; },
+    now: Date.UTC(2026, 7, 9),
+  });
+  saveStateToStorage(storage, state);
+  const restoredRecognition = loadStateFromStorage(storage).state.grid.session;
+  assert.equal(restoredRecognition.kind, "recognition-grid");
+  assert.equal(restoredRecognition.boardIndexes.length, 16);
+  assert.equal(restoredRecognition.boardIndexes[restoredRecognition.targetSlot], restoredRecognition.targetIndex);
+
+  state.grid.session = createCoupletOrderSession({
+    indexes: CHARACTERS.slice(0, 8).map(function (item) { return item.index; }),
+    coupletIndex: 0,
+    random: function () { return 0.42; },
+    now: Date.UTC(2026, 7, 9),
+  });
+  saveStateToStorage(storage, state);
+  const restoredOrder = loadStateFromStorage(storage).state.grid.session;
+  assert.equal(restoredOrder.kind, "couplet-order");
+  assert.equal(restoredOrder.orderIndexes.length, 8);
+  assert.deepEqual(new Set(restoredOrder.tileIndexes), new Set(restoredOrder.orderIndexes));
+});
+
+test("혼동 쌍과 최근 게임 기록은 v2 안에서 크기를 제한해 보존한다", function () {
+  const state = createDefaultState();
+  state.grid.confusionPairs = {
+    "4:5": {
+      correctIndex: 4,
+      selectedIndex: 5,
+      count: 3,
+      firstAt: "2026-08-01T00:00:00.000Z",
+      lastAt: "2026-08-09T00:00:00.000Z",
+    },
+  };
+  state.grid.recentRuns = Array.from({ length: 36 }, function (_, index) {
+    return {
+      mode: index % 2 ? "adaptive" : "random1000",
+      answeredCount: index + 1,
+      correctCount: index,
+      wrongCount: 1,
+      bestCombo: index,
+      score: index * 100,
+      duration: index * 1000,
+      completedAt: new Date(Date.UTC(2026, 7, 1, 0, index)).toISOString(),
+    };
+  });
+  const restored = parseImportJson(createExportJson(state));
+  assert.equal(restored.grid.confusionPairs["4:5"].count, 3);
+  assert.equal(restored.grid.recentRuns.length, 30);
+  assert.equal(restored.grid.recentRuns.at(-1).answeredCount, 36);
 });
 
 test("학습 기록 JSON은 왕복 가능하고 잘못된 인덱스는 거부한다", function () {
