@@ -1558,9 +1558,9 @@ body {
     border: 0;
     border-top: 1px solid var(--rule-strong);
     border-radius: 0;
-    background: rgba(247, 243, 235, 0.97);
+    background: #f7f3eb;
     box-shadow: 0 -8px 24px rgba(42, 34, 24, 0.1);
-    backdrop-filter: blur(14px);
+    touch-action: auto;
   }
 
   .primary-nav button {
@@ -1569,6 +1569,7 @@ body {
     flex-direction: column;
     gap: 2px;
     border-radius: 5px;
+    touch-action: auto;
   }
 
   .primary-nav button > span { font-size: 1rem; line-height: 1; }

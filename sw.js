@@ -1,9 +1,9 @@
-const CACHE_NAME = "1000cc-static-v36-20260808";
+const CACHE_NAME = "1000cc-static-v37-20260809";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=24",
-  "./theme-folio.css?v=26",
+  "./styles.css?v=25",
+  "./theme-folio.css?v=27",
   "./passage-folio-v25.css?v=26",
   "./compact-sunji-v26.css?v=31",
   "./app.js?v=35",

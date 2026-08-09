@@ -47,11 +47,14 @@ test("순지 필사판과 반응형 조선 서첩 v35 학습 모드가 오프라
   ]);
 
   assert.match(html, /theme-folio\.css/);
-  assert.match(html, /theme-folio\.css\?v=26/);
+  assert.match(html, /theme-folio\.css\?v=27/);
   assert.match(html, /passage-folio-v25\.css\?v=26/);
   assert.match(html, /compact-sunji-v26\.css\?v=31/);
   assert.match(html, /app\.js\?v=35/);
-  assert.match(html, /styles\.css\?v=24/);
+  assert.match(html, /styles\.css\?v=25/);
+  assert.match(styles, /html\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/);
+  assert.match(styles, /body\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;/);
+  assert.doesNotMatch(styles, /(?:html|body)\s*\{[^}]*min-width:\s*320px/);
   assert.equal((html.match(/data-mode=/g) || []).length, 4);
   assert.match(html, />1자 보기</);
   assert.match(html, />8자 보기</);
@@ -209,6 +212,9 @@ test("순지 필사판과 반응형 조선 서첩 v35 학습 모드가 오프라
   assert.match(theme, /\.matching-choices/);
   assert.match(theme, /Mobile one-screen home and bottom navigation/);
   assert.match(theme, /\.primary-nav\s*\{[\s\S]*position:\s*fixed[\s\S]*bottom:\s*0/);
+  assert.match(theme, /\.primary-nav\s*\{[\s\S]*background:\s*#f7f3eb;[\s\S]*touch-action:\s*auto/);
+  assert.match(theme, /\.primary-nav button\s*\{[\s\S]*touch-action:\s*auto/);
+  assert.doesNotMatch(theme, /\.primary-nav\s*\{[^}]*backdrop-filter/);
   assert.match(theme, /body\[data-screen="today"\][\s\S]*overflow:\s*hidden/);
   assert.match(theme, /\.today-stage\s*\{[\s\S]*grid-template-rows:\s*auto auto auto minmax\(112px, 1fr\) auto/);
   assert.match(theme, /\.memory-scene__art\s*\{[\s\S]*width:\s*auto;[\s\S]*height:\s*100%;/);
@@ -261,8 +267,10 @@ test("순지 필사판과 반응형 조선 서첩 v35 학습 모드가 오프라
   assert.match(theme, /\.today-actions \.primary-action\s*\{[\s\S]*min-width:\s*118px[\s\S]*min-height:\s*40px/);
   assert.match(theme, /--mobile-nav-height:\s*58px/);
   assert.match(serviceWorker, /theme-folio\.css/);
+  assert.match(serviceWorker, /theme-folio\.css\?v=27/);
   assert.match(theme, /grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)/);
-  assert.match(serviceWorker, /1000cc-static-v36-20260808/);
+  assert.match(serviceWorker, /1000cc-static-v37-20260809/);
+  assert.match(serviceWorker, /styles\.css\?v=25/);
   assert.match(serviceWorker, /compact-sunji-v26\.css\?v=31/);
   assert.match(serviceWorker, /app\.js\?v=35/);
   assert.match(serviceWorker, /data-model\.js\?v=35/);
