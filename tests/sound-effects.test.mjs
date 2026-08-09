@@ -129,6 +129,29 @@ class FakeAudioContext {
   }
 }
 
+class FakeMediaPlayer {
+  constructor(options = {}) {
+    this.currentTime = 0;
+    this.pauseCount = 0;
+    this.playCount = 0;
+    this.preload = "";
+    this.rejectPlay = Boolean(options.rejectPlay);
+    this.src = "";
+    this.volume = 1;
+  }
+
+  pause() {
+    this.pauseCount += 1;
+  }
+
+  play() {
+    this.playCount += 1;
+    return this.rejectPlay
+      ? Promise.reject(new Error("media-blocked"))
+      : Promise.resolve();
+  }
+}
+
 function flushMicrotasks() {
   return new Promise(function (resolve) { setImmediate(resolve); });
 }
@@ -169,13 +192,13 @@ test("중단된 컨텍스트는 사용자 재생 안에서 한 번 재개한 뒤
 
   assert.equal(sound.play("correct"), true);
   assert.equal(context.resumeCount, 1);
-  assert.equal(context.oscillators.length, 0);
+  assert.equal(context.filters.length, 2);
   await flushMicrotasks();
-  assert.equal(context.oscillators.length, 2);
+  assert.equal(context.state, "running");
 
   assert.equal(sound.play("tap"), true);
   assert.equal(context.resumeCount, 1);
-  assert.equal(context.oscillators.length, 3);
+  assert.equal(context.filters.length, 3);
 });
 
 test("컨텍스트 재개 거부는 삼키고 다음 사용자 동작에서 다시 시도한다", async function () {
@@ -185,13 +208,13 @@ test("컨텍스트 재개 거부는 삼키고 다음 사용자 동작에서 다�
   assert.equal(sound.play("game-complete"), true);
   await flushMicrotasks();
   assert.equal(context.resumeCount, 1);
-  assert.equal(context.oscillators.length, 0);
+  assert.equal(context.filters.length, 0, "무음 프라임만 만들고 실제 큐는 만들지 않는다");
 
   context.rejectResume = false;
   assert.equal(sound.play("tap"), true);
   await flushMicrotasks();
   assert.equal(context.resumeCount, 2);
-  assert.equal(context.oscillators.length, 1);
+  assert.equal(context.filters.length, 1);
 });
 
 test("다섯 효과음은 휴대폰에서도 들리면서 부드러운 출력 범위를 지킨다", function () {
@@ -210,39 +233,45 @@ test("다섯 효과음은 휴대폰에서도 들리면서 부드러운 출력 �
     assert.equal(sound.play(cue), true);
     assert.equal(context.oscillators.length, voiceCount);
     assert.equal(context.gains.length, voiceCount + 1, "마스터 게인 하나와 음별 게인을 사용한다");
+    assert.equal(context.gains[0].connections[0], context.destination, "마스터 출력은 실제 목적지에 연결된다");
+    context.filters.forEach(function (filter, index) {
+      assert.equal(context.oscillators[index].connections[0], filter);
+      assert.equal(filter.connections[0], context.gains[index + 1]);
+      assert.equal(context.gains[index + 1].connections[0], context.gains[0]);
+    });
     const masterPeak = context.gains[0].gain.events[0].value;
-    assert.ok(masterPeak >= 0.16 && masterPeak <= 0.18);
+    assert.ok(masterPeak >= 0.45 && masterPeak <= 0.47);
     let cuePeak = 0;
     context.gains.slice(1).forEach(function (gain) {
       const peak = Math.max(...gain.gain.events.map(function (event) { return event.value; }));
-      assert.ok(peak <= 0.16, `${cue}의 음별 피크가 과도하지 않아야 한다`);
+      assert.ok(peak <= 0.28, `${cue}의 음별 피크가 과도하지 않아야 한다`);
       cuePeak = Math.max(cuePeak, peak * masterPeak);
     });
-    assert.ok(cuePeak >= 0.018 && cuePeak <= 0.03, `${cue}의 실효 출력이 작거나 과도하지 않아야 한다`);
+    assert.ok(cuePeak >= 0.08 && cuePeak <= 0.14, `${cue}의 실효 출력이 작거나 과도하지 않아야 한다`);
     context.oscillators.forEach(function (oscillator) {
       assert.ok(oscillator.stoppedAt - oscillator.startedAt < 0.35);
     });
   });
 });
 
-test("음성 합성 중에는 새 효과음을 막고 마스터 출력을 부드럽게 낮춘다", function () {
+test("음성 합성 중에도 효과음은 작게 들리고 종료 뒤 원래 출력으로 돌아온다", function () {
   const context = new FakeAudioContext();
   const sound = new SoundEffects({ contextFactory() { return context; } });
   sound.play("tap");
   const master = context.gains[0].gain;
 
   assert.equal(sound.setSpeechActive(true), true);
-  assert.equal(sound.play("correct"), false);
-  assert.equal(context.oscillators.length, 1);
+  assert.equal(sound.play("correct"), true);
+  assert.equal(context.filters.length, 3);
   assert.ok(master.events.some(function (event) {
-    return event.kind === "linear" && event.value < 0.015;
+    return event.kind === "linear" && event.value > 0.19 && event.value < 0.2;
   }));
 
   assert.equal(sound.setSpeechActive(false), false);
   assert.equal(sound.play("correct"), true);
-  assert.equal(context.oscillators.length, 3);
+  assert.equal(context.filters.length, 5);
   assert.ok(master.events.some(function (event) {
-    return event.kind === "linear" && event.value === 0.17;
+    return event.kind === "linear" && event.value === 0.46;
   }));
 });
 
@@ -268,14 +297,14 @@ test("재개 뒤에도 interrupted인 컨텍스트는 큐를 만들지 않고 �
 
   assert.equal(sound.play("correct"), true);
   await flushMicrotasks();
-  assert.equal(context.oscillators.length, 0);
+  assert.equal(context.filters.length, 0);
 
   context.resumeState = "running";
   assert.equal(sound.unlock(), true);
   await flushMicrotasks();
   assert.equal(context.state, "running");
   assert.equal(sound.play("correct"), true);
-  assert.equal(context.oscillators.length, 3, "무음 펄스 하나와 정답음 두 개를 만든다");
+  assert.equal(context.filters.length, 2, "재개 뒤 정답음 두 개를 만든다");
 });
 
 test("효과음 설정을 끄면 새 음을 막고 다시 켜면 같은 컨텍스트를 사용한다", function () {
@@ -322,5 +351,108 @@ test("백그라운드 전환은 컨텍스트를 닫지 않고 안전하게 중�
   assert.equal(sound.play("tap"), true);
   await flushMicrotasks();
   assert.equal(context.resumeCount, 1);
-  assert.equal(context.oscillators.length, 2);
+  assert.equal(context.filters.length, 2);
+});
+
+test("브라우저 미디어 경로는 실제 PCM WAV를 한 번 재생하고 Web Audio와 겹치지 않는다", async function () {
+  const context = new FakeAudioContext();
+  const players = [];
+  const sound = new SoundEffects({
+    contextFactory() { return context; },
+    audioFactory() {
+      const player = new FakeMediaPlayer();
+      players.push(player);
+      return player;
+    },
+  });
+
+  assert.equal(sound.play("correct"), true);
+  await flushMicrotasks();
+  assert.equal(players.length, 1);
+  assert.equal(players[0].playCount, 1);
+  assert.equal(context.filters.length, 0, "미디어가 재생되면 Web Audio 큐를 중복 생성하지 않는다");
+  assert.match(players[0].src, /^data:audio\/wav;base64,/);
+
+  const wav = Buffer.from(players[0].src.split(",")[1], "base64");
+  assert.equal(wav.toString("ascii", 0, 4), "RIFF");
+  assert.equal(wav.toString("ascii", 8, 12), "WAVE");
+  assert.equal(wav.readUInt16LE(20), 1, "PCM 포맷");
+  assert.equal(wav.readUInt16LE(22), 1, "모노");
+  assert.equal(wav.readUInt32LE(24), 22050);
+  assert.equal(wav.readUInt16LE(34), 16, "16비트");
+  let peak = 0;
+  let energy = 0;
+  let samples = 0;
+  for (let offset = 44; offset + 1 < wav.length; offset += 2) {
+    const sample = wav.readInt16LE(offset) / 32768;
+    peak = Math.max(peak, Math.abs(sample));
+    energy += sample * sample;
+    samples += 1;
+  }
+  const rms = Math.sqrt(energy / samples);
+  assert.ok(peak >= 0.1 && peak <= 0.3, `PCM 피크 ${peak}는 휴대폰 가청 범위여야 한다`);
+  assert.ok(rms >= 0.02, `PCM RMS ${rms}는 실제 비무음 신호여야 한다`);
+});
+
+test("미디어 재생이 거부되면 준비된 Web Audio로 정확히 한 번 대체한다", async function () {
+  const context = new FakeAudioContext();
+  const player = new FakeMediaPlayer({ rejectPlay: true });
+  const sound = new SoundEffects({
+    contextFactory() { return context; },
+    audioFactory() { return player; },
+  });
+
+  assert.equal(sound.play("correct"), true);
+  await flushMicrotasks();
+  assert.equal(player.playCount, 1);
+  assert.equal(context.filters.length, 2);
+});
+
+test("다섯 미디어 큐의 실제 PCM 피크와 RMS가 휴대폰 가청 범위에 있다", async function () {
+  const players = new Map();
+  const sound = new SoundEffects({
+    contextFactory() { return null; },
+    audioFactory(cue) {
+      const player = new FakeMediaPlayer();
+      players.set(cue, player);
+      return player;
+    },
+  });
+
+  for (const cue of SOUND_EFFECT_CUES) {
+    assert.equal(sound.play(cue), true);
+    await flushMicrotasks();
+    const wav = Buffer.from(players.get(cue).src.split(",")[1], "base64");
+    let peak = 0;
+    let energy = 0;
+    let samples = 0;
+    for (let offset = 44; offset + 1 < wav.length; offset += 2) {
+      const sample = wav.readInt16LE(offset) / 32768;
+      peak = Math.max(peak, Math.abs(sample));
+      energy += sample * sample;
+      samples += 1;
+    }
+    const rms = Math.sqrt(energy / samples);
+    assert.ok(peak >= 0.09 && peak <= 0.2, `${cue} PCM 피크 ${peak}`);
+    assert.ok(rms >= 0.02 && rms <= 0.07, `${cue} PCM RMS ${rms}`);
+  }
+});
+
+test("같은 미디어 큐를 다시 누르면 처음부터 재생하고 끄면 즉시 멈춘다", async function () {
+  const context = new FakeAudioContext();
+  const player = new FakeMediaPlayer();
+  const sound = new SoundEffects({
+    contextFactory() { return context; },
+    audioFactory() { return player; },
+  });
+
+  sound.play("tap");
+  player.currentTime = 0.05;
+  sound.play("tap");
+  await flushMicrotasks();
+  assert.equal(player.playCount, 2);
+  assert.equal(player.currentTime, 0);
+  sound.setEnabled(false);
+  assert.ok(player.pauseCount >= 3);
+  assert.equal(player.volume, 0);
 });

@@ -54,9 +54,9 @@ import {
   loadStateFromStorage,
   saveStateToStorage,
 } from "./js/storage.js?v=28";
-import { SoundEffects } from "./js/sound-effects.js?v=2";
+import { SoundEffects } from "./js/sound-effects.js?v=3";
 import { createStore } from "./js/state.js";
-import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=26";
+import { createCoupletSpeechItems, TTSManager } from "./js/tts-manager.js?v=27";
 import { formatDuration } from "./js/utils.js";
 
 const OVERVIEW_COMPACT_QUERY =
@@ -242,6 +242,7 @@ const elements = {
   settingTapToSpeak: document.querySelector("#setting-tap-to-speak"),
   settingVibrate: document.querySelector("#setting-vibrate"),
   settingSoundEffects: document.querySelector("#setting-sound-effects"),
+  testSoundEffects: document.querySelector("#test-sound-effects"),
   toast: document.querySelector("#toast"),
 };
 
@@ -410,10 +411,8 @@ function bindEvents() {
   elements.startAdaptiveMatch.addEventListener("click", startAdaptiveMatchingGame);
   elements.startOrderMatch.addEventListener("click", startRandomOrderGame);
   elements.startRandomMatch.addEventListener("click", startRandomMatchingGame);
-  [elements.gridSetup, elements.gridSession].forEach(function (surface) {
-    surface.addEventListener("pointerdown", unlockRecognitionSound, { passive: true });
-    surface.addEventListener("keydown", unlockRecognitionSound);
-  });
+  document.addEventListener("pointerdown", unlockAppSound, { capture: true, passive: true });
+  document.addEventListener("keydown", unlockAppSound, { capture: true });
   elements.continuousBoard.addEventListener("click", handleMatchingChoiceClick);
   elements.continuousBoard.addEventListener("keydown", handleMatchingChoiceKeyboard);
   elements.recallChoices.addEventListener("click", handleRecallChoiceClick);
@@ -464,7 +463,10 @@ function bindEvents() {
       state.settings.soundEffects = elements.settingSoundEffects.checked;
     });
     soundEffects.setEnabled(appState.settings.soundEffects);
-    if (appState.settings.soundEffects) soundEffects.play("tap");
+    if (appState.settings.soundEffects) void playSoundEffectsTest();
+  });
+  elements.testSoundEffects.addEventListener("click", function () {
+    void playSoundEffectsTest();
   });
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) {
@@ -483,9 +485,25 @@ function bindEvents() {
   });
 }
 
-function unlockRecognitionSound(event) {
+function unlockAppSound(event) {
   if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
   soundEffects.unlock();
+}
+
+async function playSoundEffectsTest() {
+  if (!appState.settings.soundEffects) {
+    commit(function (state) {
+      state.settings.soundEffects = true;
+    });
+    soundEffects.setEnabled(true);
+    syncSettingsControls();
+  }
+  const played = await soundEffects.test("correct");
+  showToast(
+    played
+      ? "효과음을 재생했습니다."
+      : "브라우저가 소리를 차단했습니다. 기기 미디어 음량을 확인해 주세요.",
+  );
 }
 
 function renderApp() {
@@ -2435,6 +2453,13 @@ function showToast(message) {
 
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", function () {
+    if (!hadController || refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
   window.addEventListener("load", function () {
     navigator.serviceWorker
       .register("./sw.js", { updateViaCache: "none" })

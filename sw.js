@@ -1,4 +1,4 @@
-const CACHE_NAME = "1000cc-static-v42-20260810";
+const CACHE_NAME = "1000cc-static-v43-20260810";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,8 +6,8 @@ const APP_SHELL = [
   "./theme-folio.css?v=27",
   "./passage-folio-v25.css?v=26",
   "./compact-sunji-v26.css?v=31",
-  "./styles/recognition-game.css?v=5",
-  "./app.js?v=40",
+  "./styles/recognition-game.css?v=6",
+  "./app.js?v=41",
   "./data.js",
   "./character-meta.js",
   "./character-content.js",
@@ -63,7 +63,7 @@ const APP_SHELL = [
   "./js/recognition-renderer.js?v=1",
   "./js/recognition-score.js?v=1",
   "./js/couplet-order-engine.js?v=2",
-  "./js/sound-effects.js?v=2",
+  "./js/sound-effects.js?v=3",
   "./js/lesson-content.js?v=35",
   "./js/progress-engine.js",
   "./js/progress-engine.js?v=1",
@@ -72,7 +72,7 @@ const APP_SHELL = [
   "./js/render.js?v=29",
   "./js/state.js",
   "./js/storage.js?v=28",
-  "./js/tts-manager.js?v=26",
+  "./js/tts-manager.js?v=27",
   "./js/utils.js",
   "./js/voice-utils.js",
 ];

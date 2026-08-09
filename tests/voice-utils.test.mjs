@@ -208,6 +208,17 @@ test("선택한 음성이 실패하면 다른 한국어 음성으로 한 번 자
   assert.equal(failed, 0);
 });
 
+test("기기 음성이 취소되거나 중단돼도 재생 상태를 반드시 해제한다", function () {
+  ["canceled", "interrupted"].forEach(function (error) {
+    const { manager, synthesis } = createSpeechHarness();
+    const states = [];
+    manager.onStateChange = function (state) { states.push(state.speaking); };
+    manager.speak("하늘 천");
+    synthesis.spoken[0].emit("error", { error });
+    assert.deepEqual(states, [true, false], `${error} 뒤 speaking 상태가 남아서는 안 된다`);
+  });
+});
+
 test("utterance는 종료될 때까지 강한 참조로 유지한다", function () {
   const { manager, synthesis } = createSpeechHarness();
   manager.speak("땅 지");
