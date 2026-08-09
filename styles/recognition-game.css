@@ -261,6 +261,70 @@ body[data-screen="grid"] .app-shell {
   box-shadow: none;
 }
 
+body[data-screen="grid"]:has(#grid-session:not([hidden])) {
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+body[data-screen="grid"]:has(#grid-session:not([hidden])) .topbar { grid-row: 1; }
+
+body[data-screen="grid"]:has(#grid-session:not([hidden])) .app-shell {
+  grid-row: 2;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+body[data-screen="grid"]:has(#grid-session:not([hidden])) #screen-grid:not([hidden]),
+#grid-session:not([hidden]) {
+  height: 100%;
+  min-height: 0;
+}
+
+#grid-session:not([hidden]) {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  align-content: stretch;
+  gap: 4px;
+  overflow: hidden;
+}
+
+#grid-session .recognition-hud { grid-row: 1; }
+#grid-session .recognition-question { grid-row: 2; }
+#grid-session .recognition-board { grid-row: 3; }
+#grid-session .recognition-recall,
+#grid-session .recognition-order { grid-row: 2 / 4; }
+#grid-session .recognition-feedback { grid-row: 4; }
+#grid-session .recognition-pause { grid-row: 2 / 5; }
+
+#grid-session:not([hidden]) > .recognition-board:not([hidden]) {
+  width: auto;
+  height: min(100%, 610px);
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  justify-self: center;
+  align-self: center;
+  grid-template-rows: repeat(var(--board-columns), minmax(0, 1fr));
+  aspect-ratio: 1;
+}
+
+#grid-session:not([hidden]) > .recognition-board[data-size="25"]:not([hidden]) {
+  height: min(100%, 640px);
+}
+
+#grid-session:not([hidden]) > .recognition-board .recognition-grid-row,
+#grid-session:not([hidden]) > .recognition-board .recognition-gridcell,
+#grid-session:not([hidden]) > .recognition-board .recognition-cell {
+  min-height: 0;
+  height: 100%;
+}
+
+#grid-session:not([hidden]) > .recognition-board .recognition-cell { aspect-ratio: auto; }
+
 .recognition-hud {
   min-height: 62px;
   display: grid;
@@ -385,6 +449,7 @@ body[data-screen="grid"] .app-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(4px, 0.7vw, 7px);
+  container-type: inline-size;
 }
 
 .recognition-board[data-size="25"] {
@@ -438,12 +503,14 @@ body[data-screen="grid"] .app-shell {
 .recognition-cell__hanja {
   font-family: "Cheonjamun Hanja", "Noto Serif CJK KR", "AppleMyungjo", serif;
   font-size: clamp(2.75rem, 6.3vw, 5rem);
+  font-size: clamp(2rem, 18cqi, 5rem);
   font-weight: 500;
   line-height: 1;
 }
 
 .recognition-board[data-size="25"] .recognition-cell__hanja {
   font-size: clamp(2.45rem, 5.1vw, 4.3rem);
+  font-size: clamp(1.65rem, 14cqi, 4.3rem);
 }
 
 .recognition-cell.is-correct {
@@ -465,24 +532,18 @@ body[data-screen="grid"] .app-shell {
 .recognition-play.is-locked .recognition-cell { pointer-events: none; }
 
 .recognition-feedback {
-  position: fixed;
-  z-index: 70;
-  right: max(12px, env(safe-area-inset-right));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  left: max(12px, env(safe-area-inset-left));
-  width: auto;
+  position: static;
+  width: min(100%, 760px);
   max-width: 760px;
-  max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-  min-height: 86px;
-  margin: 0 auto;
+  min-height: 78px;
+  margin: 10px auto 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: stretch;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: visible;
   border: 1px solid var(--recognition-rule-strong);
   background: rgba(255, 253, 247, 0.94);
-  box-shadow: 0 14px 38px rgba(73, 55, 34, 0.18);
+  box-shadow: 0 7px 18px rgba(73, 55, 34, 0.1);
 }
 
 .recognition-feedback__answer {
@@ -535,6 +596,8 @@ body[data-screen="grid"] .app-shell {
 .recognition-feedback__comparison p { grid-column: 1 / -1; margin: 0; color: var(--recognition-muted); font-size: 0.72rem; }
 
 .recognition-context {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 218px;
   padding: 10px 14px;
   display: grid;
@@ -600,10 +663,38 @@ body[data-screen="grid"] .app-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
+  container-type: inline-size;
 }
 
 .recognition-order__board .recognition-cell { aspect-ratio: 1.1; }
 .recognition-order__board .recognition-cell[aria-pressed="true"] { opacity: 0.28; pointer-events: none; }
+
+#grid-session:not([hidden]) .recognition-recall,
+#grid-session:not([hidden]) .recognition-order {
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+}
+
+#grid-session:not([hidden]) .recognition-order {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+#grid-session:not([hidden]) .recognition-order__board {
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+#grid-session:not([hidden]) .recognition-order__board .recognition-grid-row,
+#grid-session:not([hidden]) .recognition-order__board .recognition-gridcell,
+#grid-session:not([hidden]) .recognition-order__board .recognition-cell {
+  min-height: 0;
+  height: 100%;
+}
+
+#grid-session:not([hidden]) .recognition-order__board .recognition-cell { aspect-ratio: auto; }
 
 /* Pause and results */
 
@@ -763,7 +854,42 @@ body[data-screen="grid"] .app-shell {
     padding: 6px 8px calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 10px);
   }
 
+  body[data-screen="grid"]:has(#grid-session:not([hidden])) {
+    height: 100dvh;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  body[data-screen="grid"]:has(#grid-session:not([hidden])) .app-shell {
+    height: calc(100dvh - var(--mobile-header-height, 50px));
+    min-height: 0;
+    padding: 4px 6px calc(var(--mobile-nav-height, 58px) + env(safe-area-inset-bottom) + 4px);
+    overflow: hidden;
+  }
+
   #screen-grid:not([hidden]) { width: 100%; }
+
+  body[data-screen="grid"]:has(#grid-session:not([hidden])) #screen-grid:not([hidden]),
+  #grid-session:not([hidden]) {
+    height: 100%;
+    min-height: 0;
+  }
+
+  #grid-session:not([hidden]) {
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    align-content: stretch;
+    gap: 3px;
+    overflow: hidden;
+  }
+
+  #grid-session .recognition-hud { grid-row: 1; }
+  #grid-session .recognition-question { grid-row: 2; }
+  #grid-session .recognition-board { grid-row: 3; }
+  #grid-session .recognition-recall,
+  #grid-session .recognition-order { grid-row: 2 / 4; }
+  #grid-session .recognition-feedback { grid-row: 4; }
+  #grid-session .recognition-pause { grid-row: 2 / 5; }
 
   #screen-grid .recognition-setup {
     padding: 22px 14px 18px;
@@ -796,15 +922,13 @@ body[data-screen="grid"] .app-shell {
   .recognition-hud {
     min-height: 0;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "identity actions"
-      "stats stats";
+    grid-template-areas: "stats actions";
   }
 
-  .recognition-hud__identity { grid-area: identity; min-height: 48px; border-right: 0; }
+  #grid-session:not([hidden]) .recognition-hud__identity { display: none; }
   .recognition-hud__identity span { font-size: 0.56rem; }
   .recognition-hud__identity strong { font-size: 0.88rem; }
-  .recognition-stats { grid-area: stats; border-top: 1px solid var(--recognition-rule); }
+  .recognition-stats { grid-area: stats; border-top: 0; }
   .recognition-stats > div { min-height: 44px; padding: 4px 6px; }
   .recognition-stats > div:last-child { border-right: 0; }
   .recognition-stats span { font-size: 0.54rem; }
@@ -814,7 +938,7 @@ body[data-screen="grid"] .app-shell {
   .recognition-icon-button > span { font-size: 0.86rem; }
   .recognition-icon-button > strong { font-size: 0.56rem; }
 
-  .recognition-question { min-height: 84px; padding: 10px 8px 8px; }
+  .recognition-question { min-height: 62px; padding: 5px 8px 4px; }
   .recognition-question > strong { font-size: clamp(2rem, 10vw, 3rem); }
 
   .recognition-board {
@@ -822,37 +946,94 @@ body[data-screen="grid"] .app-shell {
     gap: clamp(3px, 1.2vw, 5px);
   }
 
+  #grid-session:not([hidden]) > .recognition-board:not([hidden]) {
+    width: auto;
+    height: min(100%, calc(100vw - 12px));
+    max-width: 100%;
+    max-height: 100%;
+    min-height: 0;
+    justify-self: center;
+    align-self: center;
+    grid-template-rows: repeat(var(--board-columns), minmax(0, 1fr));
+    aspect-ratio: 1;
+  }
+
+  #grid-session:not([hidden]) > .recognition-board .recognition-grid-row,
+  #grid-session:not([hidden]) > .recognition-board .recognition-gridcell,
+  #grid-session:not([hidden]) > .recognition-board .recognition-cell {
+    min-height: 0;
+    height: 100%;
+  }
+
+  #grid-session:not([hidden]) > .recognition-board .recognition-cell { aspect-ratio: auto; }
+
   .recognition-board[data-size="25"] { width: min(100%, 500px); }
   .recognition-cell { min-height: 0; border-radius: 4px; }
   .recognition-cell__hanja { font-size: clamp(2.55rem, 14vw, 4.4rem); }
   .recognition-board[data-size="25"] .recognition-cell__hanja { font-size: clamp(2rem, 10.5vw, 3.4rem); }
 
   .recognition-feedback {
-    right: max(8px, env(safe-area-inset-right));
-    bottom: calc(var(--mobile-nav-height, 66px) + env(safe-area-inset-bottom) + 8px);
-    left: max(8px, env(safe-area-inset-left));
-    width: auto;
-    max-height: calc(
-      100dvh
-      - var(--mobile-header-height, 56px)
-      - var(--mobile-nav-height, 66px)
-      - env(safe-area-inset-top)
-      - env(safe-area-inset-bottom)
-      - 24px
-    );
-    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-height: min(142px, 28dvh);
+    min-height: 54px;
+    margin-top: 2px;
+    grid-template-columns: minmax(0, 1fr) 74px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
-  .recognition-feedback__answer { min-height: 64px; padding: 9px 11px; }
-  .recognition-feedback__mark { width: 30px; height: 30px; flex-basis: 30px; }
-  .recognition-context { min-width: 0; min-height: 50px; border-top: 1px solid var(--recognition-rule); border-left: 0; }
-  .recognition-feedback__comparison { padding: 9px 11px; }
+  .recognition-feedback__answer { min-height: 52px; padding: 6px 8px; gap: 8px; }
+  .recognition-feedback__mark { width: 28px; height: 28px; flex-basis: 28px; }
+  .recognition-feedback__answer strong { font-size: clamp(0.9rem, 4.2vw, 1.05rem); }
+  .recognition-feedback__answer small { font-size: 0.64rem; }
+  .recognition-context {
+    min-width: 0;
+    min-height: 52px;
+    padding: 5px 4px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-items: center;
+    border-top: 0;
+    border-left: 1px solid var(--recognition-rule);
+    text-align: center;
+  }
+  .recognition-context > span:first-child { align-self: end; }
+  .recognition-context strong { display: none; }
+  .recognition-context > span:last-child { grid-column: 2; grid-row: 1 / 3; }
+  .recognition-feedback__comparison {
+    padding: 6px 8px;
+    gap: 3px 8px;
+  }
+  .recognition-feedback__comparison strong { font-size: 0.74rem; }
+  .recognition-feedback__comparison p { font-size: 0.64rem; line-height: 1.35; }
 
   .recognition-recall,
-  .recognition-order { margin-top: 6px; padding: 16px 10px; }
+  .recognition-order {
+    min-height: 0;
+    max-height: 100%;
+    margin-top: 3px;
+    padding: 10px 8px;
+    overflow: auto;
+  }
   .recognition-recall__hanja { font-size: 4.4rem; }
   .recognition-recall__choices button { min-height: 52px; padding: 7px; }
-  .recognition-order__board { gap: 4px; }
+  .recognition-order {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .recognition-order__progress { min-height: 44px; }
+  .recognition-order__board {
+    min-height: 0;
+    height: 100%;
+    gap: 4px;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+  }
+  .recognition-order__board .recognition-grid-row,
+  .recognition-order__board .recognition-gridcell,
+  .recognition-order__board .recognition-cell {
+    min-height: 0;
+    height: 100%;
+  }
+  .recognition-order__board .recognition-cell { aspect-ratio: auto; }
 
   #screen-grid .recognition-result { padding: 22px 14px; }
   .recognition-result__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -871,6 +1052,54 @@ body[data-screen="grid"] .app-shell {
   .recognition-mode { padding-inline: 11px; }
   .recognition-result__actions { grid-template-columns: minmax(0, 1fr); }
   .recognition-result__actions .recognition-text-button { grid-column: auto; }
+}
+
+@media (max-width: 660px) and (max-height: 700px) {
+  .recognition-icon-button { min-height: 44px; }
+  .recognition-stats > div { min-height: 44px; padding-block: 2px; }
+  .recognition-question { min-height: 54px; padding-block: 2px; }
+  .recognition-question > strong { font-size: clamp(1.75rem, 9vw, 2.35rem); }
+  .recognition-question > span:last-child { display: none; }
+  .recognition-order__progress { min-height: 36px; }
+}
+
+@media (min-width: 661px) and (max-height: 700px) {
+  body[data-screen="grid"]:has(#grid-session:not([hidden])) .app-shell {
+    padding: 6px 12px 8px;
+  }
+
+  #grid-session:not([hidden]) { gap: 3px; }
+
+  .recognition-hud { min-height: 54px; }
+  .recognition-hud__identity { padding-block: 6px; }
+  .recognition-stats > div { padding-block: 4px; }
+  .recognition-icon-button { min-height: 52px; }
+
+  .recognition-question {
+    min-height: 62px;
+    padding: 5px 10px 4px;
+  }
+
+  .recognition-question > strong { font-size: clamp(2rem, 5vw, 2.8rem); }
+
+  .recognition-feedback {
+    min-height: 0;
+    max-height: 142px;
+    margin-top: 2px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    grid-template-columns: minmax(0, 1fr) minmax(138px, 176px);
+  }
+
+  .recognition-feedback__answer { padding: 7px 10px; gap: 9px; }
+  .recognition-feedback__mark { width: 30px; height: 30px; flex-basis: 30px; }
+  .recognition-feedback__comparison { padding: 6px 10px; gap: 3px 10px; }
+  .recognition-feedback__comparison p { font-size: 0.68rem; line-height: 1.35; }
+  .recognition-context { min-width: 0; padding: 7px 10px; }
+
+  .recognition-recall,
+  .recognition-order { margin-top: 3px; padding: 10px 12px; }
+  .recognition-order__progress { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

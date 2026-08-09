@@ -1399,6 +1399,7 @@ function keepPassageInView() {
 function renderGridScreen() {
   const session = appState.grid.session;
   if (isEndedGridSession(session)) {
+    resetMatchingFeedbackDisplay();
     elements.gridSetup.hidden = true;
     elements.gridSession.hidden = true;
     elements.sessionResult.hidden = false;
@@ -1411,9 +1412,11 @@ function renderGridScreen() {
     elements.gridSession.hidden = false;
     if (isRecognitionSession(session)) renderRecognitionSession(session);
     else renderCoupletOrderSession(session);
+    ensureGridFeedbackAdvanceScheduled(session);
     scheduleWeakReviewEnd();
     return;
   }
+  resetMatchingFeedbackDisplay();
   elements.gridSetup.hidden = false;
   elements.gridSession.hidden = true;
   elements.sessionResult.hidden = true;
@@ -1426,6 +1429,7 @@ function startAdaptiveMatchingGame() {
 function startRandomOrderGame() {
   stopAllSpeech();
   clearGridTimers();
+  resetMatchingFeedbackDisplay();
   recognitionFocusSlot = 0;
   const session = createCoupletOrderSession({
     coupletIndexes: selectRandomCoupletIndexes(COUPLETS.length, 10),
@@ -1446,6 +1450,7 @@ function startRandomMatchingGame() {
 function startRecognitionGame(mode, weakIndexes = []) {
   stopAllSpeech();
   clearGridTimers();
+  resetMatchingFeedbackDisplay();
   recognitionFocusSlot = 0;
   const boardSize = window.matchMedia(RECOGNITION_WIDE_QUERY).matches ? 25 : 16;
   const session = createRecognitionSession({
@@ -1491,6 +1496,86 @@ function getRecognitionModeLabel(mode) {
   }[mode] || "맞춤 연습";
 }
 
+function getDisplayedMatchingFeedback(session) {
+  if (session.feedback) {
+    return validateDisplayedMatchingFeedback({
+      kind: session.kind,
+      coupletIndex: session.coupletIndex,
+      round: session.kind === "couplet-order" ? getCoupletOrderStats(session).round : null,
+      feedback: { ...session.feedback },
+    });
+  }
+  const attempt = Array.isArray(session.history) ? session.history.at(-1) : null;
+  if (!attempt) return null;
+  if (session.kind === "recognition-grid" && ["grid", "recall"].includes(attempt.kind)) {
+    return validateDisplayedMatchingFeedback({
+      kind: session.kind,
+      coupletIndex: null,
+      round: null,
+      feedback: {
+        source: attempt.kind,
+        correct: attempt.correct,
+        targetIndex: attempt.targetIndex,
+        selectedIndex: attempt.selectedIndex,
+        promptType: attempt.promptType,
+        answeredAt: attempt.answeredAt,
+      },
+    });
+  }
+  if (session.kind === "couplet-order" && attempt.kind === "couplet-order") {
+    return validateDisplayedMatchingFeedback({
+      kind: session.kind,
+      coupletIndex: attempt.coupletIndex,
+      round: attempt.roundIndex + 1,
+      feedback: {
+        correct: attempt.correct,
+        expectedIndex: attempt.expectedIndex,
+        selectedIndex: attempt.selectedIndex,
+        position: attempt.position,
+        answeredAt: attempt.answeredAt,
+      },
+    });
+  }
+  return null;
+}
+
+function validateDisplayedMatchingFeedback(value) {
+  if (!value || !value.feedback || typeof value.feedback.correct !== "boolean") return null;
+  const feedback = value.feedback;
+  if (value.kind === "recognition-grid") {
+    return isCharacterIndex(feedback.targetIndex) && isCharacterIndex(feedback.selectedIndex)
+      ? value
+      : null;
+  }
+  if (value.kind === "couplet-order") {
+    const validRound = Number.isInteger(value.round) && value.round >= 1 && value.round <= 10;
+    const validCouplet = Number.isInteger(value.coupletIndex)
+      && value.coupletIndex >= 0
+      && value.coupletIndex < COUPLETS.length;
+    const validPosition = Number.isInteger(feedback.position)
+      && feedback.position >= 0
+      && feedback.position < 8;
+    return validRound
+      && validCouplet
+      && validPosition
+      && isCharacterIndex(feedback.expectedIndex)
+      && isCharacterIndex(feedback.selectedIndex)
+      ? value
+      : null;
+  }
+  return null;
+}
+
+function isCharacterIndex(value) {
+  return Number.isInteger(value) && value >= 0 && value < CHARACTERS.length;
+}
+
+function resetMatchingFeedbackDisplay() {
+  elements.gridSession.classList.remove("has-feedback", "is-order-session");
+  elements.matchingFeedback.hidden = true;
+  delete elements.matchingFeedback.dataset.targetIndex;
+}
+
 function renderRecognitionSession(session) {
   const stats = getRecognitionStats(session);
   const viewPhase = session.phase === "paused" ? session.pausedFromPhase : session.phase;
@@ -1498,6 +1583,7 @@ function renderRecognitionSession(session) {
   const showsGrid = viewPhase === "question" || (viewPhase === "feedback" && feedbackSource === "grid");
   const showsRecall = viewPhase === "recall" || (viewPhase === "feedback" && feedbackSource === "recall");
   const paused = session.phase === "paused";
+  const displayedFeedback = getDisplayedMatchingFeedback(session);
 
   elements.gridModeLabel.textContent = getRecognitionModeLabel(session.mode);
   elements.gridProgressLabel.textContent = "문제";
@@ -1513,12 +1599,14 @@ function renderRecognitionSession(session) {
   elements.pauseSession.setAttribute("aria-pressed", String(paused));
   elements.gridSession.classList.toggle("is-paused", paused);
   elements.gridSession.classList.toggle("is-locked", session.inputLocked);
+  elements.gridSession.classList.toggle("has-feedback", Boolean(displayedFeedback));
+  elements.gridSession.classList.remove("is-order-session");
   elements.recognitionPause.hidden = !paused;
   elements.targetPanel.hidden = !showsGrid;
   elements.continuousBoard.hidden = !showsGrid;
   elements.recognitionRecall.hidden = !showsRecall;
   elements.recognitionOrder.hidden = true;
-  elements.matchingFeedback.hidden = viewPhase !== "feedback";
+  elements.matchingFeedback.hidden = !displayedFeedback;
 
   if (showsGrid) {
     elements.targetType.textContent = session.prompt.type === "gloss-to-character"
@@ -1574,7 +1662,7 @@ function renderRecognitionSession(session) {
     });
   }
 
-  if (viewPhase === "feedback") renderRecognitionFeedback(session);
+  if (displayedFeedback) renderRecognitionFeedback(displayedFeedback.feedback);
   setRecognitionPlayInert(paused);
 }
 
@@ -1619,7 +1707,6 @@ function answerMatchingChoice(selectedSlot) {
   elements.gridAnnouncement.textContent = result.correct
     ? `정답, ${item.contextHun}. 잠시 뒤 다음 문제로 이어집니다.`
     : `오답입니다. 정답은 ${item.contextHun}입니다. 몇 문제 뒤 다시 나옵니다.`;
-  scheduleGridAdvance(result.correct ? 950 : 1300);
 }
 
 function handleRecallChoiceClick(event) {
@@ -1646,7 +1733,6 @@ function handleRecallChoiceClick(event) {
   elements.gridAnnouncement.textContent = result.correct
     ? `역방향 확인 정답, ${item.contextHun}.`
     : `역방향 확인 오답입니다. ${item.contextHun}을 기억해 두세요.`;
-  scheduleGridAdvance(result.correct ? 900 : 1200);
 }
 
 function handleOrderChoiceClick(event) {
@@ -1680,12 +1766,25 @@ function handleOrderChoiceClick(event) {
   elements.gridAnnouncement.textContent = result.correct
     ? `맞았습니다. ${expected.contextHun}.`
     : `순서가 다릅니다. 다음 글자는 ${expected.contextHun}입니다.`;
-  scheduleGridAdvance(result.correct ? 520 : 950);
+}
+
+function ensureGridFeedbackAdvanceScheduled(session) {
+  if (!session || session.phase !== "feedback" || !session.feedback || matchingAdvanceTimer) return;
+  let delay;
+  if (session.kind === "couplet-order") {
+    delay = session.feedback.correct ? 520 : 950;
+  } else if (session.feedback.source === "recall") {
+    delay = session.feedback.correct ? 900 : 1200;
+  } else {
+    delay = session.feedback.correct ? 950 : 1300;
+  }
+  scheduleGridAdvance(delay);
 }
 
 function scheduleGridAdvance(delay) {
   window.clearTimeout(matchingAdvanceTimer);
   matchingAdvanceTimer = window.setTimeout(function () {
+    matchingAdvanceTimer = 0;
     const session = appState.grid.session;
     if (isRecognitionSession(session) && session.phase === "feedback") {
       const next = advanceAfterFeedback(session, {
@@ -1714,8 +1813,7 @@ function scheduleGridAdvance(delay) {
   }, delay);
 }
 
-function renderRecognitionFeedback(session) {
-  const feedback = session.feedback;
+function renderRecognitionFeedback(feedback) {
   if (!feedback) return;
   const target = CHARACTERS[feedback.targetIndex];
   const selected = CHARACTERS[feedback.selectedIndex];
@@ -1733,13 +1831,14 @@ function renderRecognitionFeedback(session) {
   }
   const couplet = getCouplet(target.coupletIndex);
   elements.feedbackContext.textContent = couplet.data.hanja;
+  elements.matchingFeedback.dataset.targetIndex = String(feedback.targetIndex);
   elements.openAnswerContext.hidden = false;
   elements.openAnswerContext.disabled = false;
 }
 
 function renderCoupletOrderSession(session) {
   const stats = getCoupletOrderStats(session);
-  const couplet = getCouplet(session.coupletIndex);
+  const displayedFeedback = getDisplayedMatchingFeedback(session);
   elements.gridModeLabel.textContent = "랜덤 8자 순서";
   elements.gridProgressLabel.textContent = "세트";
   elements.gridSessionProgress.textContent = `${stats.round} / ${stats.roundCount}`;
@@ -1752,6 +1851,8 @@ function renderCoupletOrderSession(session) {
   elements.pauseSession.hidden = true;
   elements.gridSession.classList.remove("is-paused");
   elements.gridSession.classList.toggle("is-locked", session.inputLocked);
+  elements.gridSession.classList.toggle("has-feedback", Boolean(displayedFeedback));
+  elements.gridSession.classList.add("is-order-session");
   elements.recognitionPause.hidden = true;
   elements.targetPanel.hidden = true;
   elements.continuousBoard.hidden = true;
@@ -1769,22 +1870,24 @@ function renderCoupletOrderSession(session) {
     disabled: session.inputLocked,
     focusSlot: recognitionFocusSlot,
   });
-  elements.matchingFeedback.hidden = session.phase !== "feedback";
-  if (session.phase === "feedback") {
-    const target = CHARACTERS[session.feedback.expectedIndex];
-    const selected = CHARACTERS[session.feedback.selectedIndex];
-    elements.matchingFeedback.classList.toggle("is-wrong", !session.feedback.correct);
-    elements.feedbackMark.textContent = session.feedback.correct ? "✓" : "×";
-    elements.feedbackStatus.textContent = session.feedback.correct ? "순서 정답" : "다음 글자 확인";
+  elements.matchingFeedback.hidden = !displayedFeedback;
+  if (displayedFeedback) {
+    const feedback = displayedFeedback.feedback;
+    const target = CHARACTERS[feedback.expectedIndex];
+    const selected = CHARACTERS[feedback.selectedIndex];
+    elements.matchingFeedback.classList.toggle("is-wrong", !feedback.correct);
+    elements.feedbackMark.textContent = feedback.correct ? "✓" : "×";
+    elements.feedbackStatus.textContent = feedback.correct ? "순서 정답" : "다음 글자 확인";
     elements.feedbackAnswer.textContent = `${target.character} · ${target.contextHun}`;
-    elements.feedbackGloss.textContent = `${stats.round}세트 · ${session.feedback.position + 1}번째 글자`;
-    elements.feedbackComparison.hidden = session.feedback.correct;
-    if (!session.feedback.correct) {
+    elements.feedbackGloss.textContent = `${displayedFeedback.round}세트 · ${feedback.position + 1}번째 글자`;
+    elements.feedbackComparison.hidden = feedback.correct;
+    if (!feedback.correct) {
       elements.feedbackSelected.textContent = `${selected.character} · ${selected.contextHun}`;
       elements.feedbackCorrect.textContent = `${target.character} · ${target.contextHun}`;
       elements.feedbackDifference.textContent = "원문 순서에서 다음에 오는 글자를 다시 확인해 보세요.";
     }
-    elements.feedbackContext.textContent = couplet.data.hanja;
+    elements.feedbackContext.textContent = getCouplet(displayedFeedback.coupletIndex).data.hanja;
+    delete elements.matchingFeedback.dataset.targetIndex;
     elements.openAnswerContext.hidden = true;
   }
   setRecognitionPlayInert(false);
@@ -1825,7 +1928,6 @@ function resumeGridSession() {
     state.grid.session = next;
   });
   renderGridScreen();
-  if (next.phase === "feedback") scheduleGridAdvance(next.feedback.correct ? 900 : 1200);
   focusRecognitionInput();
   scheduleWeakReviewEnd();
 }
@@ -1999,8 +2101,8 @@ function setRecognitionPlayInert(paused) {
 
 function openGridAnswerContext() {
   const session = appState.grid.session;
-  if (!isRecognitionSession(session) || !session.feedback) return;
-  const targetIndex = session.feedback.targetIndex;
+  const targetIndex = Number(elements.matchingFeedback.dataset.targetIndex);
+  if (!isRecognitionSession(session) || !Number.isInteger(targetIndex)) return;
   pauseGridForNavigation();
   commit(function (state) {
     state.ui.selectedIndex = targetIndex;
