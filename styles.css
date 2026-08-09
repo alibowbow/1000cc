@@ -1112,9 +1112,25 @@ progress::-moz-progress-bar { background: var(--pine); border-radius: 999px; }
 }
 .setting-row span,
 .dialog-danger div { display: grid; gap: 3px; }
+.setting-row__copy { min-width: 0; display: grid; gap: 3px; cursor: pointer; }
 .setting-row small,
 .dialog-danger small { color: var(--muted); font-size: 0.74rem; }
 .setting-row input { width: 24px; height: 24px; flex: 0 0 auto; accent-color: var(--cinnabar); }
+.setting-row__controls { display: flex; align-items: center; gap: 10px; }
+.sound-test-button {
+  min-height: 38px;
+  padding: 0 12px;
+  color: var(--cinnabar-deep);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 253, 247, 0.78);
+  font-size: 0.75rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sound-test-button:hover { border-color: var(--cinnabar); background: var(--cinnabar-soft); }
+.sound-test-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--cinnabar) 38%, transparent); outline-offset: 2px; }
 .offline-note {
   margin: 14px 0;
   padding: 12px;

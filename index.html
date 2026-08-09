@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="theme-folio.css?v=27" />
     <link rel="stylesheet" href="passage-folio-v25.css?v=26" />
     <link rel="stylesheet" href="compact-sunji-v26.css?v=31" />
-    <link rel="stylesheet" href="styles/recognition-game.css?v=5" />
-    <script type="module" src="app.js?v=40"></script>
+    <link rel="stylesheet" href="styles/recognition-game.css?v=6" />
+    <script type="module" src="app.js?v=41"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">본문으로 바로가기</a>
@@ -518,10 +518,15 @@
           <span><strong>정답 진동</strong><small>지원되는 기기에서 10ms의 가벼운 진동을 사용합니다.</small></span>
           <input id="setting-vibrate" type="checkbox" />
         </label>
-        <label class="setting-row">
-          <span><strong>부드러운 효과음</strong><small>정답과 오답, 세트 완료를 작은 소리로 알려줍니다.</small></span>
-          <input id="setting-sound-effects" type="checkbox" />
-        </label>
+        <div class="setting-row setting-row--sound">
+          <label class="setting-row__copy" for="setting-sound-effects">
+            <strong>부드러운 효과음</strong><small>정답과 오답, 세트 완료를 또렷하고 잔잔하게 알려줍니다.</small>
+          </label>
+          <div class="setting-row__controls">
+            <button class="sound-test-button" id="test-sound-effects" type="button">소리 확인</button>
+            <input id="setting-sound-effects" type="checkbox" aria-label="부드러운 효과음 사용" />
+          </div>
+        </div>
 
         <p class="offline-note">앱과 게임 진행은 오프라인에서도 동작합니다. 음성은 기기에 설치된 한국어 음성 환경에 따라 오프라인 재생이 제한될 수 있습니다.</p>
       </form>

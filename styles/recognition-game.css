@@ -1137,6 +1137,77 @@ body[data-screen="grid"]:has(#grid-session:not([hidden])) #screen-grid:not([hidd
   .recognition-order__progress { min-height: 44px; }
 }
 
+@media (min-width: 760px) {
+  .recognition-feedback {
+    width: min(100%, 960px);
+    max-width: 960px;
+    min-height: 64px;
+    max-height: none;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    overflow: visible;
+  }
+
+  .recognition-feedback__answer {
+    min-width: 0;
+    min-height: 64px;
+    flex: 1 1 190px;
+    padding: 8px 12px;
+    gap: 10px;
+  }
+
+  .recognition-feedback__mark {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .recognition-feedback__answer strong { font-size: clamp(0.95rem, 1.8vw, 1.15rem); }
+
+  .recognition-feedback__comparison {
+    min-width: 0;
+    flex: 1.6 1 310px;
+    padding: 8px 12px;
+    grid-template-columns: max-content max-content minmax(0, 1fr);
+    align-items: center;
+    gap: 4px 12px;
+    border-top: 0;
+    border-left: 1px solid var(--recognition-rule);
+  }
+
+  .recognition-feedback__comparison > div {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .recognition-feedback__comparison strong { white-space: nowrap; }
+
+  .recognition-feedback__comparison p {
+    grid-column: 3;
+    min-width: 0;
+    font-size: 0.68rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .recognition-context {
+    min-width: 0;
+    min-height: 64px;
+    flex: 0 1 185px;
+    padding: 8px 10px;
+  }
+
+  .recognition-context strong {
+    font-size: clamp(0.86rem, 1.5vw, 1rem);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .recognition-mode,
   .recognition-cell { transition: none; }

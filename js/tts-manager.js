@@ -216,7 +216,13 @@ export class TTSManager {
       this.activeUtterances.delete(utterance);
       if (token !== this.sessionToken) return;
       const error = String(event && event.error || "synthesis-failed");
-      if (error === "canceled" || error === "interrupted") return;
+      if (error === "canceled" || error === "interrupted") {
+        // Some Android speech engines interrupt an utterance without passing
+        // through cancel(). Always release the shared speaking/ducking state
+        // so game effects cannot remain muted for the rest of the visit.
+        this.emitState(false);
+        return;
+      }
 
       if ((options.retryCount || 0) < 1) {
         this.refreshVoices({ notify: false });
